@@ -1,0 +1,88 @@
+<mat-toolbar color="primary">
+  <mat-icon style="margin-right: 8px;">rocket_launch</mat-icon>
+  <span>GitLab Release Manager</span>
+  <span class="spacer"></span>
+  <button mat-raised-button (click)="openCreateDialog()">
+    <mat-icon>add</mat-icon>
+    New Release
+  </button>
+</mat-toolbar>
+
+<div class="page-container">
+  <div *ngIf="loading" style="text-align: center; padding: 48px;">
+    <mat-spinner diameter="48"></mat-spinner>
+  </div>
+
+  <mat-card *ngIf="!loading">
+    <mat-card-header>
+      <mat-card-title>Releases</mat-card-title>
+      <mat-card-subtitle>{{ releases.length }} release(s) found</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      <div *ngIf="releases.length === 0" class="empty-state">
+        <mat-icon>inbox</mat-icon>
+        <p>No releases yet. Click <strong>New Release</strong> to get started.</p>
+      </div>
+
+      <table *ngIf="releases.length > 0" mat-table [dataSource]="releases" class="full-width">
+
+        <!-- Version -->
+        <ng-container matColumnDef="version">
+          <th mat-header-cell *matHeaderCellDef>Version</th>
+          <td mat-cell *matCellDef="let r">
+            <strong>{{ r.version }}</strong>
+          </td>
+        </ng-container>
+
+        <!-- Created At -->
+        <ng-container matColumnDef="created_at">
+          <th mat-header-cell *matHeaderCellDef>Created</th>
+          <td mat-cell *matCellDef="let r">
+            {{ r.created_at | date:'medium' }}
+          </td>
+        </ng-container>
+
+        <!-- Total Repos -->
+        <ng-container matColumnDef="total_repos">
+          <th mat-header-cell *matHeaderCellDef>Repos</th>
+          <td mat-cell *matCellDef="let r">{{ r.total_repos }}</td>
+        </ng-container>
+
+        <!-- Stage 2 -->
+        <ng-container matColumnDef="stage2">
+          <th mat-header-cell *matHeaderCellDef>Stage 2 – Branches</th>
+          <td mat-cell *matCellDef="let r">
+            <span class="progress-text">{{ stage2Progress(r) }}</span>
+          </td>
+        </ng-container>
+
+        <!-- Stage 3 -->
+        <ng-container matColumnDef="stage3">
+          <th mat-header-cell *matHeaderCellDef>Stage 3 – MRs</th>
+          <td mat-cell *matCellDef="let r">
+            <span class="progress-text">{{ stage3Progress(r) }}</span>
+          </td>
+        </ng-container>
+
+        <!-- Actions -->
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let r" style="text-align: right;">
+            <button mat-icon-button color="primary" (click)="viewRelease(r.version)" matTooltip="View details">
+              <mat-icon>arrow_forward</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;"
+            class="clickable-row"
+            (click)="viewRelease(row.version)">
+        </tr>
+      </table>
+    </mat-card-content>
+  </mat-card>
+
+  <div *ngIf="errorMessage" style="color: red; padding: 16px;">{{ errorMessage }}</div>
+</div>
