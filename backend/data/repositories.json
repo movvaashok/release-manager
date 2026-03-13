@@ -1,0 +1,42 @@
+[
+  {
+    "name": "frontend-app",
+    "project_id": 101,
+    "path_with_namespace": "myorg/frontend-app",
+    "web_url": "https://gitlab.com/myorg/frontend-app",
+    "default_branch": "main",
+    "develop_branch": "develop"
+  },
+  {
+    "name": "backend-api",
+    "project_id": 102,
+    "path_with_namespace": "myorg/backend-api",
+    "web_url": "https://gitlab.com/myorg/backend-api",
+    "default_branch": "main",
+    "develop_branch": "develop"
+  },
+  {
+    "name": "auth-service",
+    "project_id": 103,
+    "path_with_namespace": "myorg/auth-service",
+    "web_url": "https://gitlab.com/myorg/auth-service",
+    "default_branch": "main",
+    "develop_branch": "develop"
+  },
+  {
+    "name": "notification-service",
+    "project_id": 104,
+    "path_with_namespace": "myorg/notification-service",
+    "web_url": "https://gitlab.com/myorg/notification-service",
+    "default_branch": "main",
+    "develop_branch": "develop"
+  },
+  {
+    "name": "infra-configs",
+    "project_id": 105,
+    "path_with_namespace": "myorg/infra-configs",
+    "web_url": "https://gitlab.com/myorg/infra-configs",
+    "default_branch": "main",
+    "develop_branch": "develop"
+  }
+]
