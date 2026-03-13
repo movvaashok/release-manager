@@ -2,7 +2,7 @@ from typing import List
 
 from fastapi import APIRouter, HTTPException
 
-from app.models import CreateReleaseRequest, ReleaseState, ReleaseSummary
+from app.models import AddReposRequest, CreateReleaseRequest, ReleaseState, ReleaseSummary
 from app.services import release_service
 
 router = APIRouter(prefix="/releases", tags=["releases"])
@@ -39,6 +39,15 @@ def get_release(version: str):
     if state is None:
         raise HTTPException(status_code=404, detail=f"Release {version} not found")
     return state
+
+
+@router.post("/{version}/repos", response_model=ReleaseState)
+def add_repos(version: str, req: AddReposRequest):
+    """Add repositories to an existing release."""
+    try:
+        return release_service.add_repos_to_release(version, req.repo_names)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 
 # ---------------------------------------------------------------------------

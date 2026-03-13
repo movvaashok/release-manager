@@ -51,6 +51,15 @@
         </ng-template>
 
         <div class="tab-content">
+          <div class="action-bar">
+            <button mat-raised-button color="primary" (click)="openAddReposDialog()">
+              <mat-icon>add</mat-icon>
+              Add Repository
+            </button>
+            <span style="font-size: 13px; color: rgba(0,0,0,0.54);">
+              {{ release.stage1.length }} repositories in this release
+            </span>
+          </div>
           <table mat-table [dataSource]="release.stage1" class="full-width">
 
             <ng-container matColumnDef="name">

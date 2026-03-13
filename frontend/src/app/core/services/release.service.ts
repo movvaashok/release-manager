@@ -52,4 +52,8 @@ export class ReleaseService {
       {}
     );
   }
+
+  addRepos(version: string, repoNames: string[]): Observable<ReleaseState> {
+    return this.http.post<ReleaseState>(`${this.base}/releases/${version}/repos`, { repo_names: repoNames });
+  }
 }

@@ -94,6 +94,10 @@ class CreateReleaseRequest(BaseModel):
         return v
 
 
+class AddReposRequest(BaseModel):
+    repo_names: List[str]
+
+
 class ReleaseSummary(BaseModel):
     version: str
     created_at: datetime

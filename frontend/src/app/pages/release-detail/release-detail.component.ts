@@ -12,10 +12,12 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 
 import { ReleaseService } from '../../core/services/release.service';
 import { ReleaseState, Stage2Repo, Stage3Repo } from '../../core/models/release.model';
 import { StatusChipComponent } from '../../shared/components/status-chip/status-chip.component';
+import { AddReposDialogComponent } from './add-repos-dialog/add-repos-dialog.component';
 
 @Component({
   selector: 'app-release-detail',
@@ -33,7 +35,9 @@ import { StatusChipComponent } from '../../shared/components/status-chip/status-
     MatSnackBarModule,
     MatChipsModule,
     MatDividerModule,
+    MatDialogModule,
     StatusChipComponent,
+    AddReposDialogComponent,
   ],
   templateUrl: './release-detail.component.html',
   styleUrls: ['./release-detail.component.scss'],
@@ -54,7 +58,8 @@ export class ReleaseDetailComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private releaseService: ReleaseService,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private dialog: MatDialog
   ) {}
 
   ngOnInit(): void {
@@ -77,7 +82,7 @@ export class ReleaseDetailComponent implements OnInit {
   }
 
   goBack(): void {
-    this.router.navigate(['/']);
+    this.router.navigate(['/releases']);
   }
 
   // -----------------------------------------------------------------------
@@ -154,6 +159,25 @@ export class ReleaseDetailComponent implements OnInit {
 
   get stage3HasPendingOrFailed(): boolean {
     return !!this.release?.stage3.some(r => r.status === 'pending' || r.status === 'failed');
+  }
+
+  // -----------------------------------------------------------------------
+  // Add repos
+  // -----------------------------------------------------------------------
+
+  openAddReposDialog(): void {
+    const existingRepoNames = this.release?.stage1.map(r => r.name) ?? [];
+    const ref = this.dialog.open(AddReposDialogComponent, {
+      width: '560px',
+      disableClose: true,
+      data: { version: this.version, existingRepoNames },
+    });
+    ref.afterClosed().subscribe(result => {
+      if (result) {
+        this.release = result;
+        this.snackBar.open('Repositories added successfully.', 'Close', { duration: 3000 });
+      }
+    });
   }
 
   // -----------------------------------------------------------------------

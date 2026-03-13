@@ -16,6 +16,7 @@ from typing import List, Optional
 
 from app.config import settings
 from app.models import (
+    AddReposRequest,
     CreateReleaseRequest,
     ReleaseState,
     ReleaseSummary,
@@ -133,6 +134,30 @@ def create_release(req: CreateReleaseRequest) -> ReleaseState:
         stage2=stage2,
         stage3=stage3,
     )
+    _save_release(state)
+    return state
+
+
+def add_repos_to_release(version: str, repo_names: list) -> ReleaseState:
+    """Add new repositories to an existing release."""
+    state = _load_release(version)
+    if state is None:
+        raise ValueError(f"Release {version} not found")
+
+    refs = {r.name: r for r in _load_references()}
+    unknown = [n for n in repo_names if n not in refs]
+    if unknown:
+        raise ValueError(f"Unknown repositories: {', '.join(unknown)}")
+
+    existing_names = {r.name for r in state.stage1}
+    for n in repo_names:
+        if n in existing_names:
+            continue
+        ref = refs[n]
+        state.stage1.append(Stage1Repo(name=ref.name, project_id=ref.project_id, path_with_namespace=ref.path_with_namespace))
+        state.stage2.append(Stage2Repo(name=ref.name, project_id=ref.project_id))
+        state.stage3.append(Stage3Repo(name=ref.name, project_id=ref.project_id))
+
     _save_release(state)
     return state
 

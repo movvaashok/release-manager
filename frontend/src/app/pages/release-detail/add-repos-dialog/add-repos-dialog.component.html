@@ -1,0 +1,48 @@
+<h2 mat-dialog-title>Add Repositories to Release {{ data.version }}</h2>
+
+<mat-dialog-content style="min-width: 480px; max-height: 60vh;">
+
+  <div *ngIf="loadingRepos" style="text-align: center; padding: 24px;">
+    <mat-spinner diameter="32"></mat-spinner>
+  </div>
+
+  <ng-container *ngIf="!loadingRepos">
+    <div *ngIf="availableRepos.length === 0" style="color: rgba(0,0,0,0.54); padding: 16px 0;">
+      All repositories are already included in this release.
+    </div>
+
+    <div *ngIf="availableRepos.length > 0">
+      <div style="margin-bottom: 8px;">
+        <strong>Select repositories to add ({{ selectedRepos.size }} selected)</strong>
+      </div>
+      <mat-selection-list style="max-height: 320px; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 4px;">
+        <mat-list-option
+          *ngFor="let repo of availableRepos"
+          [value]="repo.name"
+          [selected]="selectedRepos.has(repo.name)"
+          (click)="toggleRepo(repo.name)"
+        >
+          <span matListItemTitle>{{ repo.name }}</span>
+          <span matListItemLine>{{ repo.path_with_namespace }}</span>
+        </mat-list-option>
+      </mat-selection-list>
+    </div>
+  </ng-container>
+
+  <mat-error *ngIf="errorMessage" style="margin-top: 12px; display: block;">
+    {{ errorMessage }}
+  </mat-error>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cancel()">Cancel</button>
+  <button
+    mat-raised-button
+    color="primary"
+    [disabled]="!canSubmit"
+    (click)="submit()"
+  >
+    <mat-spinner *ngIf="submitting" diameter="18" style="display: inline-block; margin-right: 8px;"></mat-spinner>
+    Add Repositories
+  </button>
+</mat-dialog-actions>
