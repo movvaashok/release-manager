@@ -5,8 +5,12 @@
   <mat-icon style="margin: 0 8px;">rocket_launch</mat-icon>
   <span>Release {{ version }}</span>
   <span class="spacer"></span>
+  <span style="font-size: 13px; margin-right: 8px; opacity: 0.85;">{{ username }}</span>
   <button mat-icon-button (click)="loadRelease()" matTooltip="Refresh">
     <mat-icon>refresh</mat-icon>
+  </button>
+  <button mat-icon-button (click)="logout()" matTooltip="Logout">
+    <mat-icon>logout</mat-icon>
   </button>
 </mat-toolbar>
 

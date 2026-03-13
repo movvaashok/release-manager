@@ -10,6 +10,7 @@ backend/**/__pycache__/
 backend/**/*.pyc
 backend/.env
 backend/data/releases/
+backend/.env
 
 # macOS
 .DS_Store

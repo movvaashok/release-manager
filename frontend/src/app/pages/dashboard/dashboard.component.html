@@ -2,9 +2,13 @@
   <mat-icon style="margin-right: 8px;">rocket_launch</mat-icon>
   <span>Pioneer Release Manager</span>
   <span class="spacer"></span>
-  <button mat-raised-button (click)="openCreateDialog()">
+  <span style="font-size: 13px; margin-right: 16px; opacity: 0.85;">{{ username }}</span>
+  <button mat-raised-button (click)="openCreateDialog()" style="margin-right: 8px;">
     <mat-icon>add</mat-icon>
     New Release
+  </button>
+  <button mat-icon-button (click)="logout()" matTooltip="Logout">
+    <mat-icon>logout</mat-icon>
   </button>
 </mat-toolbar>
 

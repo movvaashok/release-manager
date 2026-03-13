@@ -27,7 +27,7 @@ from app.models import (
     Stage2Repo,
     Stage3Repo,
 )
-from app.services.gitlab_client import gitlab
+from app.services.gitlab_client import get_gitlab_client
 
 
 # ---------------------------------------------------------------------------
@@ -138,7 +138,7 @@ def create_release(req: CreateReleaseRequest) -> ReleaseState:
     return state
 
 
-async def remove_repo_from_release(version: str, repo_name: str) -> ReleaseState:
+async def remove_repo_from_release(version: str, repo_name: str, gitlab_token: str) -> ReleaseState:
     """Delete the release branch in GitLab and remove the repo from all stages."""
     state = _load_release(version)
     if state is None:
@@ -148,6 +148,7 @@ async def remove_repo_from_release(version: str, repo_name: str) -> ReleaseState
     if repo is None:
         raise ValueError(f"Repository {repo_name!r} not in release {version}")
 
+    gitlab = get_gitlab_client(gitlab_token)
     release_branch = f"release/{version}"
     branch = await gitlab.get_branch(repo.project_id, release_branch)
     if branch is not None:
@@ -189,8 +190,9 @@ def add_repos_to_release(version: str, repo_names: list) -> ReleaseState:
 # Stage 2 – branch management
 # ---------------------------------------------------------------------------
 
-async def _run_stage2_repo(version: str, repo: Stage2Repo) -> Stage2Repo:
+async def _run_stage2_repo(version: str, repo: Stage2Repo, gitlab_token: str) -> Stage2Repo:
     """Execute stage-2 logic for a single repository and return updated model."""
+    gitlab = get_gitlab_client(gitlab_token)
     release_branch = f"release/{version}"
 
     try:
@@ -228,7 +230,7 @@ async def _run_stage2_repo(version: str, repo: Stage2Repo) -> Stage2Repo:
     return repo
 
 
-async def run_stage2(version: str) -> ReleaseState:
+async def run_stage2(version: str, gitlab_token: str) -> ReleaseState:
     """Run stage-2 for all repos that are not yet successful (sequential)."""
     state = _load_release(version)
     if state is None:
@@ -237,13 +239,13 @@ async def run_stage2(version: str) -> ReleaseState:
     for i, repo in enumerate(state.stage2):
         if repo.status == RepoStage2Status.SUCCESS:
             continue
-        state.stage2[i] = await _run_stage2_repo(version, repo)
+        state.stage2[i] = await _run_stage2_repo(version, repo, gitlab_token)
 
     _save_release(state)
     return state
 
 
-async def run_stage2_repo(version: str, repo_name: str) -> ReleaseState:
+async def run_stage2_repo(version: str, repo_name: str, gitlab_token: str) -> ReleaseState:
     """Retry stage-2 for a single repository."""
     state = _load_release(version)
     if state is None:
@@ -262,7 +264,7 @@ async def run_stage2_repo(version: str, repo_name: str) -> ReleaseState:
     repo.no_updates = False
     repo.error = None
 
-    state.stage2[idx] = await _run_stage2_repo(version, repo)
+    state.stage2[idx] = await _run_stage2_repo(version, repo, gitlab_token)
     _save_release(state)
     return state
 
@@ -271,8 +273,9 @@ async def run_stage2_repo(version: str, repo_name: str) -> ReleaseState:
 # Stage 3 – merge request creation
 # ---------------------------------------------------------------------------
 
-async def _run_stage3_repo(version: str, repo: Stage3Repo) -> Stage3Repo:
+async def _run_stage3_repo(version: str, repo: Stage3Repo, gitlab_token: str) -> Stage3Repo:
     """Execute stage-3 logic for a single repository and return updated model."""
+    gitlab = get_gitlab_client(gitlab_token)
     release_branch = f"release/{version}"
 
     try:
@@ -304,7 +307,7 @@ async def _run_stage3_repo(version: str, repo: Stage3Repo) -> Stage3Repo:
     return repo
 
 
-async def run_stage3(version: str) -> ReleaseState:
+async def run_stage3(version: str, gitlab_token: str) -> ReleaseState:
     """Run stage-3 for all repos that are not yet successful (sequential)."""
     state = _load_release(version)
     if state is None:
@@ -313,13 +316,13 @@ async def run_stage3(version: str) -> ReleaseState:
     for i, repo in enumerate(state.stage3):
         if repo.status in (RepoStage3Status.SUCCESS, RepoStage3Status.ALREADY_EXISTS):
             continue
-        state.stage3[i] = await _run_stage3_repo(version, repo)
+        state.stage3[i] = await _run_stage3_repo(version, repo, gitlab_token)
 
     _save_release(state)
     return state
 
 
-async def run_stage3_repo(version: str, repo_name: str) -> ReleaseState:
+async def run_stage3_repo(version: str, repo_name: str, gitlab_token: str) -> ReleaseState:
     """Retry stage-3 for a single repository."""
     state = _load_release(version)
     if state is None:
@@ -336,6 +339,6 @@ async def run_stage3_repo(version: str, repo_name: str) -> ReleaseState:
     repo.already_existed = False
     repo.error = None
 
-    state.stage3[idx] = await _run_stage3_repo(version, repo)
+    state.stage3[idx] = await _run_stage3_repo(version, repo, gitlab_token)
     _save_release(state)
     return state

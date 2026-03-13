@@ -19,10 +19,10 @@ def _encode_branch(branch: str) -> str:
 
 
 class GitLabClient:
-    def __init__(self) -> None:
+    def __init__(self, token: str) -> None:
         self._base = f"{settings.gitlab_url}/api/v4"
         self._headers = {
-            "PRIVATE-TOKEN": settings.gitlab_token,
+            "PRIVATE-TOKEN": token,
             "Content-Type": "application/json",
         }
 
@@ -164,5 +164,5 @@ class GitLabClient:
             return resp.json()
 
 
-# Singleton used across the application
-gitlab = GitLabClient()
+def get_gitlab_client(token: str) -> GitLabClient:
+    return GitLabClient(token)

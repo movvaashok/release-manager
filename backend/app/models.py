@@ -98,6 +98,18 @@ class AddReposRequest(BaseModel):
     repo_names: List[str]
 
 
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+    gitlab_token: Optional[str] = None
+
+
+class LoginResponse(BaseModel):
+    username: str
+    gitlab_token: Optional[str] = None
+    has_token: bool
+
+
 class ReleaseSummary(BaseModel):
     version: str
     created_at: datetime

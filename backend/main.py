@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import repos, releases
+from app.routers import auth, repos, releases
 
 app = FastAPI(
     title="GitLab Release Manager",
@@ -16,5 +16,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth.router, prefix="/api")
 app.include_router(repos.router, prefix="/api")
 app.include_router(releases.router, prefix="/api")

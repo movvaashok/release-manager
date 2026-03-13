@@ -18,6 +18,7 @@ import { ReleaseService } from '../../core/services/release.service';
 import { ReleaseState, Stage2Repo, Stage3Repo } from '../../core/models/release.model';
 import { StatusChipComponent } from '../../shared/components/status-chip/status-chip.component';
 import { AddReposDialogComponent } from './add-repos-dialog/add-repos-dialog.component';
+import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-release-detail',
@@ -46,6 +47,7 @@ export class ReleaseDetailComponent implements OnInit {
   version = '';
   release: ReleaseState | null = null;
   loading = true;
+  username = '';
   runningStage2 = false;
   runningStage3 = false;
   retryingRepo: string | null = null;
@@ -60,12 +62,19 @@ export class ReleaseDetailComponent implements OnInit {
     private router: Router,
     private releaseService: ReleaseService,
     private snackBar: MatSnackBar,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private auth: AuthService
   ) {}
 
   ngOnInit(): void {
     this.version = this.route.snapshot.paramMap.get('version') ?? '';
+    this.username = this.auth.getUsername() ?? '';
     this.loadRelease();
+  }
+
+  logout(): void {
+    this.auth.logout();
+    this.router.navigate(['/login']);
   }
 
   loadRelease(): void {

@@ -14,6 +14,7 @@ import { MatBadgeModule } from '@angular/material/badge';
 import { ReleaseService } from '../../core/services/release.service';
 import { ReleaseSummary } from '../../core/models/release.model';
 import { CreateReleaseDialogComponent } from './create-release-dialog/create-release-dialog.component';
+import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -37,6 +38,7 @@ export class DashboardComponent implements OnInit {
   releases: ReleaseSummary[] = [];
   loading = true;
   errorMessage = '';
+  username = '';
 
   displayedColumns = [
     'version', 'created_at', 'total_repos',
@@ -46,11 +48,18 @@ export class DashboardComponent implements OnInit {
   constructor(
     private releaseService: ReleaseService,
     private dialog: MatDialog,
-    private router: Router
+    private router: Router,
+    private auth: AuthService
   ) {}
 
   ngOnInit(): void {
+    this.username = this.auth.getUsername() ?? '';
     this.loadReleases();
+  }
+
+  logout(): void {
+    this.auth.logout();
+    this.router.navigate(['/login']);
   }
 
   loadReleases(): void {

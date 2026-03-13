@@ -1,0 +1,17 @@
+[
+  {
+    "username": "alice",
+    "password": "alice123",
+    "gitlab_token": null
+  },
+  {
+    "username": "bob",
+    "password": "bob456",
+    "gitlab_token": null
+  },
+  {
+    "username": "charlie",
+    "password": "charlie789",
+    "gitlab_token": null
+  }
+]
