@@ -29,9 +29,9 @@
     </div>
   </ng-container>
 
-  <mat-error *ngIf="errorMessage" style="margin-top: 12px; display: block;">
+  <div *ngIf="errorMessage" style="margin-top: 12px; color: #c62828; font-size: 14px;">
     {{ errorMessage }}
-  </mat-error>
+  </div>
 </mat-dialog-content>
 
 <mat-dialog-actions align="end">
