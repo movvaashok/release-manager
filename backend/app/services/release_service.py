@@ -138,6 +138,29 @@ def create_release(req: CreateReleaseRequest) -> ReleaseState:
     return state
 
 
+async def remove_repo_from_release(version: str, repo_name: str) -> ReleaseState:
+    """Delete the release branch in GitLab and remove the repo from all stages."""
+    state = _load_release(version)
+    if state is None:
+        raise ValueError(f"Release {version} not found")
+
+    repo = next((r for r in state.stage1 if r.name == repo_name), None)
+    if repo is None:
+        raise ValueError(f"Repository {repo_name!r} not in release {version}")
+
+    release_branch = f"release/{version}"
+    branch = await gitlab.get_branch(repo.project_id, release_branch)
+    if branch is not None:
+        await gitlab.delete_branch(repo.project_id, release_branch)
+
+    state.stage1 = [r for r in state.stage1 if r.name != repo_name]
+    state.stage2 = [r for r in state.stage2 if r.name != repo_name]
+    state.stage3 = [r for r in state.stage3 if r.name != repo_name]
+
+    _save_release(state)
+    return state
+
+
 def add_repos_to_release(version: str, repo_names: list) -> ReleaseState:
     """Add new repositories to an existing release."""
     state = _load_release(version)

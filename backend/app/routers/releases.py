@@ -50,6 +50,15 @@ def add_repos(version: str, req: AddReposRequest):
         raise HTTPException(status_code=400, detail=str(exc))
 
 
+@router.delete("/{version}/repos/{repo_name}", response_model=ReleaseState)
+async def remove_repo(version: str, repo_name: str):
+    """Delete the release branch in GitLab and remove the repo from the release."""
+    try:
+        return await release_service.remove_repo_from_release(version, repo_name)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
 # ---------------------------------------------------------------------------
 # Stage 2 – release branch management
 # ---------------------------------------------------------------------------

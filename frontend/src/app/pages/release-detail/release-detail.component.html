@@ -72,6 +72,22 @@
               <td mat-cell *matCellDef="let r">{{ r.path_with_namespace }}</td>
             </ng-container>
 
+            <ng-container matColumnDef="actions">
+              <th mat-header-cell *matHeaderCellDef></th>
+              <td mat-cell *matCellDef="let r" style="text-align: right;">
+                <button
+                  mat-icon-button
+                  color="warn"
+                  matTooltip="Remove from release and delete branch"
+                  [disabled]="!!removingRepo"
+                  (click)="removeRepo(r.name)"
+                >
+                  <mat-spinner *ngIf="removingRepo === r.name" diameter="18"></mat-spinner>
+                  <mat-icon *ngIf="removingRepo !== r.name">delete</mat-icon>
+                </button>
+              </td>
+            </ng-container>
+
             <tr mat-header-row *matHeaderRowDef="stage1Columns"></tr>
             <tr mat-row *matRowDef="let row; columns: stage1Columns;"></tr>
           </table>
@@ -135,7 +151,7 @@
                   mat-icon-button
                   color="accent"
                   matTooltip="Retry this repository"
-                  [disabled]="!!retryingRepo || r.status === 'success'"
+                  [disabled]="!!retryingRepo"
                   (click)="retryStage2Repo(r)"
                 >
                   <mat-spinner *ngIf="isRetrying('stage2', r.name)" diameter="18"></mat-spinner>

@@ -56,4 +56,8 @@ export class ReleaseService {
   addRepos(version: string, repoNames: string[]): Observable<ReleaseState> {
     return this.http.post<ReleaseState>(`${this.base}/releases/${version}/repos`, { repo_names: repoNames });
   }
+
+  removeRepo(version: string, repoName: string): Observable<ReleaseState> {
+    return this.http.delete<ReleaseState>(`${this.base}/releases/${version}/repos/${encodeURIComponent(repoName)}`);
+  }
 }

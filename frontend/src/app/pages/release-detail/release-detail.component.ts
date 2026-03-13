@@ -50,9 +50,10 @@ export class ReleaseDetailComponent implements OnInit {
   runningStage3 = false;
   retryingRepo: string | null = null;
 
-  stage1Columns = ['name', 'path'];
+  stage1Columns = ['name', 'path', 'actions'];
   stage2Columns = ['name', 'status', 'branch_info', 'error', 'actions'];
   stage3Columns = ['name', 'status', 'mr', 'error', 'actions'];
+  removingRepo: string | null = null;
 
   constructor(
     private route: ActivatedRoute,
@@ -164,6 +165,22 @@ export class ReleaseDetailComponent implements OnInit {
   // -----------------------------------------------------------------------
   // Add repos
   // -----------------------------------------------------------------------
+
+  removeRepo(repoName: string): void {
+    if (!confirm(`Remove "${repoName}" from this release? This will also delete the release branch in GitLab.`)) return;
+    this.removingRepo = repoName;
+    this.releaseService.removeRepo(this.version, repoName).subscribe({
+      next: (r) => {
+        this.release = r;
+        this.removingRepo = null;
+        this.snackBar.open(`${repoName} removed from release.`, 'Close', { duration: 3000 });
+      },
+      error: () => {
+        this.removingRepo = null;
+        this.snackBar.open(`Failed to remove ${repoName}.`, 'Close', { duration: 4000 });
+      },
+    });
+  }
 
   openAddReposDialog(): void {
     const existingRepoNames = this.release?.stage1.map(r => r.name) ?? [];
