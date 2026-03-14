@@ -2,16 +2,19 @@
   {
     "username": "alice",
     "password": "alice123",
-    "gitlab_token": null
+    "gitlab_token": null,
+    "role": "admin"
   },
   {
     "username": "bob",
     "password": "bob456",
-    "gitlab_token": null
+    "gitlab_token": null,
+    "role": "user"
   },
   {
     "username": "charlie",
     "password": "charlie789",
-    "gitlab_token": null
+    "gitlab_token": null,
+    "role": "user"
   }
 ]

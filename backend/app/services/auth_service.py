@@ -1,8 +1,9 @@
 import json
 from pathlib import Path
+from typing import List
 
 from app.config import settings
-from app.models import LoginRequest, LoginResponse
+from app.models import CreateUserRequest, LoginRequest, LoginResponse, UserSummary
 
 
 def _users_path() -> Path:
@@ -37,4 +38,35 @@ def login(req: LoginRequest) -> LoginResponse:
         username=user["username"],
         gitlab_token=user.get("gitlab_token"),
         has_token=bool(user.get("gitlab_token")),
+        role=user.get("role", "user"),
     )
+
+
+def get_all_users() -> List[UserSummary]:
+    users = _load_users()
+    return [
+        UserSummary(
+            username=u["username"],
+            role=u.get("role", "user"),
+            has_token=bool(u.get("gitlab_token")),
+        )
+        for u in users
+    ]
+
+
+def create_user(req: CreateUserRequest) -> UserSummary:
+    users = _load_users()
+    if any(u["username"] == req.username for u in users):
+        raise ValueError(f"User '{req.username}' already exists")
+    new_user = {"username": req.username, "password": req.password, "gitlab_token": None, "role": req.role}
+    users.append(new_user)
+    _save_users(users)
+    return UserSummary(username=req.username, role=req.role, has_token=False)
+
+
+def delete_user(username: str) -> None:
+    users = _load_users()
+    new_users = [u for u in users if u["username"] != username]
+    if len(new_users) == len(users):
+        raise ValueError(f"User '{username}' not found")
+    _save_users(new_users)

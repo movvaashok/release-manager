@@ -14,6 +14,7 @@ export interface Stage1Repo {
   name: string;
   project_id: number;
   path_with_namespace: string;
+  web_url?: string;
 }
 
 export interface Stage2Repo {

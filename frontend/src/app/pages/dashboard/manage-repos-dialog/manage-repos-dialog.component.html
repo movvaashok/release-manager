@@ -1,0 +1,155 @@
+<h2 mat-dialog-title style="display:flex;align-items:center;gap:8px;">
+  <mat-icon>folder</mat-icon> Manage Repositories
+</h2>
+
+<mat-dialog-content style="min-width:720px; max-height:70vh; overflow-y:auto;">
+
+  <div *ngIf="loading" style="text-align:center;padding:24px;"><mat-spinner diameter="32"></mat-spinner></div>
+
+  <ng-container *ngIf="!loading">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+      <button mat-raised-button color="primary" (click)="showAddForm=!showAddForm; editingName=null">
+        <mat-icon>add</mat-icon> Add Repository
+      </button>
+    </div>
+
+    <!-- Add form -->
+    <div *ngIf="showAddForm" class="edit-form" style="margin-bottom:16px;">
+      <div class="section-title">New Repository</div>
+      <form [formGroup]="addForm">
+        <div class="form-row">
+          <mat-form-field appearance="outline">
+            <mat-label>Name</mat-label>
+            <input matInput formControlName="name" placeholder="my-service" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Project ID</mat-label>
+            <input matInput type="number" formControlName="project_id" />
+          </mat-form-field>
+        </div>
+        <div class="form-row">
+          <mat-form-field appearance="outline">
+            <mat-label>Path with namespace</mat-label>
+            <input matInput formControlName="path_with_namespace" placeholder="myorg/my-service" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Web URL</mat-label>
+            <input matInput formControlName="web_url" placeholder="https://gitlab.com/myorg/my-service" />
+          </mat-form-field>
+        </div>
+        <div class="form-row">
+          <mat-form-field appearance="outline">
+            <mat-label>Default Branch</mat-label>
+            <input matInput formControlName="default_branch" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Develop Branch</mat-label>
+            <input matInput formControlName="develop_branch" />
+          </mat-form-field>
+        </div>
+        <div class="form-actions">
+          <button mat-button (click)="showAddForm=false">Cancel</button>
+          <button mat-raised-button color="primary" [disabled]="addForm.invalid || saving" (click)="addRepo()">
+            <mat-spinner *ngIf="saving" diameter="16" style="display:inline-block;margin-right:6px;"></mat-spinner>
+            Save
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Repos table -->
+    <table mat-table [dataSource]="repos" class="repo-table">
+
+      <ng-container matColumnDef="name">
+        <th mat-header-cell *matHeaderCellDef>Name</th>
+        <td mat-cell *matCellDef="let r"><strong>{{ r.name }}</strong></td>
+      </ng-container>
+
+      <ng-container matColumnDef="path">
+        <th mat-header-cell *matHeaderCellDef>Path</th>
+        <td mat-cell *matCellDef="let r" style="font-size:13px;">{{ r.path_with_namespace }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="web_url">
+        <th mat-header-cell *matHeaderCellDef>URL</th>
+        <td mat-cell *matCellDef="let r" class="link-cell">
+          <a [href]="r.web_url" target="_blank" rel="noopener">{{ r.web_url }}</a>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="branches">
+        <th mat-header-cell *matHeaderCellDef>Branches</th>
+        <td mat-cell *matCellDef="let r" style="font-size:12px;color:rgba(0,0,0,0.6);">
+          default: {{ r.default_branch }} / dev: {{ r.develop_branch }}
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef></th>
+        <td mat-cell *matCellDef="let r" style="white-space:nowrap;">
+          <button mat-icon-button (click)="startEdit(r)" matTooltip="Edit"><mat-icon>edit</mat-icon></button>
+          <button mat-icon-button color="warn" (click)="deleteRepo(r.name)" matTooltip="Delete"><mat-icon>delete</mat-icon></button>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+
+      <!-- Inline edit row -->
+      <ng-container *ngFor="let r of repos">
+        <tr *ngIf="editingName === r.name">
+          <td [attr.colspan]="displayedColumns.length" style="padding:0;">
+            <div class="edit-form">
+              <div class="section-title">Edit: {{ r.name }}</div>
+              <form [formGroup]="editForm">
+                <div class="form-row">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Project ID</mat-label>
+                    <input matInput type="number" formControlName="project_id" />
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Path with namespace</mat-label>
+                    <input matInput formControlName="path_with_namespace" />
+                  </mat-form-field>
+                </div>
+                <div class="form-row">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Web URL</mat-label>
+                    <input matInput formControlName="web_url" />
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Default Branch</mat-label>
+                    <input matInput formControlName="default_branch" />
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Develop Branch</mat-label>
+                    <input matInput formControlName="develop_branch" />
+                  </mat-form-field>
+                </div>
+                <div class="form-actions">
+                  <button mat-button (click)="cancelEdit()">Cancel</button>
+                  <button mat-raised-button color="primary" [disabled]="editForm.invalid || saving" (click)="saveEdit(r.name)">
+                    <mat-spinner *ngIf="saving" diameter="16" style="display:inline-block;margin-right:6px;"></mat-spinner>
+                    Save
+                  </button>
+                </div>
+              </form>
+            </div>
+          </td>
+        </tr>
+      </ng-container>
+
+    </table>
+
+    <div *ngIf="repos.length === 0" style="text-align:center;color:rgba(0,0,0,0.4);padding:24px;">
+      No repositories configured yet.
+    </div>
+
+    <div *ngIf="errorMessage" class="error-msg">{{ errorMessage }}</div>
+  </ng-container>
+
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="close()">Close</button>
+</mat-dialog-actions>

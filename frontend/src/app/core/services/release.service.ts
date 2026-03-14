@@ -60,4 +60,16 @@ export class ReleaseService {
   removeRepo(version: string, repoName: string): Observable<ReleaseState> {
     return this.http.delete<ReleaseState>(`${this.base}/releases/${version}/repos/${encodeURIComponent(repoName)}`);
   }
+
+  addReferenceRepo(repo: Partial<RepoReference>): Observable<RepoReference[]> {
+    return this.http.post<RepoReference[]>(`${this.base}/repos/reference`, repo);
+  }
+
+  updateReferenceRepo(name: string, updates: Partial<RepoReference>): Observable<RepoReference[]> {
+    return this.http.put<RepoReference[]>(`${this.base}/repos/reference/${encodeURIComponent(name)}`, updates);
+  }
+
+  deleteReferenceRepo(name: string): Observable<RepoReference[]> {
+    return this.http.delete<RepoReference[]>(`${this.base}/repos/reference/${encodeURIComponent(name)}`);
+  }
 }

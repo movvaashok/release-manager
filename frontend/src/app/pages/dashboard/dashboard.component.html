@@ -1,92 +1,121 @@
-<mat-toolbar color="primary">
-  <mat-icon style="margin-right: 8px;">rocket_launch</mat-icon>
-  <span>Pioneer Release Manager</span>
+<!-- Toolbar -->
+<mat-toolbar color="primary" class="toolbar">
+  <mat-icon style="margin-right:8px;">rocket_launch</mat-icon>
+  <span class="app-title">Pioneer Release Manager</span>
   <span class="spacer"></span>
-  <span style="font-size: 13px; margin-right: 16px; opacity: 0.85;">{{ username }}</span>
-  <button mat-raised-button (click)="openCreateDialog()" style="margin-right: 8px;">
-    <mat-icon>add</mat-icon>
-    New Release
+
+  <button *ngIf="isAdmin" mat-raised-button (click)="openCreateDialog()" style="margin-right:12px;">
+    <mat-icon>add</mat-icon> New Release
   </button>
-  <button mat-icon-button (click)="logout()" matTooltip="Logout">
-    <mat-icon>logout</mat-icon>
+
+  <!-- User menu -->
+  <button mat-icon-button [matMenuTriggerFor]="userMenu" matTooltip="{{ username }}">
+    <mat-icon>account_circle</mat-icon>
   </button>
+  <mat-menu #userMenu="matMenu">
+    <div style="padding:12px 16px 8px; border-bottom:1px solid #e0e0e0; pointer-events:none;">
+      <div style="font-weight:600;">{{ username }}</div>
+      <div style="font-size:12px; color:rgba(0,0,0,0.5); margin-top:2px;">
+        <span [class]="isAdmin ? 'role-admin' : 'role-user'">{{ isAdmin ? 'Admin' : 'User' }}</span>
+      </div>
+    </div>
+    <ng-container *ngIf="isAdmin">
+      <button mat-menu-item (click)="openManageRepos()">
+        <mat-icon>folder</mat-icon> Manage Repositories
+      </button>
+      <button mat-menu-item (click)="openManageUsers()">
+        <mat-icon>people</mat-icon> Manage Users
+      </button>
+      <mat-divider></mat-divider>
+    </ng-container>
+    <button mat-menu-item (click)="logout()">
+      <mat-icon>logout</mat-icon> Logout
+    </button>
+  </mat-menu>
 </mat-toolbar>
 
 <div class="page-container">
-  <div *ngIf="loading" style="text-align: center; padding: 48px;">
+
+  <!-- Stats row -->
+  <div class="stats-row" *ngIf="!loading">
+    <div class="stat-card">
+      <div class="stat-value">{{ totalReleases }}</div>
+      <div class="stat-label">Total Releases</div>
+    </div>
+    <div class="stat-card warn">
+      <div class="stat-value">{{ pendingReleases }}</div>
+      <div class="stat-label">In Progress</div>
+    </div>
+    <div class="stat-card success">
+      <div class="stat-value">{{ completedReleases }}</div>
+      <div class="stat-label">Completed</div>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" style="text-align:center;padding:64px;">
     <mat-spinner diameter="48"></mat-spinner>
   </div>
 
-  <mat-card *ngIf="!loading">
-    <mat-card-header>
-      <mat-card-title>Releases</mat-card-title>
-      <mat-card-subtitle>{{ releases.length }} release(s) found</mat-card-subtitle>
-    </mat-card-header>
+  <!-- Empty state -->
+  <div *ngIf="!loading && releases.length === 0" class="empty-state">
+    <mat-icon>inbox</mat-icon>
+    <p>No releases yet.<span *ngIf="isAdmin"> Click <strong>New Release</strong> to get started.</span></p>
+  </div>
 
-    <mat-card-content>
-      <div *ngIf="releases.length === 0" class="empty-state">
-        <mat-icon>inbox</mat-icon>
-        <p>No releases yet. Click <strong>New Release</strong> to get started.</p>
-      </div>
+  <!-- Release cards grid -->
+  <div *ngIf="!loading && releases.length > 0" class="releases-grid">
+    <mat-card *ngFor="let r of releases" class="release-card" (click)="viewRelease(r.version)">
+      <mat-card-header>
+        <div class="card-header-row">
+          <span class="version-badge">v{{ r.version }}</span>
+          <span class="created-date">{{ r.created_at | date:'mediumDate' }}</span>
+        </div>
+      </mat-card-header>
 
-      <table *ngIf="releases.length > 0" mat-table [dataSource]="releases" class="full-width">
+      <mat-card-content>
+        <div class="repo-count">
+          <mat-icon>folder_open</mat-icon>
+          {{ r.total_repos }} {{ r.total_repos === 1 ? 'repository' : 'repositories' }}
+        </div>
 
-        <!-- Version -->
-        <ng-container matColumnDef="version">
-          <th mat-header-cell *matHeaderCellDef>Version</th>
-          <td mat-cell *matCellDef="let r">
-            <strong>{{ r.version }}</strong>
-          </td>
-        </ng-container>
+        <div class="stage-section">
+          <div class="stage-label">
+            <mat-icon class="stage-icon">account_tree</mat-icon>
+            Stage 2 – Branches
+          </div>
+          <div class="pill-row">
+            <span *ngIf="r.stage2_success"   class="pill pill-success">{{ r.stage2_success }} ok</span>
+            <span *ngIf="r.stage2_conflict"  class="pill pill-conflict">{{ r.stage2_conflict }} conflict</span>
+            <span *ngIf="r.stage2_failed"    class="pill pill-failed">{{ r.stage2_failed }} failed</span>
+            <span *ngIf="r.stage2_pending"   class="pill pill-pending">{{ r.stage2_pending }} pending</span>
+            <span *ngIf="!r.stage2_success && !r.stage2_conflict && !r.stage2_failed && !r.stage2_pending"
+                  class="pill pill-pending">not started</span>
+          </div>
+        </div>
 
-        <!-- Created At -->
-        <ng-container matColumnDef="created_at">
-          <th mat-header-cell *matHeaderCellDef>Created</th>
-          <td mat-cell *matCellDef="let r">
-            {{ r.created_at | date:'medium' }}
-          </td>
-        </ng-container>
+        <div class="stage-section">
+          <div class="stage-label">
+            <mat-icon class="stage-icon">merge</mat-icon>
+            Stage 3 – Merge Requests
+          </div>
+          <div class="pill-row">
+            <span *ngIf="r.stage3_success + r.stage3_already_exists > 0" class="pill pill-success">{{ r.stage3_success + r.stage3_already_exists }} done</span>
+            <span *ngIf="r.stage3_failed"   class="pill pill-failed">{{ r.stage3_failed }} failed</span>
+            <span *ngIf="r.stage3_pending"  class="pill pill-pending">{{ r.stage3_pending }} pending</span>
+            <span *ngIf="!r.stage3_success && !r.stage3_already_exists && !r.stage3_failed && !r.stage3_pending"
+                  class="pill pill-pending">not started</span>
+          </div>
+        </div>
+      </mat-card-content>
 
-        <!-- Total Repos -->
-        <ng-container matColumnDef="total_repos">
-          <th mat-header-cell *matHeaderCellDef>Repos</th>
-          <td mat-cell *matCellDef="let r">{{ r.total_repos }}</td>
-        </ng-container>
+      <mat-card-actions align="end">
+        <button mat-button color="primary" (click)="$event.stopPropagation(); viewRelease(r.version)">
+          View Details <mat-icon>arrow_forward</mat-icon>
+        </button>
+      </mat-card-actions>
+    </mat-card>
+  </div>
 
-        <!-- Stage 2 -->
-        <ng-container matColumnDef="stage2">
-          <th mat-header-cell *matHeaderCellDef>Stage 2 – Branches</th>
-          <td mat-cell *matCellDef="let r">
-            <span class="progress-text">{{ stage2Progress(r) }}</span>
-          </td>
-        </ng-container>
-
-        <!-- Stage 3 -->
-        <ng-container matColumnDef="stage3">
-          <th mat-header-cell *matHeaderCellDef>Stage 3 – MRs</th>
-          <td mat-cell *matCellDef="let r">
-            <span class="progress-text">{{ stage3Progress(r) }}</span>
-          </td>
-        </ng-container>
-
-        <!-- Actions -->
-        <ng-container matColumnDef="actions">
-          <th mat-header-cell *matHeaderCellDef></th>
-          <td mat-cell *matCellDef="let r" style="text-align: right;">
-            <button mat-icon-button color="primary" (click)="viewRelease(r.version)" matTooltip="View details">
-              <mat-icon>arrow_forward</mat-icon>
-            </button>
-          </td>
-        </ng-container>
-
-        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-        <tr mat-row *matRowDef="let row; columns: displayedColumns;"
-            class="clickable-row"
-            (click)="viewRelease(row.version)">
-        </tr>
-      </table>
-    </mat-card-content>
-  </mat-card>
-
-  <div *ngIf="errorMessage" style="color: red; padding: 16px;">{{ errorMessage }}</div>
+  <div *ngIf="errorMessage" style="color:red;padding:16px;">{{ errorMessage }}</div>
 </div>

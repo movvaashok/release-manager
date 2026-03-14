@@ -121,6 +121,7 @@ def create_release(req: CreateReleaseRequest) -> ReleaseState:
             name=refs[n].name,
             project_id=refs[n].project_id,
             path_with_namespace=refs[n].path_with_namespace,
+            web_url=refs[n].web_url,
         )
         for n in req.repo_names
     ]
@@ -178,7 +179,7 @@ def add_repos_to_release(version: str, repo_names: list) -> ReleaseState:
         if n in existing_names:
             continue
         ref = refs[n]
-        state.stage1.append(Stage1Repo(name=ref.name, project_id=ref.project_id, path_with_namespace=ref.path_with_namespace))
+        state.stage1.append(Stage1Repo(name=ref.name, project_id=ref.project_id, path_with_namespace=ref.path_with_namespace, web_url=ref.web_url))
         state.stage2.append(Stage2Repo(name=ref.name, project_id=ref.project_id))
         state.stage3.append(Stage3Repo(name=ref.name, project_id=ref.project_id))
 

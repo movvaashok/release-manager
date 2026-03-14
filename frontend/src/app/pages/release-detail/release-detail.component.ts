@@ -13,6 +13,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatMenuModule } from '@angular/material/menu';
 
 import { ReleaseService } from '../../core/services/release.service';
 import { ReleaseState, Stage2Repo, Stage3Repo } from '../../core/models/release.model';
@@ -37,6 +38,7 @@ import { AuthService } from '../../core/services/auth.service';
     MatChipsModule,
     MatDividerModule,
     MatDialogModule,
+    MatMenuModule,
     StatusChipComponent,
     AddReposDialogComponent,
   ],
@@ -66,9 +68,12 @@ export class ReleaseDetailComponent implements OnInit {
     private auth: AuthService
   ) {}
 
+  isAdmin = false;
+
   ngOnInit(): void {
     this.version = this.route.snapshot.paramMap.get('version') ?? '';
     this.username = this.auth.getUsername() ?? '';
+    this.isAdmin = this.auth.isAdmin();
     this.loadRelease();
   }
 

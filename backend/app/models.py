@@ -47,6 +47,7 @@ class Stage1Repo(BaseModel):
     name: str
     project_id: int
     path_with_namespace: str
+    web_url: Optional[str] = None
 
 
 class Stage2Repo(BaseModel):
@@ -108,6 +109,36 @@ class LoginResponse(BaseModel):
     username: str
     gitlab_token: Optional[str] = None
     has_token: bool
+    role: str = "user"
+
+
+class CreateUserRequest(BaseModel):
+    username: str
+    password: str
+    role: str = "user"
+
+
+class UserSummary(BaseModel):
+    username: str
+    role: str
+    has_token: bool
+
+
+class AddReferenceRepoRequest(BaseModel):
+    name: str
+    project_id: int
+    path_with_namespace: str
+    web_url: str
+    default_branch: str = "master"
+    develop_branch: str = "develop"
+
+
+class UpdateReferenceRepoRequest(BaseModel):
+    project_id: Optional[int] = None
+    path_with_namespace: Optional[str] = None
+    web_url: Optional[str] = None
+    default_branch: Optional[str] = None
+    develop_branch: Optional[str] = None
 
 
 class ReleaseSummary(BaseModel):

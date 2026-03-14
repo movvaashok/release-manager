@@ -1,0 +1,81 @@
+<h2 mat-dialog-title style="display:flex;align-items:center;gap:8px;">
+  <mat-icon>people</mat-icon> Manage Users
+</h2>
+
+<mat-dialog-content style="min-width:560px; max-height:70vh; overflow-y:auto;">
+
+  <!-- Add user form -->
+  <div class="add-form">
+    <div style="font-size:14px;font-weight:500;margin-bottom:12px;color:rgba(0,0,0,0.7);">Create New User</div>
+    <form [formGroup]="form">
+      <div class="form-row">
+        <mat-form-field appearance="outline">
+          <mat-label>Username</mat-label>
+          <input matInput formControlName="username" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Password</mat-label>
+          <input matInput type="password" formControlName="password" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Role</mat-label>
+          <mat-select formControlName="role">
+            <mat-option value="user">User</mat-option>
+            <mat-option value="admin">Admin</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+      <div style="display:flex;justify-content:flex-end;">
+        <button mat-raised-button color="primary" [disabled]="form.invalid || saving" (click)="createUser()">
+          <mat-spinner *ngIf="saving" diameter="16" style="display:inline-block;margin-right:6px;"></mat-spinner>
+          Create User
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <mat-divider style="margin-bottom:16px;"></mat-divider>
+
+  <div *ngIf="loading" style="text-align:center;padding:24px;"><mat-spinner diameter="32"></mat-spinner></div>
+
+  <table *ngIf="!loading" mat-table [dataSource]="users" style="width:100%;">
+
+    <ng-container matColumnDef="username">
+      <th mat-header-cell *matHeaderCellDef>Username</th>
+      <td mat-cell *matCellDef="let u"><strong>{{ u.username }}</strong></td>
+    </ng-container>
+
+    <ng-container matColumnDef="role">
+      <th mat-header-cell *matHeaderCellDef>Role</th>
+      <td mat-cell *matCellDef="let u">
+        <span [class]="u.role === 'admin' ? 'chip-admin' : 'chip-user'">{{ u.role }}</span>
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="has_token">
+      <th mat-header-cell *matHeaderCellDef>GitLab Token</th>
+      <td mat-cell *matCellDef="let u">
+        <mat-icon *ngIf="u.has_token" style="color:#2e7d32;font-size:18px;">check_circle</mat-icon>
+        <mat-icon *ngIf="!u.has_token" style="color:#bdbdbd;font-size:18px;">radio_button_unchecked</mat-icon>
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="actions">
+      <th mat-header-cell *matHeaderCellDef></th>
+      <td mat-cell *matCellDef="let u" style="text-align:right;">
+        <button mat-icon-button color="warn" (click)="deleteUser(u.username)" matTooltip="Delete user">
+          <mat-icon>delete</mat-icon>
+        </button>
+      </td>
+    </ng-container>
+
+    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+    <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+  </table>
+
+  <div *ngIf="errorMessage" class="error-msg">{{ errorMessage }}</div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="close()">Close</button>
+</mat-dialog-actions>

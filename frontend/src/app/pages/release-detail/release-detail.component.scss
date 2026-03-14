@@ -1,6 +1,26 @@
+.spacer { flex: 1; }
+
 .tab-content {
   padding: 16px 0;
 }
+
+.action-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 0;
+}
+
+.link-cell a {
+  color: #1565c0;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  &:hover { text-decoration: underline; }
+}
+
+.full-width { width: 100%; }
 
 .tab-icon {
   margin-right: 6px;

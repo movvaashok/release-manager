@@ -140,6 +140,7 @@ export class LoginComponent {
       next: (res: LoginResponse) => {
         this.submitting = false;
         if (res.has_token) {
+          this.auth.saveSession(res.username, res.gitlab_token!, res.role);
           this.router.navigate(['/']);
         } else {
           this.pendingUsername = res.username;
