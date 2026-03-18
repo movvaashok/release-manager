@@ -64,3 +64,12 @@ export interface CreateReleaseRequest {
   version: string;
   repo_names: string[];
 }
+
+export interface JiraTicket {
+  key: string;
+  summary: string;
+  status: string;
+  issue_type: string;
+  priority?: string;
+  components: string[];
+}

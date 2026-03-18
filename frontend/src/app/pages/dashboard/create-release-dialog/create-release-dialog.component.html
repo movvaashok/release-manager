@@ -1,53 +1,156 @@
-<h2 mat-dialog-title>Create New Release</h2>
+<h2 mat-dialog-title>
+  Create New Release
+  <span style="font-size: 13px; font-weight: 400; color: #757575; margin-left: 12px;">{{ stepLabel }}</span>
+</h2>
 
-<mat-dialog-content style="min-width: 480px; max-height: 60vh;">
-  <form [formGroup]="form">
-    <mat-form-field class="full-width" appearance="outline">
-      <mat-label>Version</mat-label>
-      <input matInput formControlName="version" placeholder="e.g. 2.15.0" />
-      <mat-hint>Format: X.Y.Z</mat-hint>
-      <mat-error *ngIf="form.get('version')?.hasError('pattern')">
-        Version must follow X.Y.Z format (e.g. 2.15.0)
-      </mat-error>
-      <mat-error *ngIf="form.get('version')?.hasError('required')">
-        Version is required
-      </mat-error>
-    </mat-form-field>
-  </form>
+<mat-dialog-content style="min-width: 560px; max-height: 72vh; overflow-y: auto;">
 
-  <div style="margin-top: 20px;">
-    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-      <strong>Repositories ({{ selectedRepos.size }} / {{ repos.length }} selected)</strong>
-      <button mat-stroked-button (click)="toggleAll()" [disabled]="loadingRepos">
-        {{ allSelected ? 'Deselect All' : 'Select All' }}
-      </button>
+  <!-- ── Step 1: Enter Version ── -->
+  <div *ngIf="step === 'version'">
+    <form [formGroup]="form">
+      <mat-form-field class="full-width" appearance="outline">
+        <mat-label>Version</mat-label>
+        <input matInput formControlName="version" placeholder="e.g. 2.15.0" />
+        <mat-hint>Format: X.Y.Z</mat-hint>
+        <mat-error *ngIf="form.get('version')?.hasError('pattern')">
+          Version must follow X.Y.Z format (e.g. 2.15.0)
+        </mat-error>
+        <mat-error *ngIf="form.get('version')?.hasError('required')">
+          Version is required
+        </mat-error>
+      </mat-form-field>
+    </form>
+    <p style="margin-top: 16px; color: #616161; font-size: 14px;">
+      Jira tickets with this fix version will be fetched from project <strong>TSSA</strong>.
+      You can then select tickets to automatically identify the repositories to include.
+    </p>
+  </div>
+
+  <!-- ── Step 2: Select Jira Tickets ── -->
+  <div *ngIf="step === 'tickets'">
+    <div *ngIf="loadingTickets" style="text-align: center; padding: 40px;">
+      <mat-spinner diameter="36"></mat-spinner>
+      <p style="margin-top: 12px; color: #757575;">
+        Fetching Jira tickets for version <strong>{{ form.value.version }}</strong>…
+      </p>
     </div>
 
-    <div *ngIf="loadingRepos" style="text-align: center; padding: 24px;">
-      <mat-spinner diameter="32"></mat-spinner>
+    <div *ngIf="!loadingTickets">
+      <div *ngIf="tickets.length === 0" style="padding: 32px; text-align: center; color: #9e9e9e; border: 1px solid #e0e0e0; border-radius: 4px;">
+        <mat-icon style="font-size: 40px; height: 40px; width: 40px; color: #bdbdbd;">search_off</mat-icon>
+        <p style="margin-top: 8px;">No Jira tickets found for fix version <strong>{{ form.value.version }}</strong> in project TSSA.</p>
+      </div>
+
+      <div *ngIf="tickets.length > 0">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+          <strong>{{ selectedTicketKeys.size }} / {{ tickets.length }} tickets selected</strong>
+          <button mat-stroked-button (click)="toggleAllTickets()">
+            {{ allTicketsSelected ? 'Deselect All' : 'Select All' }}
+          </button>
+        </div>
+
+        <mat-selection-list style="max-height: 360px; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 4px;">
+          <mat-list-option
+            *ngFor="let ticket of tickets"
+            [value]="ticket.key"
+            [selected]="selectedTicketKeys.has(ticket.key)"
+            (click)="toggleTicket(ticket.key)"
+          >
+            <span matListItemTitle>
+              <strong>{{ ticket.key }}</strong>&nbsp;&nbsp;{{ ticket.summary }}
+            </span>
+            <span matListItemLine style="color: #757575;">
+              {{ ticket.issue_type }} &bull; {{ ticket.status }}
+              <ng-container *ngIf="ticket.priority"> &bull; {{ ticket.priority }}</ng-container>
+              <ng-container *ngIf="ticket.components.length > 0">
+                &bull; <em>{{ ticket.components.join(', ') }}</em>
+              </ng-container>
+            </span>
+          </mat-list-option>
+        </mat-selection-list>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Step 3: Confirm Repositories ── -->
+  <div *ngIf="step === 'repos'">
+    <div *ngIf="loadingRepos" style="text-align: center; padding: 40px;">
+      <mat-spinner diameter="36"></mat-spinner>
+      <p style="margin-top: 12px; color: #757575;">Loading repositories…</p>
     </div>
 
-    <mat-selection-list *ngIf="!loadingRepos" style="max-height: 300px; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 4px;">
-      <mat-list-option
-        *ngFor="let repo of repos"
-        [value]="repo.name"
-        [selected]="selectedRepos.has(repo.name)"
-        (click)="toggleRepo(repo.name)"
-      >
-        <span matListItemTitle>{{ repo.name }}</span>
-        <span matListItemLine>{{ repo.path_with_namespace }}</span>
-      </mat-list-option>
-    </mat-selection-list>
+    <div *ngIf="!loadingRepos">
+      <p style="margin: 0 0 12px; font-size: 14px; color: #616161;">
+        Repositories below are pre-selected based on components from the chosen Jira tickets.
+        Adjust the selection as needed before creating the release.
+      </p>
+
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+        <strong>{{ selectedRepos.size }} / {{ repos.length }} repositories selected</strong>
+        <button mat-stroked-button (click)="toggleAllRepos()">
+          {{ allReposSelected ? 'Deselect All' : 'Select All' }}
+        </button>
+      </div>
+
+      <mat-selection-list style="max-height: 360px; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 4px;">
+        <mat-list-option
+          *ngFor="let repo of repos"
+          [value]="repo.name"
+          [selected]="selectedRepos.has(repo.name)"
+          (click)="toggleRepo(repo.name)"
+        >
+          <span matListItemTitle>{{ repo.name }}</span>
+          <span matListItemLine>{{ repo.path_with_namespace }}</span>
+        </mat-list-option>
+      </mat-selection-list>
+    </div>
   </div>
 
   <div *ngIf="errorMessage" style="margin-top: 12px; color: #c62828; font-size: 14px;">
     {{ errorMessage }}
   </div>
+
 </mat-dialog-content>
 
 <mat-dialog-actions align="end">
-  <button mat-button (click)="cancel()">Cancel</button>
+  <button mat-button (click)="cancel()" [disabled]="submitting">Cancel</button>
+
   <button
+    mat-stroked-button
+    *ngIf="step !== 'version'"
+    (click)="back()"
+    [disabled]="loadingTickets || loadingRepos || submitting"
+  >
+    Back
+  </button>
+
+  <!-- Step 1 → Fetch Tickets -->
+  <button
+    *ngIf="step === 'version'"
+    mat-raised-button
+    color="primary"
+    [disabled]="!form.valid || loadingTickets"
+    (click)="fetchTickets()"
+  >
+    <mat-spinner *ngIf="loadingTickets" diameter="18" style="display: inline-block; margin-right: 8px;"></mat-spinner>
+    Fetch Jira Tickets
+  </button>
+
+  <!-- Step 2 → Use Selected -->
+  <button
+    *ngIf="step === 'tickets'"
+    mat-raised-button
+    color="primary"
+    [disabled]="selectedTicketKeys.size === 0 || loadingRepos"
+    (click)="useSelectedTickets()"
+  >
+    <mat-spinner *ngIf="loadingRepos" diameter="18" style="display: inline-block; margin-right: 8px;"></mat-spinner>
+    Use Selected ({{ selectedTicketKeys.size }})
+  </button>
+
+  <!-- Step 3 → Create Release -->
+  <button
+    *ngIf="step === 'repos'"
     mat-raised-button
     color="primary"
     [disabled]="!canSubmit"
