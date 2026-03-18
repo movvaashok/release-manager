@@ -16,14 +16,15 @@ async def get_tickets_by_fix_version(version: str, project: str) -> List[dict]:
     headers = {
         "Authorization": _auth_header(),
         "Accept": "application/json",
+        "Content-Type": "application/json",
     }
     async with httpx.AsyncClient() as client:
-        response = await client.get(
-            f"{settings.jira_url.rstrip('/')}/rest/api/3/search",
+        response = await client.post(
+            f"{settings.jira_url.rstrip('/')}/rest/api/3/search/jql",
             headers=headers,
-            params={
+            json={
                 "jql": jql,
-                "fields": "summary,status,priority,components,issuetype",
+                "fields": ["summary", "status", "priority", "components", "issuetype"],
                 "maxResults": 100,
             },
             timeout=30.0,
