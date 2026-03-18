@@ -16,6 +16,7 @@ def _auth_header() -> str:
 
 async def get_tickets_by_fix_version(version: str, project: str) -> List[dict]:
     jql = f'project = "{project}" AND fixVersion = "{version}" ORDER BY created DESC'
+    print(f"[JIRA DEBUG] JQL: {jql}", flush=True)
     headers = {
         "Authorization": _auth_header(),
         "Accept": "application/json",
@@ -34,6 +35,6 @@ async def get_tickets_by_fix_version(version: str, project: str) -> List[dict]:
         )
         response.raise_for_status()
         data = response.json()
-        logger.info("Jira search response: total=%s, issues=%s, keys=%s",
-                    data.get("total"), len(data.get("issues", [])), list(data.keys()))
+        print(f"[JIRA DEBUG] status={response.status_code} total={data.get('total')} "
+              f"issues={len(data.get('issues', []))} keys={list(data.keys())}", flush=True)
         return data.get("issues", [])
