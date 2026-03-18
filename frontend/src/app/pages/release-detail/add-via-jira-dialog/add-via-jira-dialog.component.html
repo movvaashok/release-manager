@@ -33,40 +33,39 @@
         </div>
 
         <div class="ticket-list">
-          <div
-            *ngFor="let ticket of tickets"
-            class="ticket-row"
-            [class.ticket-selected]="selectedTicketKeys.has(ticket.key)"
-            (click)="toggleTicket(ticket.key)"
-          >
-            <mat-checkbox
-              [checked]="selectedTicketKeys.has(ticket.key)"
-              (click)="$event.stopPropagation()"
-              (change)="toggleTicket(ticket.key)"
-              style="flex-shrink:0;"
-            ></mat-checkbox>
+          <ng-container *ngFor="let ticket of tickets">
+            <div
+              class="ticket-row"
+              [class.ticket-selected]="selectedTicketKeys.has(ticket.key)"
+              (click)="toggleTicket(ticket.key)"
+            >
+              <mat-checkbox
+                [checked]="selectedTicketKeys.has(ticket.key)"
+                (click)="$event.stopPropagation()"
+                (change)="toggleTicket(ticket.key)"
+                style="flex-shrink:0;"
+              ></mat-checkbox>
 
-            <div class="ticket-body">
-              <div class="ticket-top">
-                <span class="ticket-key">{{ ticket.key }}</span>
-                <span class="ticket-status-badge" [ngClass]="statusClass(ticket.status)">{{ ticket.status }}</span>
+              <div class="ticket-body">
+                <div class="ticket-top">
+                  <span class="ticket-key">{{ ticket.key }}</span>
+                  <span class="ticket-status-badge" [ngClass]="statusClass(ticket.status)">{{ ticket.status }}</span>
+                </div>
+                <div class="ticket-summary">{{ ticket.summary }}</div>
               </div>
-              <div class="ticket-summary">{{ ticket.summary }}</div>
+
+              <button
+                *ngIf="ticket.components.length > 0"
+                mat-icon-button
+                class="expand-btn"
+                (click)="toggleExpand(ticket.key, $event)"
+                matTooltip="Components"
+              >
+                <mat-icon>{{ expandedTickets.has(ticket.key) ? 'expand_less' : 'expand_more' }}</mat-icon>
+              </button>
             </div>
 
-            <button
-              *ngIf="ticket.components.length > 0"
-              mat-icon-button
-              class="expand-btn"
-              (click)="toggleExpand(ticket.key, $event)"
-              matTooltip="Components"
-            >
-              <mat-icon>{{ expandedTickets.has(ticket.key) ? 'expand_less' : 'expand_more' }}</mat-icon>
-            </button>
-          </div>
-
-          <!-- Component dropdown row -->
-          <ng-container *ngFor="let ticket of tickets">
+            <!-- Component row renders directly below its ticket -->
             <div *ngIf="expandedTickets.has(ticket.key)" class="component-row">
               <mat-chip-set>
                 <mat-chip *ngFor="let c of ticket.components" style="font-size:12px;">{{ c }}</mat-chip>
@@ -164,7 +163,8 @@
   display: flex; align-items: center; gap: 12px; padding: 10px 14px;
   cursor: pointer; transition: background 0.15s; border-bottom: 1px solid #f5f5f5;
 }
-.ticket-row:last-child { border-bottom: none; }
+.ticket-row:last-child { border-bottom: 1px solid #f5f5f5; }
+.component-row:last-child { border-bottom: none; }
 .ticket-row:hover { background: #f5f5f5; }
 .ticket-selected { background: #e8f0fe !important; }
 .ticket-body { flex: 1; min-width: 0; }
