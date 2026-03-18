@@ -14,7 +14,6 @@ import { MatDividerModule } from '@angular/material/divider';
 import { ReleaseService } from '../../core/services/release.service';
 import { ReleaseSummary } from '../../core/models/release.model';
 import { AuthService } from '../../core/services/auth.service';
-import { CreateReleaseDialogComponent } from './create-release-dialog/create-release-dialog.component';
 import { ManageReposDialogComponent } from './manage-repos-dialog/manage-repos-dialog.component';
 import { ManageUsersDialogComponent } from './manage-users-dialog/manage-users-dialog.component';
 
@@ -62,11 +61,20 @@ export class DashboardComponent implements OnInit {
     });
   }
 
-  openCreateDialog(): void {
-    const ref = this.dialog.open(CreateReleaseDialogComponent, { width: '560px', disableClose: true });
-    ref.afterClosed().subscribe(result => {
-      if (result) this.router.navigate(['/releases', result.version]);
-    });
+  get inProgressReleases(): ReleaseSummary[] {
+    return this.releases.filter(r => r.stage2_pending > 0 || r.stage3_pending > 0);
+  }
+
+  get attentionCount(): number {
+    return this.inProgressReleases.filter(r => this.needsAttention(r)).length;
+  }
+
+  needsAttention(r: ReleaseSummary): boolean {
+    return r.stage2_failed > 0 || r.stage2_conflict > 0 || r.stage3_failed > 0;
+  }
+
+  newRelease(): void {
+    this.router.navigate(['/releases/new']);
   }
 
   openManageRepos(): void {
@@ -96,16 +104,5 @@ export class DashboardComponent implements OnInit {
     if (r.stage3_failed > 0) return 'status-warn';
     if (r.stage3_pending > 0) return 'status-pending';
     return 'status-done';
-  }
-
-  get totalReleases(): number { return this.releases.length; }
-  get pendingReleases(): number {
-    return this.releases.filter(r => r.stage2_pending > 0 || r.stage3_pending > 0).length;
-  }
-  get completedReleases(): number {
-    return this.releases.filter(r =>
-      r.stage2_pending === 0 && r.stage2_failed === 0 &&
-      r.stage3_pending === 0 && r.stage3_failed === 0
-    ).length;
   }
 }

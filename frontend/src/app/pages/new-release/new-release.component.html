@@ -1,0 +1,192 @@
+<!-- Toolbar -->
+<mat-toolbar color="primary" class="toolbar">
+  <button mat-icon-button (click)="goToDashboard()" matTooltip="Back to Dashboard">
+    <mat-icon>arrow_back</mat-icon>
+  </button>
+  <mat-icon style="margin: 0 8px;">rocket_launch</mat-icon>
+  <span class="app-title">New Release</span>
+</mat-toolbar>
+
+<!-- Page body -->
+<div class="page-container">
+
+  <!-- Step indicator -->
+  <div class="step-indicator">
+    <div class="step" [class.active]="step === 'version'" [class.done]="stepIndex > 1">
+      <div class="step-circle">{{ stepIndex > 1 ? '✓' : '1' }}</div>
+      <span>Version</span>
+    </div>
+    <div class="step-line" [class.done]="stepIndex > 1"></div>
+    <div class="step" [class.active]="step === 'tickets'" [class.done]="stepIndex > 2">
+      <div class="step-circle">{{ stepIndex > 2 ? '✓' : '2' }}</div>
+      <span>Jira Tickets</span>
+    </div>
+    <div class="step-line" [class.done]="stepIndex > 2"></div>
+    <div class="step" [class.active]="step === 'repos'">
+      <div class="step-circle">3</div>
+      <span>Repositories</span>
+    </div>
+  </div>
+
+  <!-- ── Step 1: Enter Version ── -->
+  <div *ngIf="step === 'version'" class="step-card">
+    <h2 class="step-title">Enter Release Version</h2>
+    <p class="step-subtitle">
+      Jira tickets with this fix version will be fetched from project <strong>TSSA</strong>.
+    </p>
+
+    <form [formGroup]="form" class="version-form">
+      <mat-form-field appearance="outline" class="version-field">
+        <mat-label>Version</mat-label>
+        <input matInput formControlName="version" placeholder="e.g. 2.15.0" />
+        <mat-hint>Format: X.Y.Z</mat-hint>
+        <mat-error *ngIf="form.get('version')?.hasError('pattern')">Must follow X.Y.Z format</mat-error>
+        <mat-error *ngIf="form.get('version')?.hasError('required')">Version is required</mat-error>
+      </mat-form-field>
+    </form>
+
+    <div *ngIf="errorMessage" class="error-msg">{{ errorMessage }}</div>
+
+    <div class="step-actions">
+      <button mat-button (click)="goToDashboard()">Cancel</button>
+      <button mat-raised-button color="primary" [disabled]="!form.valid || loadingTickets" (click)="fetchTickets()">
+        <mat-spinner *ngIf="loadingTickets" diameter="18" class="btn-spinner"></mat-spinner>
+        Fetch Jira Tickets
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Step 2: Select Jira Tickets ── -->
+  <div *ngIf="step === 'tickets'" class="step-card">
+    <h2 class="step-title">Select Jira Tickets</h2>
+    <p class="step-subtitle">
+      Select the tickets included in release <strong>{{ form.value.version }}</strong>.
+      Repositories will be inferred from ticket components.
+    </p>
+
+    <div *ngIf="tickets.length === 0" class="empty-state">
+      <mat-icon>search_off</mat-icon>
+      <p>No Jira tickets found for fix version <strong>{{ form.value.version }}</strong> in project TSSA.</p>
+    </div>
+
+    <div *ngIf="tickets.length > 0">
+      <div class="list-header">
+        <span>{{ selectedTicketKeys.size }} / {{ tickets.length }} selected</span>
+        <button mat-stroked-button (click)="toggleAllTickets()">
+          {{ allTicketsSelected ? 'Deselect All' : 'Select All' }}
+        </button>
+      </div>
+
+      <mat-selection-list class="ticket-list">
+        <mat-list-option
+          *ngFor="let ticket of tickets"
+          [value]="ticket.key"
+          [selected]="selectedTicketKeys.has(ticket.key)"
+          (click)="toggleTicket(ticket.key)"
+        >
+          <span matListItemTitle>
+            <strong class="ticket-key">{{ ticket.key }}</strong>&nbsp;&nbsp;{{ ticket.summary }}
+          </span>
+          <span matListItemLine class="ticket-meta">
+            {{ ticket.issue_type }} &bull; {{ ticket.status }}
+            <ng-container *ngIf="ticket.priority"> &bull; {{ ticket.priority }}</ng-container>
+            <ng-container *ngIf="ticket.components.length > 0">
+              &bull; <em>{{ ticket.components.join(', ') }}</em>
+            </ng-container>
+          </span>
+        </mat-list-option>
+      </mat-selection-list>
+    </div>
+
+    <div *ngIf="errorMessage" class="error-msg">{{ errorMessage }}</div>
+
+    <div class="step-actions">
+      <button mat-button (click)="back()">Back</button>
+      <button
+        mat-raised-button
+        color="primary"
+        [disabled]="selectedTicketKeys.size === 0 || loadingRepos"
+        (click)="proceedToRepos()"
+      >
+        <mat-spinner *ngIf="loadingRepos" diameter="18" class="btn-spinner"></mat-spinner>
+        Next — Select Repositories
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Step 3: Confirm Repositories ── -->
+  <div *ngIf="step === 'repos'" class="step-card">
+    <h2 class="step-title">Confirm Repositories</h2>
+    <p class="step-subtitle">
+      Matched repositories are pre-selected based on Jira ticket components.
+      You can also include additional repositories below.
+    </p>
+
+    <div *ngIf="loadingRepos" style="text-align:center; padding: 40px;">
+      <mat-spinner diameter="36"></mat-spinner>
+    </div>
+
+    <div *ngIf="!loadingRepos">
+
+      <!-- Matched repos -->
+      <div class="repo-section">
+        <div class="repo-section-header matched">
+          <mat-icon>check_circle</mat-icon>
+          Matched from Jira Components ({{ matchedRepos.length }})
+        </div>
+
+        <div *ngIf="matchedRepos.length === 0" class="no-match">
+          No repositories matched the Jira component names. Select from the list below.
+        </div>
+
+        <mat-selection-list *ngIf="matchedRepos.length > 0" class="repo-list">
+          <mat-list-option
+            *ngFor="let repo of matchedRepos"
+            [value]="repo.name"
+            [selected]="selectedRepos.has(repo.name)"
+            (click)="toggleRepo(repo.name)"
+          >
+            <span matListItemTitle>{{ repo.name }}</span>
+            <span matListItemLine>{{ repo.path_with_namespace }}</span>
+          </mat-list-option>
+        </mat-selection-list>
+      </div>
+
+      <!-- Other repos -->
+      <div *ngIf="otherRepos.length > 0" class="repo-section" style="margin-top: 20px;">
+        <div class="repo-section-header other">
+          <mat-icon>add_circle_outline</mat-icon>
+          Other Repositories ({{ otherRepos.length }})
+        </div>
+
+        <mat-selection-list class="repo-list">
+          <mat-list-option
+            *ngFor="let repo of otherRepos"
+            [value]="repo.name"
+            [selected]="selectedRepos.has(repo.name)"
+            (click)="toggleRepo(repo.name)"
+          >
+            <span matListItemTitle>{{ repo.name }}</span>
+            <span matListItemLine>{{ repo.path_with_namespace }}</span>
+          </mat-list-option>
+        </mat-selection-list>
+      </div>
+
+      <div class="selected-summary">
+        <mat-icon>folder_open</mat-icon>
+        {{ selectedRepos.size }} {{ selectedRepos.size === 1 ? 'repository' : 'repositories' }} selected
+      </div>
+    </div>
+
+    <div *ngIf="errorMessage" class="error-msg">{{ errorMessage }}</div>
+
+    <div class="step-actions">
+      <button mat-button (click)="back()" [disabled]="submitting">Back</button>
+      <button mat-raised-button color="primary" [disabled]="!canCreate" (click)="createRelease()">
+        <mat-spinner *ngIf="submitting" diameter="18" class="btn-spinner"></mat-spinner>
+        Create Release
+      </button>
+    </div>
+  </div>
+
+</div>

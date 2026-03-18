@@ -4,7 +4,7 @@
   <span class="app-title">Pioneer Release Manager</span>
   <span class="spacer"></span>
 
-  <button *ngIf="isAdmin" mat-raised-button (click)="openCreateDialog()" style="margin-right:12px;">
+  <button *ngIf="isAdmin" mat-raised-button (click)="newRelease()" style="margin-right:12px;">
     <mat-icon>add</mat-icon> New Release
   </button>
 
@@ -36,86 +36,108 @@
 
 <div class="page-container">
 
-  <!-- Stats row -->
-  <div class="stats-row" *ngIf="!loading">
-    <div class="stat-card">
-      <div class="stat-value">{{ totalReleases }}</div>
-      <div class="stat-label">Total Releases</div>
-    </div>
-    <div class="stat-card warn">
-      <div class="stat-value">{{ pendingReleases }}</div>
-      <div class="stat-label">In Progress</div>
-    </div>
-    <div class="stat-card success">
-      <div class="stat-value">{{ completedReleases }}</div>
-      <div class="stat-label">Completed</div>
-    </div>
-  </div>
-
   <!-- Loading -->
   <div *ngIf="loading" style="text-align:center;padding:64px;">
     <mat-spinner diameter="48"></mat-spinner>
   </div>
 
-  <!-- Empty state -->
-  <div *ngIf="!loading && releases.length === 0" class="empty-state">
-    <mat-icon>inbox</mat-icon>
-    <p>No releases yet.<span *ngIf="isAdmin"> Click <strong>New Release</strong> to get started.</span></p>
-  </div>
+  <ng-container *ngIf="!loading">
 
-  <!-- Release cards grid -->
-  <div *ngIf="!loading && releases.length > 0" class="releases-grid">
-    <mat-card *ngFor="let r of releases" class="release-card" (click)="viewRelease(r.version)">
-      <mat-card-header>
-        <div class="card-header-row">
-          <span class="version-badge">v{{ r.version }}</span>
-          <span class="created-date">{{ r.created_at | date:'mediumDate' }}</span>
+    <!-- Attention banner -->
+    <div *ngIf="attentionCount > 0" class="attention-banner">
+      <mat-icon>warning</mat-icon>
+      <span>
+        <strong>{{ attentionCount }} {{ attentionCount === 1 ? 'release requires' : 'releases require' }} attention</strong>
+        — failures or conflicts detected. Manual verification needed.
+      </span>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-value">{{ inProgressReleases.length }}</div>
+        <div class="stat-label">In Progress</div>
+      </div>
+      <div class="stat-card warn" *ngIf="attentionCount > 0">
+        <div class="stat-value">{{ attentionCount }}</div>
+        <div class="stat-label">Need Attention</div>
+      </div>
+    </div>
+
+    <!-- Empty state -->
+    <div *ngIf="inProgressReleases.length === 0" class="empty-state">
+      <mat-icon>check_circle_outline</mat-icon>
+      <p>No releases currently in progress.</p>
+      <p *ngIf="isAdmin" style="font-size:14px; margin-top:4px;">
+        Click <strong>New Release</strong> to get started.
+      </p>
+    </div>
+
+    <!-- Release cards -->
+    <div *ngIf="inProgressReleases.length > 0" class="releases-grid">
+      <mat-card
+        *ngFor="let r of inProgressReleases"
+        class="release-card"
+        [class.card-attention]="needsAttention(r)"
+        (click)="viewRelease(r.version)"
+      >
+        <!-- Attention badge -->
+        <div *ngIf="needsAttention(r)" class="attention-badge">
+          <mat-icon>warning</mat-icon> Needs Attention
         </div>
-      </mat-card-header>
 
-      <mat-card-content>
-        <div class="repo-count">
-          <mat-icon>folder_open</mat-icon>
-          {{ r.total_repos }} {{ r.total_repos === 1 ? 'repository' : 'repositories' }}
-        </div>
+        <mat-card-header>
+          <div class="card-header-row">
+            <span class="version-badge">v{{ r.version }}</span>
+            <span class="created-date">{{ r.created_at | date:'mediumDate' }}</span>
+          </div>
+        </mat-card-header>
 
-        <div class="stage-section">
-          <div class="stage-label">
-            <mat-icon class="stage-icon">account_tree</mat-icon>
-            Stage 2 – Branches
+        <mat-card-content>
+          <div class="repo-count">
+            <mat-icon>folder_open</mat-icon>
+            {{ r.total_repos }} {{ r.total_repos === 1 ? 'repository' : 'repositories' }}
           </div>
-          <div class="pill-row">
-            <span *ngIf="r.stage2_success"   class="pill pill-success">{{ r.stage2_success }} ok</span>
-            <span *ngIf="r.stage2_conflict"  class="pill pill-conflict">{{ r.stage2_conflict }} conflict</span>
-            <span *ngIf="r.stage2_failed"    class="pill pill-failed">{{ r.stage2_failed }} failed</span>
-            <span *ngIf="r.stage2_pending"   class="pill pill-pending">{{ r.stage2_pending }} pending</span>
-            <span *ngIf="!r.stage2_success && !r.stage2_conflict && !r.stage2_failed && !r.stage2_pending"
-                  class="pill pill-pending">not started</span>
-          </div>
-        </div>
 
-        <div class="stage-section">
-          <div class="stage-label">
-            <mat-icon class="stage-icon">merge</mat-icon>
-            Stage 3 – Merge Requests
+          <div class="stage-section">
+            <div class="stage-label">
+              <mat-icon class="stage-icon">account_tree</mat-icon>
+              Stage 2 – Branches
+            </div>
+            <div class="pill-row">
+              <span *ngIf="r.stage2_success"   class="pill pill-success">{{ r.stage2_success }} ok</span>
+              <span *ngIf="r.stage2_conflict"  class="pill pill-conflict">{{ r.stage2_conflict }} conflict</span>
+              <span *ngIf="r.stage2_failed"    class="pill pill-failed">{{ r.stage2_failed }} failed</span>
+              <span *ngIf="r.stage2_pending"   class="pill pill-pending">{{ r.stage2_pending }} pending</span>
+              <span *ngIf="!r.stage2_success && !r.stage2_conflict && !r.stage2_failed && !r.stage2_pending"
+                    class="pill pill-pending">not started</span>
+            </div>
           </div>
-          <div class="pill-row">
-            <span *ngIf="r.stage3_success + r.stage3_already_exists > 0" class="pill pill-success">{{ r.stage3_success + r.stage3_already_exists }} done</span>
-            <span *ngIf="r.stage3_failed"   class="pill pill-failed">{{ r.stage3_failed }} failed</span>
-            <span *ngIf="r.stage3_pending"  class="pill pill-pending">{{ r.stage3_pending }} pending</span>
-            <span *ngIf="!r.stage3_success && !r.stage3_already_exists && !r.stage3_failed && !r.stage3_pending"
-                  class="pill pill-pending">not started</span>
-          </div>
-        </div>
-      </mat-card-content>
 
-      <mat-card-actions align="end">
-        <button mat-button color="primary" (click)="$event.stopPropagation(); viewRelease(r.version)">
-          View Details <mat-icon>arrow_forward</mat-icon>
-        </button>
-      </mat-card-actions>
-    </mat-card>
-  </div>
+          <div class="stage-section">
+            <div class="stage-label">
+              <mat-icon class="stage-icon">merge</mat-icon>
+              Stage 3 – Merge Requests
+            </div>
+            <div class="pill-row">
+              <span *ngIf="r.stage3_success + r.stage3_already_exists > 0" class="pill pill-success">{{ r.stage3_success + r.stage3_already_exists }} done</span>
+              <span *ngIf="r.stage3_failed"   class="pill pill-failed">{{ r.stage3_failed }} failed</span>
+              <span *ngIf="r.stage3_pending"  class="pill pill-pending">{{ r.stage3_pending }} pending</span>
+              <span *ngIf="!r.stage3_success && !r.stage3_already_exists && !r.stage3_failed && !r.stage3_pending"
+                    class="pill pill-pending">not started</span>
+            </div>
+          </div>
+        </mat-card-content>
+
+        <mat-card-actions align="end">
+          <button mat-button color="primary" (click)="$event.stopPropagation(); viewRelease(r.version)">
+            View Details <mat-icon>arrow_forward</mat-icon>
+          </button>
+        </mat-card-actions>
+      </mat-card>
+    </div>
+
+  </ng-container>
 
   <div *ngIf="errorMessage" style="color:red;padding:16px;">{{ errorMessage }}</div>
 </div>

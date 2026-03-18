@@ -38,6 +38,40 @@
   p { font-size: 16px; margin-top: 12px; }
 }
 
+/* Attention banner */
+.attention-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff3e0;
+  border: 1px solid #ffb74d;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  color: #e65100;
+  mat-icon { color: #fb8c00; flex-shrink: 0; }
+}
+
+/* Attention card */
+.card-attention {
+  border-top-color: #e53935 !important;
+}
+
+.attention-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #ffebee;
+  color: #c62828;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 12px;
+  margin: -16px -16px 8px;
+  border-radius: 8px 8px 0 0;
+  mat-icon { font-size: 14px; width: 14px; height: 14px; }
+}
+
 /* Cards grid */
 .releases-grid {
   display: grid;

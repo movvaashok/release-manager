@@ -1,0 +1,187 @@
+.toolbar { position: sticky; top: 0; z-index: 100; }
+.app-title { font-size: 18px; font-weight: 500; }
+
+.page-container {
+  max-width: 720px;
+  margin: 40px auto;
+  padding: 0 16px 64px;
+}
+
+/* ── Step indicator ── */
+.step-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 36px;
+  gap: 0;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 90px;
+
+  span {
+    font-size: 12px;
+    color: rgba(0, 0, 0, 0.4);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  &.active {
+    .step-circle { background: #1565c0; color: white; }
+    span { color: #1565c0; }
+  }
+
+  &.done {
+    .step-circle { background: #43a047; color: white; }
+    span { color: #43a047; }
+  }
+}
+
+.step-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #e0e0e0;
+  color: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.step-line {
+  flex: 1;
+  height: 2px;
+  background: #e0e0e0;
+  margin-bottom: 22px;
+  max-width: 80px;
+  &.done { background: #43a047; }
+}
+
+/* ── Step card ── */
+.step-card {
+  background: white;
+  border-radius: 12px;
+  padding: 32px 36px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.step-title {
+  margin: 0 0 8px;
+  font-size: 22px;
+  font-weight: 600;
+  color: #1a237e;
+}
+
+.step-subtitle {
+  margin: 0 0 28px;
+  color: #616161;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ── Version form ── */
+.version-form { margin-bottom: 8px; }
+.version-field { width: 300px; }
+
+/* ── Ticket list ── */
+.list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.ticket-list {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  max-height: 380px;
+  overflow-y: auto;
+}
+
+.ticket-key { color: #1565c0; }
+
+.ticket-meta { color: #9e9e9e; }
+
+/* ── Repo sections ── */
+.repo-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 10px;
+
+  mat-icon { font-size: 18px; width: 18px; height: 18px; }
+
+  &.matched { color: #2e7d32; mat-icon { color: #43a047; } }
+  &.other   { color: #1565c0; mat-icon { color: #42a5f5; } }
+}
+
+.repo-list {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.no-match {
+  padding: 16px;
+  color: #9e9e9e;
+  font-size: 14px;
+  border: 1px dashed #e0e0e0;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.selected-summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1565c0;
+  mat-icon { font-size: 18px; width: 18px; height: 18px; }
+}
+
+/* ── Empty state ── */
+.empty-state {
+  text-align: center;
+  padding: 40px 24px;
+  color: #9e9e9e;
+  mat-icon { font-size: 48px; width: 48px; height: 48px; color: #bdbdbd; }
+  p { margin-top: 12px; font-size: 15px; }
+}
+
+/* ── Actions ── */
+.step-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.btn-spinner {
+  display: inline-block;
+  margin-right: 8px;
+}
+
+/* ── Error ── */
+.error-msg {
+  margin-top: 12px;
+  color: #c62828;
+  font-size: 14px;
+}

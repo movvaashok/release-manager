@@ -20,6 +20,12 @@ export const routes: Routes = [
       import('./pages/dashboard/dashboard.component').then(m => m.DashboardComponent),
   },
   {
+    path: 'releases/new',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/new-release/new-release.component').then(m => m.NewReleaseComponent),
+  },
+  {
     path: 'releases/:version',
     canActivate: [authGuard],
     loadComponent: () =>
