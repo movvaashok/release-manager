@@ -16,31 +16,38 @@ def _auth_header() -> str:
 
 async def get_tickets_by_fix_version(version: str, project: str) -> List[dict]:
     jql = f'project = "{project}" AND fixVersion = "{version}" ORDER BY created DESC'
-    print(f"[JIRA DEBUG] JQL: {jql}", flush=True)
+    jql_project_only = f'project = "{project}" ORDER BY created DESC'
+    print(f"[JIRA DEBUG] JQL (full): {jql}", flush=True)
+    print(f"[JIRA DEBUG] JQL (project only): {jql_project_only}", flush=True)
     headers = {
         "Authorization": _auth_header(),
         "Accept": "application/json",
         "Content-Type": "application/json",
     }
     async with httpx.AsyncClient() as client:
-        response = await client.post(
+        # Test 1: project only (to check access)
+        r1 = await client.post(
             f"{settings.jira_url.rstrip('/')}/rest/api/3/search/jql",
             headers=headers,
-            json={
-                "jql": jql,
-                "fields": ["summary", "status", "priority", "components", "issuetype"],
-                "maxResults": 100,
-            },
+            json={"jql": jql_project_only, "fields": ["summary"], "maxResults": 1},
             timeout=30.0,
         )
-        response.raise_for_status()
-        data = response.json()
+        d1 = r1.json()
+        print(f"[JIRA DEBUG] project-only → status={r1.status_code} issues={len(d1.get('issues', []))} isLast={d1.get('isLast')}", flush=True)
+        if d1.get("issues"):
+            print(f"[JIRA DEBUG] sample key: {d1['issues'][0].get('key')}", flush=True)
+
+        # Test 2: full JQL with fixVersion
+        r2 = await client.post(
+            f"{settings.jira_url.rstrip('/')}/rest/api/3/search/jql",
+            headers=headers,
+            json={"jql": jql, "fields": ["summary", "status", "priority", "components", "issuetype"], "maxResults": 100},
+            timeout=30.0,
+        )
+        r2.raise_for_status()
+        data = r2.json()
         issues = data.get("issues", [])
-        print(f"[JIRA DEBUG] status={response.status_code}", flush=True)
-        print(f"[JIRA DEBUG] response keys: {list(data.keys())}", flush=True)
-        print(f"[JIRA DEBUG] issue count: {len(issues)}", flush=True)
-        if issues:
-            print(f"[JIRA DEBUG] first issue key: {issues[0].get('key')}", flush=True)
-        else:
-            print("[JIRA DEBUG] NO ISSUES RETURNED — check JQL or permissions", flush=True)
+        print(f"[JIRA DEBUG] full JQL → status={r2.status_code} issues={len(issues)}", flush=True)
+        if not issues:
+            print("[JIRA DEBUG] NO ISSUES — fixVersion name likely doesn't match exactly", flush=True)
         return issues
