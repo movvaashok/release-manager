@@ -25,6 +25,15 @@ async def get_tickets_by_fix_version(version: str, project: str) -> List[dict]:
         "Content-Type": "application/json",
     }
     async with httpx.AsyncClient() as client:
+        # Test 0: list all versions in the project
+        r0 = await client.get(
+            f"{settings.jira_url.rstrip('/')}/rest/api/3/project/{project}/versions",
+            headers=headers,
+            timeout=30.0,
+        )
+        versions = [v.get("name") for v in r0.json()] if r0.status_code == 200 else []
+        print(f"[JIRA DEBUG] versions in {project}: {versions}", flush=True)
+
         # Test 1: project only (to check access)
         r1 = await client.post(
             f"{settings.jira_url.rstrip('/')}/rest/api/3/search/jql",
