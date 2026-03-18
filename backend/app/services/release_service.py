@@ -3,13 +3,15 @@ Business logic for the release workflow.
 
 Storage layout:
     data/
-        repositories.json         – reference repo list (manually maintained)
-        releases/
-            2.15.0.json           – one file per release
+        {project_id}/
+            repositories.json     – reference repo list per project
+            releases/
+                2.15.0.json       – one file per release
 """
 from __future__ import annotations
 
 import json
+import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional
@@ -31,34 +33,53 @@ from app.services.gitlab_client import get_gitlab_client
 
 
 # ---------------------------------------------------------------------------
+# One-time migration: move legacy flat data into pioneer/ subdirectory
+# ---------------------------------------------------------------------------
+
+def migrate_legacy_data() -> None:
+    pioneer_releases = settings.data_dir / "pioneer" / "releases"
+    legacy_releases = settings.data_dir / "releases"
+    if legacy_releases.exists() and not pioneer_releases.exists():
+        pioneer_releases.mkdir(parents=True, exist_ok=True)
+        for f in legacy_releases.glob("*.json"):
+            shutil.copy2(f, pioneer_releases / f.name)
+
+    pioneer_repos = settings.data_dir / "pioneer" / "repositories.json"
+    legacy_repos = settings.data_dir / "repositories.json"
+    if legacy_repos.exists() and not pioneer_repos.exists():
+        pioneer_repos.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(legacy_repos, pioneer_repos)
+
+
+# ---------------------------------------------------------------------------
 # Helpers – JSON persistence
 # ---------------------------------------------------------------------------
 
-def _releases_dir() -> Path:
-    d = settings.data_dir / "releases"
+def _releases_dir(project_id: str) -> Path:
+    d = settings.data_dir / project_id / "releases"
     d.mkdir(parents=True, exist_ok=True)
     return d
 
 
-def _release_path(version: str) -> Path:
-    return _releases_dir() / f"{version}.json"
+def _release_path(project_id: str, version: str) -> Path:
+    return _releases_dir(project_id) / f"{version}.json"
 
 
-def _load_release(version: str) -> Optional[ReleaseState]:
-    path = _release_path(version)
+def _load_release(project_id: str, version: str) -> Optional[ReleaseState]:
+    path = _release_path(project_id, version)
     if not path.exists():
         return None
     return ReleaseState.model_validate_json(path.read_text())
 
 
-def _save_release(state: ReleaseState) -> None:
-    _release_path(state.version).write_text(
+def _save_release(project_id: str, state: ReleaseState) -> None:
+    _release_path(project_id, state.version).write_text(
         state.model_dump_json(indent=2)
     )
 
 
-def _load_references() -> List[RepoReference]:
-    path = settings.data_dir / "repositories.json"
+def _load_references(project_id: str) -> List[RepoReference]:
+    path = settings.data_dir / project_id / "repositories.json"
     if not path.exists():
         return []
     data = json.loads(path.read_text())
@@ -88,13 +109,13 @@ def _to_summary(state: ReleaseState) -> ReleaseSummary:
 # Public API consumed by routers
 # ---------------------------------------------------------------------------
 
-def get_references() -> List[RepoReference]:
-    return _load_references()
+def get_references(project_id: str) -> List[RepoReference]:
+    return _load_references(project_id)
 
 
-def list_releases() -> List[ReleaseSummary]:
+def list_releases(project_id: str) -> List[ReleaseSummary]:
     summaries = []
-    for path in sorted(_releases_dir().glob("*.json")):
+    for path in sorted(_releases_dir(project_id).glob("*.json")):
         try:
             state = ReleaseState.model_validate_json(path.read_text())
             summaries.append(_to_summary(state))
@@ -103,15 +124,15 @@ def list_releases() -> List[ReleaseSummary]:
     return summaries
 
 
-def get_release(version: str) -> Optional[ReleaseState]:
-    return _load_release(version)
+def get_release(project_id: str, version: str) -> Optional[ReleaseState]:
+    return _load_release(project_id, version)
 
 
-def create_release(req: CreateReleaseRequest) -> ReleaseState:
-    if _release_path(req.version).exists():
+def create_release(project_id: str, req: CreateReleaseRequest) -> ReleaseState:
+    if _release_path(project_id, req.version).exists():
         raise ValueError(f"Release {req.version} already exists")
 
-    refs = {r.name: r for r in _load_references()}
+    refs = {r.name: r for r in _load_references(project_id)}
     unknown = [n for n in req.repo_names if n not in refs]
     if unknown:
         raise ValueError(f"Unknown repositories: {', '.join(unknown)}")
@@ -135,13 +156,12 @@ def create_release(req: CreateReleaseRequest) -> ReleaseState:
         stage2=stage2,
         stage3=stage3,
     )
-    _save_release(state)
+    _save_release(project_id, state)
     return state
 
 
-async def remove_repo_from_release(version: str, repo_name: str, gitlab_token: str) -> ReleaseState:
-    """Delete the release branch in GitLab and remove the repo from all stages."""
-    state = _load_release(version)
+async def remove_repo_from_release(project_id: str, version: str, repo_name: str, gitlab_token: str) -> ReleaseState:
+    state = _load_release(project_id, version)
     if state is None:
         raise ValueError(f"Release {version} not found")
 
@@ -159,17 +179,16 @@ async def remove_repo_from_release(version: str, repo_name: str, gitlab_token: s
     state.stage2 = [r for r in state.stage2 if r.name != repo_name]
     state.stage3 = [r for r in state.stage3 if r.name != repo_name]
 
-    _save_release(state)
+    _save_release(project_id, state)
     return state
 
 
-def add_repos_to_release(version: str, repo_names: list) -> ReleaseState:
-    """Add new repositories to an existing release."""
-    state = _load_release(version)
+def add_repos_to_release(project_id: str, version: str, repo_names: list) -> ReleaseState:
+    state = _load_release(project_id, version)
     if state is None:
         raise ValueError(f"Release {version} not found")
 
-    refs = {r.name: r for r in _load_references()}
+    refs = {r.name: r for r in _load_references(project_id)}
     unknown = [n for n in repo_names if n not in refs]
     if unknown:
         raise ValueError(f"Unknown repositories: {', '.join(unknown)}")
@@ -183,7 +202,7 @@ def add_repos_to_release(version: str, repo_names: list) -> ReleaseState:
         state.stage2.append(Stage2Repo(name=ref.name, project_id=ref.project_id))
         state.stage3.append(Stage3Repo(name=ref.name, project_id=ref.project_id))
 
-    _save_release(state)
+    _save_release(project_id, state)
     return state
 
 
@@ -231,9 +250,8 @@ async def _run_stage2_repo(version: str, repo: Stage2Repo, gitlab_token: str) ->
     return repo
 
 
-async def run_stage2(version: str, gitlab_token: str) -> ReleaseState:
-    """Run stage-2 for all repos that are not yet successful (sequential)."""
-    state = _load_release(version)
+async def run_stage2(project_id: str, version: str, gitlab_token: str) -> ReleaseState:
+    state = _load_release(project_id, version)
     if state is None:
         raise ValueError(f"Release {version} not found")
 
@@ -242,13 +260,12 @@ async def run_stage2(version: str, gitlab_token: str) -> ReleaseState:
             continue
         state.stage2[i] = await _run_stage2_repo(version, repo, gitlab_token)
 
-    _save_release(state)
+    _save_release(project_id, state)
     return state
 
 
-async def run_stage2_repo(version: str, repo_name: str, gitlab_token: str) -> ReleaseState:
-    """Retry stage-2 for a single repository."""
-    state = _load_release(version)
+async def run_stage2_repo(project_id: str, version: str, repo_name: str, gitlab_token: str) -> ReleaseState:
+    state = _load_release(project_id, version)
     if state is None:
         raise ValueError(f"Release {version} not found")
 
@@ -257,7 +274,6 @@ async def run_stage2_repo(version: str, repo_name: str, gitlab_token: str) -> Re
         raise ValueError(f"Repository {repo_name!r} not in release {version}")
 
     repo = state.stage2[idx]
-    # Reset before retrying
     repo.status = RepoStage2Status.PENDING
     repo.branch_created = False
     repo.branch_existed = False
@@ -266,7 +282,7 @@ async def run_stage2_repo(version: str, repo_name: str, gitlab_token: str) -> Re
     repo.error = None
 
     state.stage2[idx] = await _run_stage2_repo(version, repo, gitlab_token)
-    _save_release(state)
+    _save_release(project_id, state)
     return state
 
 
@@ -308,9 +324,8 @@ async def _run_stage3_repo(version: str, repo: Stage3Repo, gitlab_token: str) ->
     return repo
 
 
-async def run_stage3(version: str, gitlab_token: str) -> ReleaseState:
-    """Run stage-3 for all repos that are not yet successful (sequential)."""
-    state = _load_release(version)
+async def run_stage3(project_id: str, version: str, gitlab_token: str) -> ReleaseState:
+    state = _load_release(project_id, version)
     if state is None:
         raise ValueError(f"Release {version} not found")
 
@@ -319,13 +334,12 @@ async def run_stage3(version: str, gitlab_token: str) -> ReleaseState:
             continue
         state.stage3[i] = await _run_stage3_repo(version, repo, gitlab_token)
 
-    _save_release(state)
+    _save_release(project_id, state)
     return state
 
 
-async def run_stage3_repo(version: str, repo_name: str, gitlab_token: str) -> ReleaseState:
-    """Retry stage-3 for a single repository."""
-    state = _load_release(version)
+async def run_stage3_repo(project_id: str, version: str, repo_name: str, gitlab_token: str) -> ReleaseState:
+    state = _load_release(project_id, version)
     if state is None:
         raise ValueError(f"Release {version} not found")
 
@@ -341,5 +355,5 @@ async def run_stage3_repo(version: str, repo_name: str, gitlab_token: str) -> Re
     repo.error = None
 
     state.stage3[idx] = await _run_stage3_repo(version, repo, gitlab_token)
-    _save_release(state)
+    _save_release(project_id, state)
     return state

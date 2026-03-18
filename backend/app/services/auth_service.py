@@ -39,6 +39,7 @@ def login(req: LoginRequest) -> LoginResponse:
         gitlab_token=user.get("gitlab_token"),
         has_token=bool(user.get("gitlab_token")),
         role=user.get("role", "user"),
+        projects=user.get("projects", []),
     )
 
 
@@ -49,6 +50,7 @@ def get_all_users() -> List[UserSummary]:
             username=u["username"],
             role=u.get("role", "user"),
             has_token=bool(u.get("gitlab_token")),
+            projects=u.get("projects", []),
         )
         for u in users
     ]
@@ -58,10 +60,16 @@ def create_user(req: CreateUserRequest) -> UserSummary:
     users = _load_users()
     if any(u["username"] == req.username for u in users):
         raise ValueError(f"User '{req.username}' already exists")
-    new_user = {"username": req.username, "password": req.password, "gitlab_token": None, "role": req.role}
+    new_user = {
+        "username": req.username,
+        "password": req.password,
+        "gitlab_token": None,
+        "role": req.role,
+        "projects": req.projects,
+    }
     users.append(new_user)
     _save_users(users)
-    return UserSummary(username=req.username, role=req.role, has_token=False)
+    return UserSummary(username=req.username, role=req.role, has_token=False, projects=req.projects)
 
 
 def delete_user(username: str) -> None:
@@ -70,3 +78,18 @@ def delete_user(username: str) -> None:
     if len(new_users) == len(users):
         raise ValueError(f"User '{username}' not found")
     _save_users(new_users)
+
+
+def update_user_projects(username: str, projects: List[str]) -> UserSummary:
+    users = _load_users()
+    user = next((u for u in users if u["username"] == username), None)
+    if user is None:
+        raise ValueError(f"User '{username}' not found")
+    user["projects"] = projects
+    _save_users(users)
+    return UserSummary(
+        username=user["username"],
+        role=user.get("role", "user"),
+        has_token=bool(user.get("gitlab_token")),
+        projects=projects,
+    )

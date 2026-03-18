@@ -65,6 +65,12 @@ export interface CreateReleaseRequest {
   repo_names: string[];
 }
 
+export interface Project {
+  id: string;
+  display_name: string;
+  jira_project_key: string;
+}
+
 export interface JiraTicket {
   key: string;
   summary: string;

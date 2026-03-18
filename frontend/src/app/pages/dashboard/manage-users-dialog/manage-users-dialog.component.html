@@ -60,6 +60,25 @@
       </td>
     </ng-container>
 
+    <ng-container matColumnDef="projects">
+      <th mat-header-cell *matHeaderCellDef>Projects</th>
+      <td mat-cell *matCellDef="let u">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button *ngFor="let p of allProjects"
+                  mat-stroked-button
+                  (click)="toggleProject(u, p.id)"
+                  [style.border-color]="hasProject(u, p.id) ? '#1565c0' : '#bdbdbd'"
+                  [style.color]="hasProject(u, p.id) ? '#1565c0' : '#9e9e9e'"
+                  [style.background]="hasProject(u, p.id) ? '#e3f2fd' : 'transparent'"
+                  style="min-width:0;padding:0 10px;height:28px;font-size:12px;line-height:28px;">
+            <mat-icon *ngIf="hasProject(u, p.id)" style="font-size:14px;height:14px;width:14px;margin-right:2px;">check</mat-icon>
+            {{ p.display_name }}
+          </button>
+          <span *ngIf="allProjects.length === 0" style="font-size:12px;color:#9e9e9e;">All</span>
+        </div>
+      </td>
+    </ng-container>
+
     <ng-container matColumnDef="actions">
       <th mat-header-cell *matHeaderCellDef></th>
       <td mat-cell *matCellDef="let u" style="text-align:right;">

@@ -15,18 +15,21 @@ export interface LoginResponse {
   gitlab_token: string | null;
   has_token: boolean;
   role: string;
+  projects: string[];
 }
 
 export interface UserSummary {
   username: string;
   role: string;
   has_token: boolean;
+  projects: string[];
 }
 
 export interface CreateUserRequest {
   username: string;
   password: string;
   role: string;
+  projects?: string[];
 }
 
 const SESSION_KEY = 'pioneer_session';
@@ -47,13 +50,17 @@ export class AuthService {
     );
   }
 
-  saveSession(username: string, gitlabToken: string, role: string): void {
-    localStorage.setItem(SESSION_KEY, JSON.stringify({ username, gitlab_token: gitlabToken, role }));
+  saveSession(username: string, gitlabToken: string, role: string, projects: string[] = []): void {
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ username, gitlab_token: gitlabToken, role, projects }));
   }
 
-  getSession(): { username: string; gitlab_token: string; role: string } | null {
+  getSession(): { username: string; gitlab_token: string; role: string; projects: string[] } | null {
     const raw = localStorage.getItem(SESSION_KEY);
     return raw ? JSON.parse(raw) : null;
+  }
+
+  getProjects(): string[] {
+    return this.getSession()?.projects ?? [];
   }
 
   getToken(): string | null {
@@ -90,5 +97,9 @@ export class AuthService {
 
   deleteUser(username: string): Observable<void> {
     return this.http.delete<void>(`${this.base}/auth/users/${username}`);
+  }
+
+  updateUserProjects(username: string, projects: string[]): Observable<UserSummary> {
+    return this.http.put<UserSummary>(`${this.base}/auth/users/${username}/projects`, { projects });
   }
 }

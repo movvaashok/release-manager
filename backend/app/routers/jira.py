@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
 from app.config import settings
-from app.services import jira_client
+from app.services import jira_client, project_service
 
 router = APIRouter(prefix="/jira", tags=["jira"])
 
@@ -34,13 +34,14 @@ def _check_configured() -> None:
 @router.get("/tickets", response_model=JiraTicketsResponse)
 async def get_tickets(
     version: str = Query(..., description="Fix version to search for (e.g. 2.15.0)"),
-    project: Optional[str] = Query(None, description="Jira project key (defaults to JIRA_DEFAULT_PROJECT)"),
+    project: str = Query("pioneer", description="Project ID (pioneer, calibrate, …)"),
 ) -> JiraTicketsResponse:
     _check_configured()
-    project = project or settings.jira_default_project
+    proj = project_service.get_project(project)
+    jira_key = proj.jira_project_key if proj else settings.jira_default_project
 
     try:
-        raw_issues = await jira_client.get_tickets_by_fix_version(version, project)
+        raw_issues = await jira_client.get_tickets_by_fix_version(version, jira_key)
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Jira API error: {exc}")
 

@@ -9,6 +9,16 @@ import re
 
 
 # ---------------------------------------------------------------------------
+# Project
+# ---------------------------------------------------------------------------
+
+class ProjectConfig(BaseModel):
+    id: str
+    display_name: str
+    jira_project_key: str
+
+
+# ---------------------------------------------------------------------------
 # Enums
 # ---------------------------------------------------------------------------
 
@@ -110,18 +120,25 @@ class LoginResponse(BaseModel):
     gitlab_token: Optional[str] = None
     has_token: bool
     role: str = "user"
+    projects: List[str] = []
 
 
 class CreateUserRequest(BaseModel):
     username: str
     password: str
     role: str = "user"
+    projects: List[str] = []
 
 
 class UserSummary(BaseModel):
     username: str
     role: str
     has_token: bool
+    projects: List[str] = []
+
+
+class UpdateUserProjectsRequest(BaseModel):
+    projects: List[str]
 
 
 class AddReferenceRepoRequest(BaseModel):

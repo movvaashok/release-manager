@@ -4,6 +4,22 @@
   <span class="app-title">Pioneer Release Manager</span>
   <span class="spacer"></span>
 
+  <!-- Project switcher -->
+  <button *ngIf="availableProjects.length > 1" mat-stroked-button
+          [matMenuTriggerFor]="projectMenu"
+          style="margin-right:12px; color:white; border-color:rgba(255,255,255,0.6);">
+    <mat-icon>work_outline</mat-icon>
+    {{ currentProject?.display_name ?? 'Select Project' }}
+    <mat-icon>arrow_drop_down</mat-icon>
+  </button>
+  <mat-menu #projectMenu="matMenu">
+    <button mat-menu-item *ngFor="let p of availableProjects" (click)="switchProject(p)">
+      <mat-icon *ngIf="p.id === currentProject?.id" style="color:#1565c0;">check</mat-icon>
+      <mat-icon *ngIf="p.id !== currentProject?.id" style="opacity:0;">check</mat-icon>
+      {{ p.display_name }}
+    </button>
+  </mat-menu>
+
   <button *ngIf="isAdmin" mat-raised-button (click)="newRelease()" style="margin-right:12px;">
     <mat-icon>add</mat-icon> New Release
   </button>

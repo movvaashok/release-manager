@@ -1,7 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import auth, jira, repos, releases
+from app.routers import auth, jira, projects, repos, releases
+from app.services.release_service import migrate_legacy_data
 
 app = FastAPI(
     title="GitLab Release Manager",
@@ -17,6 +18,12 @@ app.add_middleware(
 )
 
 app.include_router(auth.router, prefix="/api")
+app.include_router(projects.router, prefix="/api")
 app.include_router(repos.router, prefix="/api")
 app.include_router(releases.router, prefix="/api")
 app.include_router(jira.router, prefix="/api")
+
+
+@app.on_event("startup")
+def startup():
+    migrate_legacy_data()

@@ -12,8 +12,9 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
 
 import { ReleaseService } from '../../core/services/release.service';
-import { ReleaseSummary } from '../../core/models/release.model';
+import { ReleaseSummary, Project } from '../../core/models/release.model';
 import { AuthService } from '../../core/services/auth.service';
+import { ProjectService } from '../../core/services/project.service';
 import { ManageReposDialogComponent } from './manage-repos-dialog/manage-repos-dialog.component';
 import { ManageUsersDialogComponent } from './manage-users-dialog/manage-users-dialog.component';
 
@@ -39,7 +40,8 @@ export class DashboardComponent implements OnInit {
     private releaseService: ReleaseService,
     private dialog: MatDialog,
     private router: Router,
-    private auth: AuthService
+    private auth: AuthService,
+    public projectService: ProjectService
   ) {}
 
   ngOnInit(): void {
@@ -82,11 +84,24 @@ export class DashboardComponent implements OnInit {
   }
 
   openManageUsers(): void {
-    this.dialog.open(ManageUsersDialogComponent, { width: '640px', disableClose: false });
+    this.dialog.open(ManageUsersDialogComponent, { width: '860px', disableClose: false });
   }
 
   viewRelease(version: string): void {
     this.router.navigate(['/releases', version]);
+  }
+
+  get currentProject(): Project | null {
+    return this.projectService.current;
+  }
+
+  get availableProjects(): Project[] {
+    return this.projectService.projects;
+  }
+
+  switchProject(project: Project): void {
+    this.projectService.setProject(project);
+    this.loadReleases();
   }
 
   logout(): void {

@@ -8,6 +8,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { AuthService, LoginResponse } from '../../core/services/auth.service';
+import { ProjectService } from '../../core/services/project.service';
 
 @Component({
   selector: 'app-login',
@@ -120,6 +121,7 @@ export class LoginComponent {
   constructor(
     private fb: FormBuilder,
     private auth: AuthService,
+    private projectService: ProjectService,
     private router: Router
   ) {
     this.credForm = this.fb.group({
@@ -140,8 +142,10 @@ export class LoginComponent {
       next: (res: LoginResponse) => {
         this.submitting = false;
         if (res.has_token) {
-          this.auth.saveSession(res.username, res.gitlab_token!, res.role);
-          this.router.navigate(['/']);
+          this.auth.saveSession(res.username, res.gitlab_token!, res.role, res.projects);
+          this.projectService.loadForUser(res.projects, res.role === 'admin').subscribe(() => {
+            this.router.navigate(['/releases']);
+          });
         } else {
           this.pendingUsername = res.username;
           this.step = 2;

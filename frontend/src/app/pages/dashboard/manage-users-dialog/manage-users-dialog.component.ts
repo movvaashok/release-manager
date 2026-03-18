@@ -13,6 +13,8 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDividerModule } from '@angular/material/divider';
 import { AuthService, UserSummary } from '../../../core/services/auth.service';
+import { ProjectService } from '../../../core/services/project.service';
+import { Project } from '../../../core/models/release.model';
 
 @Component({
   selector: 'app-manage-users-dialog',
@@ -34,7 +36,8 @@ import { AuthService, UserSummary } from '../../../core/services/auth.service';
 })
 export class ManageUsersDialogComponent implements OnInit {
   users: UserSummary[] = [];
-  displayedColumns = ['username', 'role', 'has_token', 'actions'];
+  allProjects: Project[] = [];
+  displayedColumns = ['username', 'role', 'has_token', 'projects', 'actions'];
   loading = true;
   saving = false;
   errorMessage = '';
@@ -44,7 +47,8 @@ export class ManageUsersDialogComponent implements OnInit {
   constructor(
     private fb: FormBuilder,
     private dialogRef: MatDialogRef<ManageUsersDialogComponent>,
-    private auth: AuthService
+    private auth: AuthService,
+    private projectService: ProjectService
   ) {
     this.form = this.fb.group({
       username: ['', Validators.required],
@@ -54,6 +58,7 @@ export class ManageUsersDialogComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.allProjects = this.projectService.projects;
     this.loadUsers();
   }
 
@@ -83,6 +88,28 @@ export class ManageUsersDialogComponent implements OnInit {
       next: () => { this.users = this.users.filter(u => u.username !== username); },
       error: (err: any) => { this.errorMessage = err?.error?.detail ?? 'Delete failed.'; },
     });
+  }
+
+  hasProject(user: UserSummary, projectId: string): boolean {
+    return user.projects?.includes(projectId) ?? false;
+  }
+
+  toggleProject(user: UserSummary, projectId: string): void {
+    const current = user.projects ?? [];
+    const updated = current.includes(projectId)
+      ? current.filter(p => p !== projectId)
+      : [...current, projectId];
+    this.auth.updateUserProjects(user.username, updated).subscribe({
+      next: (u) => {
+        const idx = this.users.findIndex(x => x.username === u.username);
+        if (idx >= 0) this.users = [...this.users.slice(0, idx), u, ...this.users.slice(idx + 1)];
+      },
+      error: (err: any) => { this.errorMessage = err?.error?.detail ?? 'Update failed.'; },
+    });
+  }
+
+  projectLabel(projectId: string): string {
+    return this.allProjects.find(p => p.id === projectId)?.display_name ?? projectId;
   }
 
   close(): void { this.dialogRef.close(); }

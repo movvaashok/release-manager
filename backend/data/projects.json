@@ -1,0 +1,12 @@
+[
+  {
+    "id": "pioneer",
+    "display_name": "Pioneer",
+    "jira_project_key": "TSSA"
+  },
+  {
+    "id": "calibrate",
+    "display_name": "Calibrate",
+    "jira_project_key": "TRAN"
+  }
+]

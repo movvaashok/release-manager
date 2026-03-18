@@ -2,7 +2,7 @@ from typing import List
 
 from fastapi import APIRouter, HTTPException
 
-from app.models import CreateUserRequest, LoginRequest, LoginResponse, UserSummary
+from app.models import CreateUserRequest, LoginRequest, LoginResponse, UpdateUserProjectsRequest, UserSummary
 from app.services import auth_service
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -27,6 +27,14 @@ def create_user(req: CreateUserRequest):
         return auth_service.create_user(req)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+
+
+@router.put("/users/{username}/projects", response_model=UserSummary)
+def update_user_projects(username: str, req: UpdateUserProjectsRequest):
+    try:
+        return auth_service.update_user_projects(username, req.projects)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
 
 
 @router.delete("/users/{username}", status_code=204)
