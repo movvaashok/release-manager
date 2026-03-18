@@ -66,8 +66,11 @@
 
         <div class="tab-content">
           <div class="action-bar" *ngIf="isAdmin">
-            <button mat-raised-button color="primary" (click)="openAddReposDialog()">
-              <mat-icon>add</mat-icon> Add Repository
+            <button mat-raised-button color="primary" (click)="openAddViaJiraDialog()">
+              <mat-icon>confirmation_number</mat-icon> Add via Jira
+            </button>
+            <button mat-stroked-button (click)="openAddReposDialog()">
+              <mat-icon>add</mat-icon> Add Manually
             </button>
             <span style="font-size:13px;color:rgba(0,0,0,0.54);">
               {{ release.stage1.length }} repositories in this release
@@ -200,6 +203,13 @@
               <mat-spinner *ngIf="runningStage3" diameter="18" style="display:inline-block;margin-right:6px;"></mat-spinner>
               <mat-icon *ngIf="!runningStage3">play_arrow</mat-icon>
               {{ runningStage3 ? 'Running…' : 'Run Stage 3' }}
+            </button>
+            <button mat-stroked-button
+              *ngIf="mrLinkCount > 0"
+              (click)="copyMRLinks()"
+              matTooltip="Copy all MR URLs to clipboard">
+              <mat-icon>content_copy</mat-icon>
+              Copy {{ mrLinkCount }} MR {{ mrLinkCount === 1 ? 'Link' : 'Links' }}
             </button>
             <span style="font-size:13px;color:rgba(0,0,0,0.54);">
               Creates MRs from release/{{ version }} → master

@@ -10,6 +10,8 @@ import { MatInputModule } from '@angular/material/input';
 import { MatListModule } from '@angular/material/list';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatChipsModule } from '@angular/material/chips';
 import { JiraService } from '../../core/services/jira.service';
 import { ReleaseService } from '../../core/services/release.service';
 import { JiraTicket, RepoReference } from '../../core/models/release.model';
@@ -30,6 +32,8 @@ type Step = 'version' | 'tickets' | 'repos';
     MatListModule,
     MatProgressSpinnerModule,
     MatDividerModule,
+    MatCheckboxModule,
+    MatChipsModule,
   ],
   templateUrl: './new-release.component.html',
   styleUrls: ['./new-release.component.scss'],
@@ -41,6 +45,7 @@ export class NewReleaseComponent {
   // Step 2 — Jira tickets
   tickets: JiraTicket[] = [];
   selectedTicketKeys = new Set<string>();
+  expandedTickets = new Set<string>();
   loadingTickets = false;
 
   // Step 3 — Repos
@@ -101,6 +106,19 @@ export class NewReleaseComponent {
     else this.tickets.forEach((t) => this.selectedTicketKeys.add(t.key));
   }
 
+  toggleExpand(key: string, event: Event): void {
+    event.stopPropagation();
+    if (this.expandedTickets.has(key)) this.expandedTickets.delete(key);
+    else this.expandedTickets.add(key);
+  }
+
+  statusClass(status: string): string {
+    const s = status.toLowerCase();
+    if (s.includes('done') || s.includes('resolved') || s.includes('closed') || s.includes('fixed')) return 'status-done';
+    if (s.includes('progress') || s.includes('review') || s.includes('open')) return 'status-inprogress';
+    return 'status-other';
+  }
+
   get allTicketsSelected(): boolean {
     return this.tickets.length > 0 && this.selectedTicketKeys.size === this.tickets.length;
   }
@@ -111,14 +129,12 @@ export class NewReleaseComponent {
     this.errorMessage = '';
 
     const selectedTickets = this.tickets.filter((t) => this.selectedTicketKeys.has(t.key));
-    const componentNames = new Set<string>();
-    selectedTickets.forEach((t) => t.components.forEach((c) => componentNames.add(c)));
-    const lowerComponents = new Set([...componentNames].map((c) => c.toLowerCase()));
+    const componentNames = new Set(selectedTickets.flatMap((t) => t.components.map((c) => this.normalize(c))));
 
     this.releaseService.getReferences().subscribe({
       next: (repos) => {
-        this.matchedRepos = repos.filter((r) => lowerComponents.has(r.name.toLowerCase()));
-        this.otherRepos = repos.filter((r) => !lowerComponents.has(r.name.toLowerCase()));
+        this.matchedRepos = repos.filter((r) => componentNames.has(this.normalize(r.name)));
+        this.otherRepos = repos.filter((r) => !componentNames.has(this.normalize(r.name)));
         this.selectedRepos = new Set(this.matchedRepos.map((r) => r.name));
         this.loadingRepos = false;
         this.step = 'repos';
@@ -155,6 +171,10 @@ export class NewReleaseComponent {
           this.errorMessage = err?.error?.detail ?? 'Failed to create release.';
         },
       });
+  }
+
+  private normalize(s: string): string {
+    return s.toLowerCase().replace(/_/g, ' ').trim();
   }
 
   // ── Navigation ───────────────────────────────────────────────────────────────

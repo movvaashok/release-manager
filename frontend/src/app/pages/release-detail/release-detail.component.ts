@@ -19,6 +19,7 @@ import { ReleaseService } from '../../core/services/release.service';
 import { ReleaseState, Stage2Repo, Stage3Repo } from '../../core/models/release.model';
 import { StatusChipComponent } from '../../shared/components/status-chip/status-chip.component';
 import { AddReposDialogComponent } from './add-repos-dialog/add-repos-dialog.component';
+import { AddViaJiraDialogComponent } from './add-via-jira-dialog/add-via-jira-dialog.component';
 import { AuthService } from '../../core/services/auth.service';
 
 @Component({
@@ -41,6 +42,7 @@ import { AuthService } from '../../core/services/auth.service';
     MatMenuModule,
     StatusChipComponent,
     AddReposDialogComponent,
+    AddViaJiraDialogComponent,
   ],
   templateUrl: './release-detail.component.html',
   styleUrls: ['./release-detail.component.scss'],
@@ -209,6 +211,35 @@ export class ReleaseDetailComponent implements OnInit {
         this.snackBar.open('Repositories added successfully.', 'Close', { duration: 3000 });
       }
     });
+  }
+
+  openAddViaJiraDialog(): void {
+    const existingRepoNames = this.release?.stage1.map(r => r.name) ?? [];
+    const ref = this.dialog.open(AddViaJiraDialogComponent, {
+      width: '600px',
+      disableClose: true,
+      data: { version: this.version, existingRepoNames },
+    });
+    ref.afterClosed().subscribe(result => {
+      if (result) {
+        this.release = result;
+        this.snackBar.open('Repositories added successfully.', 'Close', { duration: 3000 });
+      }
+    });
+  }
+
+  copyMRLinks(): void {
+    const urls = this.release?.stage3
+      .filter(r => r.mr_url)
+      .map(r => r.mr_url!)
+      .join('\n') ?? '';
+    navigator.clipboard.writeText(urls).then(() => {
+      this.snackBar.open('MR links copied to clipboard.', 'Close', { duration: 3000 });
+    });
+  }
+
+  get mrLinkCount(): number {
+    return this.release?.stage3.filter(r => r.mr_url).length ?? 0;
   }
 
   // -----------------------------------------------------------------------

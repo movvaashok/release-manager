@@ -1,0 +1,153 @@
+import { Component, Inject, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatDividerModule } from '@angular/material/divider';
+import { MatListModule } from '@angular/material/list';
+
+import { JiraService } from '../../../core/services/jira.service';
+import { ReleaseService } from '../../../core/services/release.service';
+import { JiraTicket, RepoReference } from '../../../core/models/release.model';
+
+type Step = 'tickets' | 'repos';
+
+function normalize(s: string): string {
+  return s.toLowerCase().replace(/_/g, ' ').trim();
+}
+
+@Component({
+  selector: 'app-add-via-jira-dialog',
+  standalone: true,
+  imports: [
+    CommonModule,
+    MatDialogModule,
+    MatButtonModule,
+    MatIconModule,
+    MatProgressSpinnerModule,
+    MatCheckboxModule,
+    MatChipsModule,
+    MatDividerModule,
+    MatListModule,
+  ],
+  templateUrl: './add-via-jira-dialog.component.html',
+})
+export class AddViaJiraDialogComponent implements OnInit {
+  step: Step = 'tickets';
+
+  tickets: JiraTicket[] = [];
+  selectedTicketKeys = new Set<string>();
+  expandedTickets = new Set<string>();
+  loadingTickets = true;
+  ticketError = '';
+
+  matchedRepos: RepoReference[] = [];
+  otherRepos: RepoReference[] = [];
+  selectedRepos = new Set<string>();
+  loadingRepos = false;
+
+  submitting = false;
+  errorMessage = '';
+
+  constructor(
+    private dialogRef: MatDialogRef<AddViaJiraDialogComponent>,
+    @Inject(MAT_DIALOG_DATA) public data: { version: string; existingRepoNames: string[] },
+    private jiraService: JiraService,
+    private releaseService: ReleaseService,
+  ) {}
+
+  ngOnInit(): void {
+    this.jiraService.getTickets(this.data.version).subscribe({
+      next: (tickets) => {
+        this.tickets = tickets;
+        this.loadingTickets = false;
+      },
+      error: (err) => {
+        this.loadingTickets = false;
+        this.ticketError = err?.error?.detail ?? 'Failed to fetch Jira tickets.';
+      },
+    });
+  }
+
+  toggleTicket(key: string): void {
+    if (this.selectedTicketKeys.has(key)) this.selectedTicketKeys.delete(key);
+    else this.selectedTicketKeys.add(key);
+  }
+
+  toggleExpand(key: string, event: Event): void {
+    event.stopPropagation();
+    if (this.expandedTickets.has(key)) this.expandedTickets.delete(key);
+    else this.expandedTickets.add(key);
+  }
+
+  toggleAllTickets(): void {
+    if (this.selectedTicketKeys.size === this.tickets.length) this.selectedTicketKeys.clear();
+    else this.tickets.forEach((t) => this.selectedTicketKeys.add(t.key));
+  }
+
+  get allTicketsSelected(): boolean {
+    return this.tickets.length > 0 && this.selectedTicketKeys.size === this.tickets.length;
+  }
+
+  statusClass(status: string): string {
+    const s = status.toLowerCase();
+    if (s.includes('done') || s.includes('resolved') || s.includes('closed') || s.includes('fixed')) return 'status-done';
+    if (s.includes('progress') || s.includes('review') || s.includes('open')) return 'status-inprogress';
+    return 'status-other';
+  }
+
+  proceedToRepos(): void {
+    if (this.selectedTicketKeys.size === 0) return;
+    this.loadingRepos = true;
+    this.errorMessage = '';
+
+    const selected = this.tickets.filter((t) => this.selectedTicketKeys.has(t.key));
+    const componentNames = new Set(selected.flatMap((t) => t.components.map((c) => normalize(c))));
+    const existingSet = new Set(this.data.existingRepoNames.map((n) => n.toLowerCase()));
+
+    this.releaseService.getReferences().subscribe({
+      next: (repos) => {
+        const available = repos.filter((r) => !existingSet.has(r.name.toLowerCase()));
+        this.matchedRepos = available.filter((r) => componentNames.has(normalize(r.name)));
+        this.otherRepos = available.filter((r) => !componentNames.has(normalize(r.name)));
+        this.selectedRepos = new Set(this.matchedRepos.map((r) => r.name));
+        this.loadingRepos = false;
+        this.step = 'repos';
+      },
+      error: () => {
+        this.loadingRepos = false;
+        this.errorMessage = 'Failed to load repositories.';
+      },
+    });
+  }
+
+  toggleRepo(name: string): void {
+    if (this.selectedRepos.has(name)) this.selectedRepos.delete(name);
+    else this.selectedRepos.add(name);
+  }
+
+  submit(): void {
+    if (this.selectedRepos.size === 0) return;
+    this.submitting = true;
+    this.errorMessage = '';
+    this.releaseService.addRepos(this.data.version, Array.from(this.selectedRepos)).subscribe({
+      next: (state) => this.dialogRef.close(state),
+      error: (err) => {
+        this.submitting = false;
+        this.errorMessage = err?.error?.detail ?? 'Failed to add repositories.';
+      },
+    });
+  }
+
+  back(): void {
+    this.errorMessage = '';
+    this.step = 'tickets';
+  }
+
+  cancel(): void {
+    this.dialogRef.close(null);
+  }
+}
