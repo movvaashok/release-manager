@@ -1,9 +1,12 @@
 import base64
+import logging
 from typing import List
 
 import httpx
 
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 def _auth_header() -> str:
@@ -30,4 +33,7 @@ async def get_tickets_by_fix_version(version: str, project: str) -> List[dict]:
             timeout=30.0,
         )
         response.raise_for_status()
-        return response.json().get("issues", [])
+        data = response.json()
+        logger.info("Jira search response: total=%s, issues=%s, keys=%s",
+                    data.get("total"), len(data.get("issues", [])), list(data.keys()))
+        return data.get("issues", [])
