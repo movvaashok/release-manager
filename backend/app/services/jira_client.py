@@ -35,6 +35,12 @@ async def get_tickets_by_fix_version(version: str, project: str) -> List[dict]:
         )
         response.raise_for_status()
         data = response.json()
-        print(f"[JIRA DEBUG] status={response.status_code} total={data.get('total')} "
-              f"issues={len(data.get('issues', []))} keys={list(data.keys())}", flush=True)
-        return data.get("issues", [])
+        issues = data.get("issues", [])
+        print(f"[JIRA DEBUG] status={response.status_code}", flush=True)
+        print(f"[JIRA DEBUG] response keys: {list(data.keys())}", flush=True)
+        print(f"[JIRA DEBUG] issue count: {len(issues)}", flush=True)
+        if issues:
+            print(f"[JIRA DEBUG] first issue key: {issues[0].get('key')}", flush=True)
+        else:
+            print("[JIRA DEBUG] NO ISSUES RETURNED — check JQL or permissions", flush=True)
+        return issues
