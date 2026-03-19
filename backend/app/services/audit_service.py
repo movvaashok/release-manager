@@ -1,17 +1,23 @@
 """
-Append-only JSON-lines audit log.
+Append-only JSON-lines audit log — one file per release.
 
-Each line in data/audit_logs.jsonl is a JSON object:
+Storage layout:
+  data/{project}/releases/{version}_audit.jsonl
+
+Each line is a JSON object:
 {
   "id": "uuid",
   "timestamp": "2024-01-01T12:00:00Z",
   "username": "alice",
   "action": "stage2_run",
-  "project": "pioneer",
-  "release_version": "1.2.3",
-  "repo_name": null,           # set for per-repo actions
-  "details": { ... }           # optional extra context
+  "repo_name": null,     # set for per-repo actions
+  "details": { ... }    # optional extra context
 }
+
+Keeping the log co-located with the release data file means:
+- No cross-release file contention when multiple users act on different releases.
+- Reads scan only the relevant file (never grows with unrelated data).
+- Deleting a release can cleanly remove its audit log too.
 """
 import json
 import uuid
@@ -22,8 +28,9 @@ from typing import Any, Dict, List, Optional
 from app.config import settings
 
 
-def _log_path() -> Path:
-    path = settings.data_dir / "audit_logs.jsonl"
+def _log_path(project: str, release_version: str) -> Path:
+    """Return the path for a release-scoped audit log file, creating dirs as needed."""
+    path = settings.data_dir / project / "releases" / f"{release_version}_audit.jsonl"
     path.parent.mkdir(parents=True, exist_ok=True)
     return path
 
@@ -37,18 +44,16 @@ def record(
     repo_name: Optional[str] = None,
     details: Optional[Dict[str, Any]] = None,
 ) -> None:
-    """Append a single audit entry to the log file."""
+    """Append a single audit entry to the release-scoped log file."""
     entry = {
         "id": str(uuid.uuid4()),
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "username": username,
         "action": action,
-        "project": project,
-        "release_version": release_version,
         "repo_name": repo_name,
         "details": details or {},
     }
-    with _log_path().open("a", encoding="utf-8") as fh:
+    with _log_path(project, release_version).open("a", encoding="utf-8") as fh:
         fh.write(json.dumps(entry) + "\n")
 
 
@@ -59,8 +64,8 @@ def get_logs(
     from_ts: Optional[str] = None,   # ISO-8601
     to_ts: Optional[str] = None,     # ISO-8601
 ) -> List[Dict[str, Any]]:
-    """Return all audit entries for a given project + version, newest first."""
-    path = _log_path()
+    """Return all audit entries for a release, newest first, with optional filters."""
+    path = _log_path(project, release_version)
     if not path.exists():
         return []
 
@@ -75,10 +80,6 @@ def get_logs(
             except json.JSONDecodeError:
                 continue
 
-            if entry.get("project") != project:
-                continue
-            if entry.get("release_version") != release_version:
-                continue
             if username_filter and entry.get("username") != username_filter:
                 continue
             if from_ts and entry.get("timestamp", "") < from_ts:
@@ -93,11 +94,11 @@ def get_logs(
 
 
 def get_all_usernames(project: str, release_version: str) -> List[str]:
-    """Return distinct usernames who have audit entries for a release."""
-    path = _log_path()
+    """Return distinct usernames who have entries in this release's audit log."""
+    path = _log_path(project, release_version)
     if not path.exists():
         return []
-    seen = set()
+    seen: set[str] = set()
     with path.open("r", encoding="utf-8") as fh:
         for line in fh:
             line = line.strip()
@@ -107,7 +108,6 @@ def get_all_usernames(project: str, release_version: str) -> List[str]:
                 entry = json.loads(line)
             except json.JSONDecodeError:
                 continue
-            if entry.get("project") == project and entry.get("release_version") == release_version:
-                if u := entry.get("username"):
-                    seen.add(u)
+            if u := entry.get("username"):
+                seen.add(u)
     return sorted(seen)
