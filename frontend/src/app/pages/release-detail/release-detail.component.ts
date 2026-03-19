@@ -93,7 +93,10 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
   }
 
   loadRelease(): void {
-    this.loading = true;
+    // Only show the full-page spinner on the very first load.
+    // On toolbar refreshes the data is already present, so keeping loading=true
+    // would destroy the tab group and reset the active tab to 0.
+    if (!this.release) this.loading = true;
     this.releaseService.getRelease(this.version).subscribe({
       next: (r) => {
         this.release = r;
