@@ -6,6 +6,7 @@ from app.models import AddReposRequest, CreateReleaseRequest, ReleaseState, Rele
 from app.services import release_service
 from app.services import audit_service
 from app.services import confluence_client
+from app.services import jira_client
 
 router = APIRouter(prefix="/releases", tags=["releases"])
 
@@ -296,6 +297,39 @@ async def confluence_search(
                 project=project,
                 release_version=version,
                 details={"ra_map": ra_map},
+            )
+
+    return state
+
+
+@router.post("/{version}/docs/tsd-search", response_model=ReleaseState)
+async def tsd_search(
+    version: str,
+    project: str = Query("pioneer"),
+    x_role: str | None = Header(default=None),
+    x_username: str | None = Header(default=None),
+):
+    """
+    Search Jira TSD project for a ticket matching '<Project> v<version>'.
+    If found and the release has no tsd_ticket_url set, saves the URL automatically.
+    Always returns the up-to-date ReleaseState.
+    """
+    state = release_service.get_release(project, version)
+    if state is None:
+        raise HTTPException(status_code=404, detail=f"Release {version} not found")
+
+    # Only auto-populate if not already set
+    if not state.tsd_ticket_url:
+        ticket = await jira_client.find_tsd_ticket(project, version)
+        if ticket:
+            req = UpdateDocsRequest(tsd_ticket_url=ticket["url"])
+            state = release_service.update_docs(project, version, req)
+            audit_service.record(
+                username=_u(x_username),
+                action="tsd_auto_linked",
+                project=project,
+                release_version=version,
+                details={"tsd_key": ticket["key"], "tsd_url": ticket["url"], "summary": ticket["summary"]},
             )
 
     return state

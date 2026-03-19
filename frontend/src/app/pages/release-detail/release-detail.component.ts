@@ -92,6 +92,8 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
   };
   confluenceSearching = false;
   confluenceFound: boolean | null = null; // null = not yet searched
+  tsdSearching = false;
+  tsdFound: boolean | null = null; // null = not yet searched
   messageCopied = false;
   refreshingRa = false;
 
@@ -265,8 +267,29 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
     });
   }
 
+  tryPopulateTsd(): void {
+    if (!this.release || this.release.tsd_ticket_url || this.tsdSearching) return;
+    this.tsdSearching = true;
+    this.releaseService.tsdSearch(this.version).subscribe({
+      next: (r) => {
+        const found = !!r.tsd_ticket_url && !this.release?.tsd_ticket_url;
+        this.release = r;
+        this.tsdSearching = false;
+        this.tsdFound = !!r.tsd_ticket_url;
+        if (found) {
+          this.snackBar.open('TSD ticket found and linked automatically.', 'Close', { duration: 4000 });
+        }
+      },
+      error: () => {
+        this.tsdSearching = false;
+        this.tsdFound = false;
+      },
+    });
+  }
+
   onDocTabSelected(): void {
     this.tryPopulateConfluence();
+    this.tryPopulateTsd();
   }
 
   refreshRaRequirements(): void {

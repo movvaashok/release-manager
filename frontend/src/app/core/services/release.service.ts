@@ -101,6 +101,14 @@ export class ReleaseService {
     );
   }
 
+  tsdSearch(version: string): Observable<ReleaseState> {
+    return this.http.post<ReleaseState>(
+      `${this.base}/releases/${version}/docs/tsd-search`,
+      {},
+      { params: this.p },
+    );
+  }
+
   confluenceSearch(version: string): Observable<ReleaseState> {
     return this.http.post<ReleaseState>(
       `${this.base}/releases/${version}/docs/confluence-search`,

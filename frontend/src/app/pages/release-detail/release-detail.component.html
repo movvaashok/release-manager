@@ -396,13 +396,20 @@
               <div class="doc-card">
                 <div class="doc-label">
                   <mat-icon>confirmation_number</mat-icon> TSD Ticket
+                  <span *ngIf="tsdSearching" class="confluence-searching">
+                    <mat-spinner diameter="12" style="display:inline-block;margin-left:6px;vertical-align:middle;"></mat-spinner>
+                    Searching…
+                  </span>
+                  <span *ngIf="!tsdSearching && tsdFound === true && release.tsd_ticket_url" class="auto-found-badge">
+                    <mat-icon style="font-size:14px;height:14px;width:14px;vertical-align:middle;">auto_awesome</mat-icon> Auto-linked
+                  </span>
                 </div>
                 <div class="doc-value">
                   <a *ngIf="release.tsd_ticket_url" [href]="release.tsd_ticket_url" target="_blank" rel="noopener" class="doc-link">
                     <mat-icon class="link-icon">open_in_new</mat-icon>
                     {{ release.tsd_ticket_url }}
                   </a>
-                  <span *ngIf="!release.tsd_ticket_url" class="doc-empty">Not set</span>
+                  <span *ngIf="!release.tsd_ticket_url && !tsdSearching" class="doc-empty">Not set</span>
                 </div>
               </div>
 
