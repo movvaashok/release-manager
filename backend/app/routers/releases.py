@@ -42,6 +42,33 @@ def create_release(
         raise HTTPException(status_code=400, detail=str(exc))
 
 
+@router.delete("/{version}", status_code=200)
+def delete_release(
+    version: str,
+    project: str = Query("pioneer"),
+    x_role: str | None = Header(default=None),
+    x_username: str | None = Header(default=None),
+):
+    """
+    Admin-only: archive a release by moving its folder to releases/archive/.
+    The archived folder is named {version}_{YYYYMMDD_HHMMSS} to preserve history.
+    """
+    if x_role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    try:
+        archive_name = release_service.archive_release(project, version)
+        audit_service.record(
+            username=_u(x_username),
+            action="release_archived",
+            project=project,
+            release_version=version,
+            details={"archive_folder": archive_name},
+        )
+        return {"detail": f"Release {version} archived as {archive_name}"}
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+
 @router.get("/{version}", response_model=ReleaseState)
 def get_release(version: str, project: str = Query("pioneer")):
     state = release_service.get_release(project, version)

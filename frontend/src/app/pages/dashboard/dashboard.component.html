@@ -81,18 +81,18 @@
     </div>
 
     <!-- Empty state -->
-    <div *ngIf="inProgressReleases.length === 0" class="empty-state">
+    <div *ngIf="releases.length === 0" class="empty-state">
       <mat-icon>check_circle_outline</mat-icon>
-      <p>No releases currently in progress.</p>
+      <p>No releases found.</p>
       <p *ngIf="isAdmin" style="font-size:14px; margin-top:4px;">
         Click <strong>New Release</strong> to get started.
       </p>
     </div>
 
     <!-- Release cards -->
-    <div *ngIf="inProgressReleases.length > 0" class="releases-grid">
+    <div *ngIf="releases.length > 0" class="releases-grid">
       <mat-card
-        *ngFor="let r of inProgressReleases"
+        *ngFor="let r of releases"
         class="release-card"
         [class.card-attention]="needsAttention(r)"
         (click)="viewRelease(r.version)"

@@ -167,6 +167,8 @@ def list_releases(project_id: str) -> List[ReleaseSummary]:
     for version_dir in sorted(releases_dir.iterdir()):
         if not version_dir.is_dir():
             continue
+        if version_dir.name == "archive":
+            continue  # skip archived releases
         state_file = version_dir / "state.json"
         if not state_file.exists():
             continue
@@ -183,7 +185,7 @@ def get_release(project_id: str, version: str) -> Optional[ReleaseState]:
 
 
 def create_release(project_id: str, req: CreateReleaseRequest) -> ReleaseState:
-    if (_releases_dir(project_id) / req.version).exists():
+    if _release_path(project_id, req.version).exists():
         raise ValueError(f"Release {req.version} already exists")
 
     refs = {r.name: r for r in _load_references(project_id)}
@@ -587,3 +589,28 @@ def apply_ra_requirements(project_id: str, version: str, ra_map: dict) -> Releas
 
     _save_release(project_id, state)
     return state
+
+
+def archive_release(project_id: str, version: str) -> str:
+    """
+    Move the release subfolder into an archive directory.
+
+    Source:      data/{project}/releases/{version}/
+    Destination: data/{project}/releases/archive/{version}_{YYYYMMDD_HHMMSS}/
+
+    Returns the archive folder name so it can be logged.
+    Raises ValueError if the release does not exist.
+    """
+    src = _releases_dir(project_id) / version
+    if not src.exists() or not (src / "state.json").exists():
+        raise ValueError(f"Release {version} not found")
+
+    archive_dir = _releases_dir(project_id) / "archive"
+    archive_dir.mkdir(parents=True, exist_ok=True)
+
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    dest_name = f"{version}_{timestamp}"
+    dest = archive_dir / dest_name
+
+    shutil.move(str(src), str(dest))
+    return dest_name

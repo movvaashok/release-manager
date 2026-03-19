@@ -141,6 +141,13 @@ export class ReleaseService {
     );
   }
 
+  deleteRelease(version: string): Observable<{ detail: string }> {
+    return this.http.delete<{ detail: string }>(
+      `${this.base}/releases/${version}`,
+      { params: this.p },
+    );
+  }
+
   addReferenceRepo(repo: Partial<RepoReference>): Observable<RepoReference[]> {
     return this.http.post<RepoReference[]>(`${this.base}/repos/reference`, repo, { params: this.p });
   }

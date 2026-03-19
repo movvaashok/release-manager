@@ -13,6 +13,11 @@
           style="margin-right:8px; color:white; border-color:rgba(255,255,255,0.6);">
     <mat-icon>history</mat-icon> Audit Logs
   </button>
+  <button *ngIf="isAdmin" mat-stroked-button (click)="confirmDeleteRelease()"
+          matTooltip="Archive this release"
+          style="margin-right:8px; color:#ffcdd2; border-color:rgba(255,205,210,0.6);">
+    <mat-icon>archive</mat-icon> Delete Release
+  </button>
   <!-- User menu -->
   <button mat-icon-button [matMenuTriggerFor]="userMenu" matTooltip="{{ username }}">
     <mat-icon>account_circle</mat-icon>

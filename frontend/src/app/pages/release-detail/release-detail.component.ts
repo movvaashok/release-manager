@@ -193,6 +193,23 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
     this.router.navigate(['/releases', this.version, 'audit-logs']);
   }
 
+  confirmDeleteRelease(): void {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete release v${this.version}?\n\nThe release folder will be moved to the archive. This cannot be undone from the UI.`
+    );
+    if (!confirmed) return;
+
+    this.releaseService.deleteRelease(this.version).subscribe({
+      next: () => {
+        this.snackBar.open(`Release v${this.version} archived successfully.`, 'Close', { duration: 4000 });
+        this.router.navigate(['/releases']);
+      },
+      error: () => {
+        this.snackBar.open('Failed to archive release. Please try again.', 'Close', { duration: 4000 });
+      },
+    });
+  }
+
   // -----------------------------------------------------------------------
   // Documentation tab
   // -----------------------------------------------------------------------
