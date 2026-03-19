@@ -26,7 +26,7 @@ import { ProjectService } from '../../core/services/project.service';
     <div class="login-container">
       <div class="login-card">
         <mat-icon class="logo-icon">rocket_launch</mat-icon>
-        <h1>Pioneer Release Manager</h1>
+        <h1>Truata Release Manager</h1>
 
         <!-- Step 1: credentials -->
         <form *ngIf="step === 1" [formGroup]="credForm" (ngSubmit)="submitCredentials()">
@@ -79,7 +79,7 @@ import { ProjectService } from '../../core/services/project.service';
       display: flex;
       align-items: center;
       justify-content: center;
-      background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%);
+      background: linear-gradient(135deg, #2d1b4e 0%, #1a0f30 100%);
     }
     .login-card {
       background: white;
@@ -94,13 +94,13 @@ import { ProjectService } from '../../core/services/project.service';
       font-size: 56px;
       width: 56px;
       height: 56px;
-      color: #1565c0;
+      color: #2d1b4e;
       margin-bottom: 12px;
     }
     h1 {
       font-size: 22px;
       font-weight: 600;
-      color: #1a237e;
+      color: #2d1b4e;
       margin: 0 0 28px;
     }
     .full-width { width: 100%; }

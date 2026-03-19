@@ -11,7 +11,7 @@ import { MatIconModule } from '@angular/material/icon';
     <div class="welcome-container">
       <div class="welcome-card">
         <mat-icon class="logo-icon">rocket_launch</mat-icon>
-        <h1>Pioneer Release Manager</h1>
+        <h1>Truata Release Manager</h1>
         <p class="subtitle">
           Automate release branch management and merge request creation
           across your GitLab repositories.
@@ -29,7 +29,7 @@ import { MatIconModule } from '@angular/material/icon';
       display: flex;
       align-items: center;
       justify-content: center;
-      background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%);
+      background: linear-gradient(135deg, #2d1b4e 0%, #1a0f30 100%);
     }
     .welcome-card {
       background: white;
@@ -43,13 +43,13 @@ import { MatIconModule } from '@angular/material/icon';
       font-size: 64px;
       width: 64px;
       height: 64px;
-      color: #1565c0;
+      color: #2d1b4e;
       margin-bottom: 16px;
     }
     h1 {
       font-size: 28px;
       font-weight: 600;
-      color: #1a237e;
+      color: #2d1b4e;
       margin: 0 0 16px;
     }
     .subtitle {

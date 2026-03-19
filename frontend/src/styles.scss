@@ -33,6 +33,13 @@ html, body {
   color: #6a1b9a !important;
 }
 
+// Truata brand colour – override the default Material primary toolbar colour
+mat-toolbar[color="primary"],
+.mat-toolbar[color="primary"] {
+  background-color: #2d1b4e !important;
+  color: #ffffff !important;
+}
+
 // Layout helpers
 .page-container {
   max-width: 1200px;
