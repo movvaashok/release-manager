@@ -311,26 +311,51 @@ async def tsd_search(
 ):
     """
     Search Jira TSD project for a ticket matching '<Project> v<version>'.
-    If found and the release has no tsd_ticket_url set, saves the URL automatically.
+    If found:
+      - Saves tsd_ticket_url if not already set.
+      - Reads the TSD ticket's issue links to find an RA blocker
+        (TSD 'is blocked by' RA-XXX) and saves risk_assessment_url if found.
     Always returns the up-to-date ReleaseState.
     """
     state = release_service.get_release(project, version)
     if state is None:
         raise HTTPException(status_code=404, detail=f"Release {version} not found")
 
-    # Only auto-populate if not already set
-    if not state.tsd_ticket_url:
+    need_tsd = not state.tsd_ticket_url
+    need_ra = not state.risk_assessment_url
+
+    # Only call Jira if we're missing TSD or RA links
+    if need_tsd or need_ra:
         ticket = await jira_client.find_tsd_ticket(project, version)
         if ticket:
-            req = UpdateDocsRequest(tsd_ticket_url=ticket["url"])
-            state = release_service.update_docs(project, version, req)
-            audit_service.record(
-                username=_u(x_username),
-                action="tsd_auto_linked",
-                project=project,
-                release_version=version,
-                details={"tsd_key": ticket["key"], "tsd_url": ticket["url"], "summary": ticket["summary"]},
-            )
+            updates: dict = {}
+            if need_tsd:
+                updates["tsd_ticket_url"] = ticket["url"]
+            if need_ra and ticket.get("ra_url"):
+                updates["risk_assessment_url"] = ticket["ra_url"]
+
+            if updates:
+                state = release_service.update_docs(project, version, UpdateDocsRequest(**updates))
+                if "tsd_ticket_url" in updates:
+                    audit_service.record(
+                        username=_u(x_username),
+                        action="tsd_auto_linked",
+                        project=project,
+                        release_version=version,
+                        details={
+                            "tsd_key": ticket["key"],
+                            "tsd_url": ticket["url"],
+                            "summary": ticket["summary"],
+                        },
+                    )
+                if "risk_assessment_url" in updates:
+                    audit_service.record(
+                        username=_u(x_username),
+                        action="ra_auto_linked",
+                        project=project,
+                        release_version=version,
+                        details={"ra_url": ticket["ra_url"], "tsd_key": ticket["key"]},
+                    )
 
     return state
 

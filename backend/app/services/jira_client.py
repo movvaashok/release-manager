@@ -77,7 +77,8 @@ async def find_tsd_ticket(project: str, version: str) -> Optional[dict]:
         "Content-Type": "application/json",
     }
 
-    # Use JQL text search on summary within the TSD project
+    # Use JQL text search on summary within the TSD project.
+    # Also fetch issuelinks so we can detect RA blockers in one round-trip.
     jql = f'project = "TSD" AND summary ~ "{summary_search}" ORDER BY created DESC'
 
     async with httpx.AsyncClient() as client:
@@ -87,7 +88,7 @@ async def find_tsd_ticket(project: str, version: str) -> Optional[dict]:
                 headers=headers,
                 json={
                     "jql": jql,
-                    "fields": ["summary", "status"],
+                    "fields": ["summary", "status", "issuelinks"],
                     "maxResults": 5,
                 },
                 timeout=15.0,
@@ -102,18 +103,51 @@ async def find_tsd_ticket(project: str, version: str) -> Optional[dict]:
 
         # Pick the first issue whose summary contains the expected string (case-insensitive)
         target = summary_search.lower()
+        matched = None
         for issue in issues:
             summary = issue.get("fields", {}).get("summary", "")
             if target in summary.lower():
-                key = issue["key"]
-                status = issue.get("fields", {}).get("status", {}).get("name", "")
-                url = f"{settings.jira_url.rstrip('/')}/browse/{key}"
-                return {"key": key, "summary": summary, "url": url, "status": status}
+                matched = issue
+                break
 
-        # Fallback to first result if no exact substring match
-        issue = issues[0]
-        key = issue["key"]
-        summary = issue.get("fields", {}).get("summary", "")
-        status = issue.get("fields", {}).get("status", {}).get("name", "")
+        if matched is None:
+            matched = issues[0]  # Fallback to first result
+
+        key = matched["key"]
+        summary = matched.get("fields", {}).get("summary", "")
+        status = matched.get("fields", {}).get("status", {}).get("name", "")
         url = f"{settings.jira_url.rstrip('/')}/browse/{key}"
-        return {"key": key, "summary": summary, "url": url, "status": status}
+
+        # Extract RA ticket from issue links:
+        # TSD "is blocked by" RA-XXX  →  link.type.inward == "is blocked by"
+        #                                 and link.inwardIssue.key starts with "RA-"
+        ra_url = _extract_ra_from_links(matched.get("fields", {}).get("issuelinks", []))
+
+        return {"key": key, "summary": summary, "url": url, "status": status, "ra_url": ra_url}
+
+
+def _extract_ra_from_links(issue_links: list) -> Optional[str]:
+    """
+    Scan Jira issue links on a TSD ticket for an RA blocker.
+
+    Jira link types for "TSD is blocked by RA-XXX":
+      - link["type"]["inward"]  == "is blocked by"   AND link["inwardIssue"]["key"] starts with "RA"
+    Also handles the reverse direction in case the link was created the other way:
+      - link["type"]["outward"] == "blocks"           AND link["outwardIssue"]["key"] starts with "RA"
+    """
+    base = settings.jira_url.rstrip("/") if settings.jira_url else ""
+    for link in issue_links:
+        link_type = link.get("type", {})
+        # "is blocked by" direction — inward issue is the RA ticket
+        if "is blocked by" in link_type.get("inward", "").lower():
+            inward = link.get("inwardIssue", {})
+            key = inward.get("key", "")
+            if key.upper().startswith("RA"):
+                return f"{base}/browse/{key}"
+        # "blocks" direction — outward issue is the RA ticket
+        if "blocks" in link_type.get("outward", "").lower():
+            outward = link.get("outwardIssue", {})
+            key = outward.get("key", "")
+            if key.upper().startswith("RA"):
+                return f"{base}/browse/{key}"
+    return None
