@@ -159,6 +159,23 @@
               <td mat-cell *matCellDef="let r">{{ branchInfo(r) }}</td>
             </ng-container>
 
+            <ng-container matColumnDef="pipeline">
+              <th mat-header-cell *matHeaderCellDef>Pipeline</th>
+              <td mat-cell *matCellDef="let r">
+                <a *ngIf="r.pipeline_url" [href]="r.pipeline_url" target="_blank" rel="noopener"
+                   style="display:inline-flex;align-items:center;gap:4px;text-decoration:none;">
+                  <mat-icon [style.color]="pipelineColor(r.pipeline_status)" style="font-size:16px;width:16px;height:16px;">
+                    {{ pipelineIcon(r.pipeline_status) }}
+                  </mat-icon>
+                  <span [style.color]="pipelineColor(r.pipeline_status)" style="font-size:12px;font-weight:500;">
+                    {{ r.pipeline_status }}
+                  </span>
+                  <mat-icon style="font-size:12px;width:12px;height:12px;color:#9e9e9e;">open_in_new</mat-icon>
+                </a>
+                <span *ngIf="!r.pipeline_url" style="color:#bdbdbd;font-size:13px;">–</span>
+              </td>
+            </ng-container>
+
             <ng-container matColumnDef="error">
               <th mat-header-cell *matHeaderCellDef>Error</th>
               <td mat-cell *matCellDef="let r" class="error-cell">{{ r.error ?? '–' }}</td>
@@ -238,6 +255,23 @@
                   <mat-icon style="font-size:14px;vertical-align:middle;">open_in_new</mat-icon>
                 </a>
                 <span *ngIf="!r.mr_url">–</span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="pipeline3">
+              <th mat-header-cell *matHeaderCellDef>Pipeline</th>
+              <td mat-cell *matCellDef="let r">
+                <a *ngIf="r.pipeline_url" [href]="r.pipeline_url" target="_blank" rel="noopener"
+                   style="display:inline-flex;align-items:center;gap:4px;text-decoration:none;">
+                  <mat-icon [style.color]="pipelineColor(r.pipeline_status)" style="font-size:16px;width:16px;height:16px;">
+                    {{ pipelineIcon(r.pipeline_status) }}
+                  </mat-icon>
+                  <span [style.color]="pipelineColor(r.pipeline_status)" style="font-size:12px;font-weight:500;">
+                    {{ r.pipeline_status }}
+                  </span>
+                  <mat-icon style="font-size:12px;width:12px;height:12px;color:#9e9e9e;">open_in_new</mat-icon>
+                </a>
+                <span *ngIf="!r.pipeline_url" style="color:#bdbdbd;font-size:13px;">–</span>
               </td>
             </ng-container>
 

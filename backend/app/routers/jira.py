@@ -16,6 +16,7 @@ class JiraTicket(BaseModel):
     issue_type: str
     priority: Optional[str] = None
     components: List[str]
+    url: Optional[str] = None
 
 
 class JiraTicketsResponse(BaseModel):
@@ -48,14 +49,17 @@ async def get_tickets(
     tickets = []
     for issue in raw_issues:
         fields = issue.get("fields", {})
+        ticket_key = issue["key"]
+        ticket_url = f"{settings.jira_url.rstrip('/')}/browse/{ticket_key}" if settings.jira_url else None
         tickets.append(
             JiraTicket(
-                key=issue["key"],
+                key=ticket_key,
                 summary=fields.get("summary", ""),
                 status=(fields.get("status") or {}).get("name", ""),
                 issue_type=(fields.get("issuetype") or {}).get("name", ""),
                 priority=(fields.get("priority") or {}).get("name"),
                 components=[c["name"] for c in fields.get("components", [])],
+                url=ticket_url,
             )
         )
 

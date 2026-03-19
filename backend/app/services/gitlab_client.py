@@ -164,5 +164,42 @@ class GitLabClient:
             return resp.json()
 
 
+    # ------------------------------------------------------------------
+    # Pipelines
+    # ------------------------------------------------------------------
+
+    async def get_latest_pipeline_for_branch(
+        self, project_id: int, branch: str
+    ) -> Optional[Dict[str, Any]]:
+        """Return the most recent pipeline object for *branch*, or None."""
+        url = f"{self._base}/projects/{project_id}/pipelines"
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                url,
+                headers=self._headers,
+                params={"ref": branch, "per_page": 1, "order_by": "id", "sort": "desc"},
+                timeout=30,
+            )
+            resp.raise_for_status()
+            pipelines = resp.json()
+            return pipelines[0] if pipelines else None
+
+    async def get_latest_pipeline_for_mr(
+        self, project_id: int, mr_iid: int
+    ) -> Optional[Dict[str, Any]]:
+        """Return the most recent pipeline object for a merge request, or None."""
+        url = f"{self._base}/projects/{project_id}/merge_requests/{mr_iid}/pipelines"
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                url,
+                headers=self._headers,
+                params={"per_page": 1},
+                timeout=30,
+            )
+            resp.raise_for_status()
+            pipelines = resp.json()
+            return pipelines[0] if pipelines else None
+
+
 def get_gitlab_client(token: str) -> GitLabClient:
     return GitLabClient(token)

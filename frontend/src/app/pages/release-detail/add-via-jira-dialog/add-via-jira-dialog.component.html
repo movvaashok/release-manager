@@ -48,7 +48,15 @@
 
               <div class="ticket-body">
                 <div class="ticket-top">
-                  <span class="ticket-key">{{ ticket.key }}</span>
+                  <a
+                    *ngIf="ticket.url"
+                    class="ticket-key"
+                    [href]="ticket.url"
+                    target="_blank"
+                    rel="noopener"
+                    (click)="$event.stopPropagation()"
+                  >{{ ticket.key }}</a>
+                  <span *ngIf="!ticket.url" class="ticket-key">{{ ticket.key }}</span>
                   <span class="ticket-status-badge" [ngClass]="statusClass(ticket.status)">{{ ticket.status }}</span>
                 </div>
                 <div class="ticket-summary">{{ ticket.summary }}</div>
@@ -169,7 +177,8 @@
 .ticket-selected { background: #e8f0fe !important; }
 .ticket-body { flex: 1; min-width: 0; }
 .ticket-top { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
-.ticket-key { font-weight: 700; color: #1565c0; font-size: 13px; flex-shrink: 0; }
+.ticket-key { font-weight: 700; color: #1565c0; font-size: 13px; flex-shrink: 0; text-decoration: none; }
+a.ticket-key:hover { text-decoration: underline; }
 .ticket-summary { font-size: 13px; color: rgba(0,0,0,0.75); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ticket-status-badge {
   font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 10px; flex-shrink: 0;

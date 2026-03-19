@@ -57,8 +57,8 @@ export class ReleaseDetailComponent implements OnInit {
   retryingRepo: string | null = null;
 
   stage1Columns = ['name', 'path', 'actions'];
-  stage2Columns = ['name', 'status', 'branch_info', 'error', 'actions'];
-  stage3Columns = ['name', 'status', 'mr', 'error', 'actions'];
+  stage2Columns = ['name', 'status', 'branch_info', 'pipeline', 'error', 'actions'];
+  stage3Columns = ['name', 'status', 'mr', 'pipeline3', 'error', 'actions'];
   removingRepo: string | null = null;
 
   constructor(
@@ -256,5 +256,36 @@ export class ReleaseDetailComponent implements OnInit {
 
   isRetrying(prefix: string, name: string): boolean {
     return this.retryingRepo === `${prefix}-${name}`;
+  }
+
+  pipelineIcon(status: string | null): string {
+    switch (status) {
+      case 'success':   return 'check_circle';
+      case 'failed':    return 'cancel';
+      case 'running':   return 'sync';
+      case 'pending':
+      case 'created':
+      case 'waiting_for_resource':
+      case 'preparing': return 'schedule';
+      case 'canceled':
+      case 'skipped':   return 'remove_circle_outline';
+      case 'manual':    return 'play_circle_outline';
+      default:          return 'help_outline';
+    }
+  }
+
+  pipelineColor(status: string | null): string {
+    switch (status) {
+      case 'success':   return '#2e7d32';
+      case 'failed':    return '#c62828';
+      case 'running':   return '#1565c0';
+      case 'pending':
+      case 'created':
+      case 'waiting_for_resource':
+      case 'preparing': return '#e65100';
+      case 'canceled':
+      case 'skipped':   return '#757575';
+      default:          return '#9e9e9e';
+    }
   }
 }

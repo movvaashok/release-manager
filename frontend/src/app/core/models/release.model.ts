@@ -26,6 +26,8 @@ export interface Stage2Repo {
   merged: boolean;
   no_updates: boolean;
   error: string | null;
+  pipeline_status: string | null;
+  pipeline_url: string | null;
 }
 
 export interface Stage3Repo {
@@ -36,6 +38,8 @@ export interface Stage3Repo {
   mr_iid: number | null;
   already_existed: boolean;
   error: string | null;
+  pipeline_status: string | null;
+  pipeline_url: string | null;
 }
 
 export interface ReleaseState {
@@ -78,4 +82,5 @@ export interface JiraTicket {
   issue_type: string;
   priority?: string;
   components: string[];
+  url?: string;
 }

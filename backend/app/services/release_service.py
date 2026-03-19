@@ -229,19 +229,27 @@ async def _run_stage2_repo(version: str, repo: Stage2Repo, gitlab_token: str) ->
         if not comparison.get("commits"):
             repo.no_updates = True
             repo.status = RepoStage2Status.SUCCESS
-            return repo
-
-        result = await gitlab.merge_branches(
-            repo.project_id,
-            "develop",
-            release_branch,
-            f"Merge develop into release/{version}",
-        )
-        if result.get("conflict"):
-            repo.status = RepoStage2Status.CONFLICT
         else:
-            repo.merged = True
-            repo.status = RepoStage2Status.SUCCESS
+            result = await gitlab.merge_branches(
+                repo.project_id,
+                "develop",
+                release_branch,
+                f"Merge develop into release/{version}",
+            )
+            if result.get("conflict"):
+                repo.status = RepoStage2Status.CONFLICT
+            else:
+                repo.merged = True
+                repo.status = RepoStage2Status.SUCCESS
+
+        # Fetch latest pipeline for the release branch
+        try:
+            pipeline = await gitlab.get_latest_pipeline_for_branch(repo.project_id, release_branch)
+            if pipeline:
+                repo.pipeline_status = pipeline.get("status")
+                repo.pipeline_url = pipeline.get("web_url")
+        except Exception:
+            pass  # Pipeline fetch failure should not block stage result
 
     except Exception as exc:
         repo.status = RepoStage2Status.FAILED
@@ -280,6 +288,8 @@ async def run_stage2_repo(project_id: str, version: str, repo_name: str, gitlab_
     repo.merged = False
     repo.no_updates = False
     repo.error = None
+    repo.pipeline_status = None
+    repo.pipeline_url = None
 
     state.stage2[idx] = await _run_stage2_repo(version, repo, gitlab_token)
     _save_release(project_id, state)
@@ -317,6 +327,16 @@ async def _run_stage3_repo(version: str, repo: Stage3Repo, gitlab_token: str) ->
             repo.mr_iid = mr["iid"]
             repo.status = RepoStage3Status.SUCCESS
 
+        # Fetch latest pipeline for this MR
+        if repo.mr_iid is not None:
+            try:
+                pipeline = await gitlab.get_latest_pipeline_for_mr(repo.project_id, repo.mr_iid)
+                if pipeline:
+                    repo.pipeline_status = pipeline.get("status")
+                    repo.pipeline_url = pipeline.get("web_url")
+            except Exception:
+                pass  # Pipeline fetch failure should not block stage result
+
     except Exception as exc:
         repo.status = RepoStage3Status.FAILED
         repo.error = str(exc)
@@ -353,6 +373,8 @@ async def run_stage3_repo(project_id: str, version: str, repo_name: str, gitlab_
     repo.mr_iid = None
     repo.already_existed = False
     repo.error = None
+    repo.pipeline_status = None
+    repo.pipeline_url = None
 
     state.stage3[idx] = await _run_stage3_repo(version, repo, gitlab_token)
     _save_release(project_id, state)

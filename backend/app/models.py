@@ -69,6 +69,8 @@ class Stage2Repo(BaseModel):
     merged: bool = False
     no_updates: bool = False
     error: Optional[str] = None
+    pipeline_status: Optional[str] = None
+    pipeline_url: Optional[str] = None
 
 
 class Stage3Repo(BaseModel):
@@ -79,6 +81,8 @@ class Stage3Repo(BaseModel):
     mr_iid: Optional[int] = None
     already_existed: bool = False
     error: Optional[str] = None
+    pipeline_status: Optional[str] = None
+    pipeline_url: Optional[str] = None
 
 
 class ReleaseState(BaseModel):
