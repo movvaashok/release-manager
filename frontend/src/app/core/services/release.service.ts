@@ -93,6 +93,14 @@ export class ReleaseService {
     );
   }
 
+  refreshRa(version: string): Observable<ReleaseState> {
+    return this.http.post<ReleaseState>(
+      `${this.base}/releases/${version}/docs/refresh-ra`,
+      {},
+      { params: this.p },
+    );
+  }
+
   confluenceSearch(version: string): Observable<ReleaseState> {
     return this.http.post<ReleaseState>(
       `${this.base}/releases/${version}/docs/confluence-search`,

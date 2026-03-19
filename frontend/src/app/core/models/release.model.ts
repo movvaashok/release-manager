@@ -43,6 +43,7 @@ export interface Stage3Repo {
   error: string | null;
   pipeline_status: string | null;
   pipeline_url: string | null;
+  requires_ra: boolean;
 }
 
 export interface ReleaseState {

@@ -86,6 +86,7 @@ class Stage3Repo(BaseModel):
     error: Optional[str] = None
     pipeline_status: Optional[str] = None
     pipeline_url: Optional[str] = None
+    requires_ra: bool = False   # Populated from Confluence release plan table
 
 
 class ReleaseState(BaseModel):

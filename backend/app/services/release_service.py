@@ -505,3 +505,31 @@ def update_docs(project_id: str, version: str, req) -> ReleaseState:
 
     _save_release(project_id, state)
     return state
+
+
+def apply_ra_requirements(project_id: str, version: str, ra_map: dict) -> ReleaseState:
+    """
+    Apply RA requirements from the Confluence release plan table to Stage 3 repos.
+
+    ra_map: {normalised_component_name -> ra_value}  (e.g. {"my service": "Y"})
+
+    Comparison: repo.name is normalised (underscores → space, lowercased)
+    and matched against the normalised component names from the table.
+    A repo gets requires_ra=True when the RA value starts with 'Y' (case-insensitive).
+    """
+    import re as _re
+
+    def _normalise(s: str) -> str:
+        return _re.sub(r"[\s_]+", " ", s.strip().lower())
+
+    state = _load_release(project_id, version)
+    if state is None:
+        raise ValueError(f"Release {version} not found")
+
+    for repo in state.stage3:
+        key = _normalise(repo.name)
+        ra_value = ra_map.get(key, "")
+        repo.requires_ra = ra_value.strip().upper().startswith("Y")
+
+    _save_release(project_id, state)
+    return state

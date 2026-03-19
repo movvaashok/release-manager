@@ -275,13 +275,28 @@
             <span style="font-size:13px;color:rgba(0,0,0,0.54);">
               Creates MRs from release/{{ version }} → master
             </span>
+            <button mat-stroked-button *ngIf="release.confluence_url"
+              (click)="refreshRaRequirements()"
+              [disabled]="refreshingRa"
+              matTooltip="Re-read Confluence page and update RA flags">
+              <mat-spinner *ngIf="refreshingRa" diameter="18" style="display:inline-block;margin-right:6px;"></mat-spinner>
+              <mat-icon *ngIf="!refreshingRa">sync</mat-icon>
+              Refresh RA
+            </button>
+            <span *ngIf="raRepoCount > 0" class="ra-summary">
+              <mat-icon class="ra-summary-icon">warning</mat-icon>
+              {{ raRepoCount }} {{ raRepoCount === 1 ? 'repo requires' : 'repos require' }} Risk Assessment
+            </span>
           </div>
 
           <table mat-table [dataSource]="release.stage3" class="full-width">
 
             <ng-container matColumnDef="name">
               <th mat-header-cell *matHeaderCellDef>Repository</th>
-              <td mat-cell *matCellDef="let r"><strong>{{ r.name }}</strong></td>
+              <td mat-cell *matCellDef="let r">
+                <strong>{{ r.name }}</strong>
+                <span *ngIf="r.requires_ra" class="ra-badge" matTooltip="Risk Assessment required for this component">RA</span>
+              </td>
             </ng-container>
 
             <ng-container matColumnDef="status">
@@ -339,7 +354,8 @@
 
             <tr mat-header-row *matHeaderRowDef="stage3Columns"></tr>
             <tr mat-row *matRowDef="let row; columns: stage3Columns;"
-                [class.row-failed]="row.status === 'failed'">
+                [class.row-failed]="row.status === 'failed'"
+                [class.row-requires-ra]="row.requires_ra">
             </tr>
           </table>
         </div>

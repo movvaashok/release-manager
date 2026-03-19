@@ -175,3 +175,43 @@
   text-transform: uppercase;
   letter-spacing: 0.4px;
 }
+
+// ── Stage 3 RA highlighting ─────────────────────────────────────────────────
+
+.row-requires-ra {
+  background-color: #fff8e1;
+
+  &:hover {
+    background-color: #fff3cd !important;
+  }
+}
+
+.ra-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: #e65100;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  vertical-align: middle;
+  cursor: default;
+}
+
+.ra-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #e65100;
+  margin-left: 8px;
+
+  .ra-summary-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+}

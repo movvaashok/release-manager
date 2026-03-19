@@ -92,6 +92,11 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
   confluenceSearching = false;
   confluenceFound: boolean | null = null; // null = not yet searched
   messageCopied = false;
+  refreshingRa = false;
+
+  get raRepoCount(): number {
+    return this.release?.stage3.filter(r => r.requires_ra).length ?? 0;
+  }
 
   constructor(
     private route: ActivatedRoute,
@@ -256,6 +261,28 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
 
   onDocTabSelected(): void {
     this.tryPopulateConfluence();
+  }
+
+  refreshRaRequirements(): void {
+    this.refreshingRa = true;
+    this.releaseService.refreshRa(this.version).subscribe({
+      next: (r) => {
+        this.release = r;
+        this.refreshingRa = false;
+        const count = r.stage3.filter(x => x.requires_ra).length;
+        this.snackBar.open(
+          count > 0
+            ? `RA requirements updated — ${count} repo${count === 1 ? '' : 's'} require Risk Assessment.`
+            : 'RA requirements updated — no repos require Risk Assessment.',
+          'Close',
+          { duration: 4000 },
+        );
+      },
+      error: () => {
+        this.refreshingRa = false;
+        this.snackBar.open('Failed to refresh RA requirements.', 'Close', { duration: 4000 });
+      },
+    });
   }
 
   // -----------------------------------------------------------------------

@@ -255,32 +255,75 @@ async def confluence_search(
 ):
     """
     Search Confluence for a page titled 'Pioneer {version}'.
-    If found and the release doesn't already have a confluence_url, save it automatically.
+    If found:
+      1. Saves the confluence_url to the release (if not already set).
+      2. Fetches the page content, parses the Release description table,
+         and applies requires_ra flags to all Stage 3 repos.
     Always returns the up-to-date ReleaseState.
     """
     state = release_service.get_release(project, version)
     if state is None:
         raise HTTPException(status_code=404, detail=f"Release {version} not found")
 
-    # Already set — nothing to do
-    if state.confluence_url:
-        return state
+    # Determine the page URL — use existing if already linked, else search
+    confluence_url = state.confluence_url
+    if not confluence_url:
+        page_title = f"Pioneer {version}"
+        page = await confluence_client.find_page_by_title(page_title)
+        if page:
+            from app.models import UpdateDocsRequest as _UDR
+            req = _UDR(confluence_url=page["web_url"])
+            state = release_service.update_docs(project, version, req)
+            confluence_url = page["web_url"]
+            audit_service.record(
+                username=_u(x_username),
+                action="confluence_auto_linked",
+                project=project,
+                release_version=version,
+                details={"confluence_url": page["web_url"], "page_title": page["title"]},
+            )
 
-    page_title = f"Pioneer {version}"
-    page = await confluence_client.find_page_by_title(page_title)
+    # Fetch RA requirements from page content (works whether URL was just found or already set)
+    if confluence_url:
+        ra_map = await confluence_client.get_ra_requirements(confluence_url)
+        if ra_map:
+            state = release_service.apply_ra_requirements(project, version, ra_map)
+            audit_service.record(
+                username=_u(x_username),
+                action="ra_requirements_applied",
+                project=project,
+                release_version=version,
+                details={"ra_map": ra_map},
+            )
 
-    if page:
-        from app.models import UpdateDocsRequest as _UDR
-        req = _UDR(confluence_url=page["web_url"])
-        state = release_service.update_docs(project, version, req)
-        audit_service.record(
-            username=_u(x_username),
-            action="confluence_auto_linked",
-            project=project,
-            release_version=version,
-            details={"confluence_url": page["web_url"], "page_title": page["title"]},
-        )
+    return state
 
+
+@router.post("/{version}/docs/refresh-ra", response_model=ReleaseState)
+async def refresh_ra_requirements(
+    version: str,
+    project: str = Query("pioneer"),
+    x_username: str | None = Header(default=None),
+):
+    """
+    Re-fetch the Confluence page and re-apply RA requirements to Stage 3 repos.
+    Useful after the Confluence page content has been updated.
+    """
+    state = release_service.get_release(project, version)
+    if state is None:
+        raise HTTPException(status_code=404, detail=f"Release {version} not found")
+    if not state.confluence_url:
+        raise HTTPException(status_code=400, detail="No Confluence page linked to this release")
+
+    ra_map = await confluence_client.get_ra_requirements(state.confluence_url)
+    state = release_service.apply_ra_requirements(project, version, ra_map)
+    audit_service.record(
+        username=_u(x_username),
+        action="ra_requirements_refreshed",
+        project=project,
+        release_version=version,
+        details={"ra_map": ra_map},
+    )
     return state
 
 
