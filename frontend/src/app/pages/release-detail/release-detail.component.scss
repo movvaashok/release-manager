@@ -61,3 +61,96 @@
 .row-has-new-commits {
   background-color: #fff3e0;
 }
+
+// ── Documentation tab ───────────────────────────────────────────────────────
+
+.doc-tab {
+  padding: 24px 0;
+}
+
+.doc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.doc-card {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 16px 20px;
+
+  .doc-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(0,0,0,0.5);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
+  }
+
+  .doc-value {
+    font-size: 14px;
+    word-break: break-all;
+  }
+
+  .doc-empty {
+    color: rgba(0,0,0,0.35);
+    font-style: italic;
+  }
+}
+
+.doc-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #2d1b4e;
+  text-decoration: none;
+  font-weight: 500;
+
+  &:hover { text-decoration: underline; }
+
+  .link-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+  }
+}
+
+.doc-actions {
+  margin-top: 8px;
+}
+
+.doc-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 560px;
+}
+
+.doc-edit-field {
+  width: 100%;
+}
+
+.doc-edit-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.doc-error {
+  color: #c62828;
+  font-size: 13px;
+  margin-top: 8px;
+}

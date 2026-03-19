@@ -1,6 +1,7 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
@@ -14,6 +15,10 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
 
 import { ReleaseService } from '../../core/services/release.service';
 import { ReleaseState, Stage2Repo, Stage3Repo } from '../../core/models/release.model';
@@ -32,6 +37,7 @@ const POLL_INTERVAL_MS = 30_000;
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     MatTabsModule,
     MatTableModule,
     MatButtonModule,
@@ -45,6 +51,10 @@ const POLL_INTERVAL_MS = 30_000;
     MatDividerModule,
     MatDialogModule,
     MatMenuModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatDatepickerModule,
+    MatNativeDateModule,
     StatusChipComponent,
     AddReposDialogComponent,
     AddViaJiraDialogComponent,
@@ -68,6 +78,17 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
   stage2Columns = ['name', 'status', 'branch_info', 'diff', 'pipeline', 'error', 'actions'];
   stage3Columns = ['name', 'status', 'mr', 'pipeline3', 'error', 'actions'];
   removingRepo: string | null = null;
+
+  // Documentation tab
+  editingDocs = false;
+  savingDocs = false;
+  docsError = '';
+  docsForm: { cab_date_obj: Date | null; tsd_ticket_url: string; confluence_url: string; risk_assessment_url: string } = {
+    cab_date_obj: null,
+    tsd_ticket_url: '',
+    confluence_url: '',
+    risk_assessment_url: '',
+  };
 
   constructor(
     private route: ActivatedRoute,
@@ -154,6 +175,56 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
 
   openAuditLogs(): void {
     this.router.navigate(['/releases', this.version, 'audit-logs']);
+  }
+
+  // -----------------------------------------------------------------------
+  // Documentation tab
+  // -----------------------------------------------------------------------
+
+  startEditDocs(): void {
+    if (!this.release) return;
+    this.docsError = '';
+    // Pre-populate form from current release state
+    this.docsForm = {
+      cab_date_obj: this.release.cab_date ? new Date(this.release.cab_date + 'T12:00:00') : null,
+      tsd_ticket_url: this.release.tsd_ticket_url ?? '',
+      confluence_url: this.release.confluence_url ?? '',
+      risk_assessment_url: this.release.risk_assessment_url ?? '',
+    };
+    this.editingDocs = true;
+  }
+
+  cancelEditDocs(): void {
+    this.editingDocs = false;
+    this.docsError = '';
+  }
+
+  saveDocs(): void {
+    this.savingDocs = true;
+    this.docsError = '';
+
+    const cabDateRaw = this.docsForm.cab_date_obj;
+    const cabDateStr = cabDateRaw
+      ? `${cabDateRaw.getFullYear()}-${String(cabDateRaw.getMonth() + 1).padStart(2, '0')}-${String(cabDateRaw.getDate()).padStart(2, '0')}`
+      : null;
+
+    this.releaseService.updateDocs(this.version, {
+      cab_date: cabDateStr,
+      tsd_ticket_url: this.docsForm.tsd_ticket_url || null,
+      confluence_url: this.docsForm.confluence_url || null,
+      risk_assessment_url: this.docsForm.risk_assessment_url || null,
+    }).subscribe({
+      next: (r) => {
+        this.release = r;
+        this.editingDocs = false;
+        this.savingDocs = false;
+        this.snackBar.open('Documentation links saved.', 'Close', { duration: 3000 });
+      },
+      error: (err) => {
+        this.docsError = err?.error?.detail ?? 'Failed to save documentation links.';
+        this.savingDocs = false;
+      },
+    });
   }
 
   // -----------------------------------------------------------------------

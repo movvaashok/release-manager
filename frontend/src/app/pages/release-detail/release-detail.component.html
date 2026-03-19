@@ -345,6 +345,122 @@
         </div>
       </mat-tab>
 
+      <!-- ─────────────────────────────────────────────────────────────────
+           Documentation tab (visible to all, editable by admin)
+      ──────────────────────────────────────────────────────────────────── -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-icon">description</mat-icon>
+          Documentation
+        </ng-template>
+
+        <div class="tab-content doc-tab">
+
+          <!-- View mode -->
+          <ng-container *ngIf="!editingDocs">
+            <div class="doc-grid">
+
+              <div class="doc-card">
+                <div class="doc-label">
+                  <mat-icon>calendar_today</mat-icon> Target CAB Meeting Date
+                </div>
+                <div class="doc-value" [class.doc-empty]="!release.cab_date">
+                  {{ release.cab_date ? (release.cab_date | date:'longDate') : 'Not set' }}
+                </div>
+              </div>
+
+              <div class="doc-card">
+                <div class="doc-label">
+                  <mat-icon>confirmation_number</mat-icon> TSD Ticket
+                </div>
+                <div class="doc-value">
+                  <a *ngIf="release.tsd_ticket_url" [href]="release.tsd_ticket_url" target="_blank" rel="noopener" class="doc-link">
+                    <mat-icon class="link-icon">open_in_new</mat-icon>
+                    {{ release.tsd_ticket_url }}
+                  </a>
+                  <span *ngIf="!release.tsd_ticket_url" class="doc-empty">Not set</span>
+                </div>
+              </div>
+
+              <div class="doc-card">
+                <div class="doc-label">
+                  <mat-icon>article</mat-icon> Confluence Page
+                </div>
+                <div class="doc-value">
+                  <a *ngIf="release.confluence_url" [href]="release.confluence_url" target="_blank" rel="noopener" class="doc-link">
+                    <mat-icon class="link-icon">open_in_new</mat-icon>
+                    {{ release.confluence_url }}
+                  </a>
+                  <span *ngIf="!release.confluence_url" class="doc-empty">Not set</span>
+                </div>
+              </div>
+
+              <div class="doc-card">
+                <div class="doc-label">
+                  <mat-icon>security</mat-icon> Risk Assessment Ticket
+                </div>
+                <div class="doc-value">
+                  <a *ngIf="release.risk_assessment_url" [href]="release.risk_assessment_url" target="_blank" rel="noopener" class="doc-link">
+                    <mat-icon class="link-icon">open_in_new</mat-icon>
+                    {{ release.risk_assessment_url }}
+                  </a>
+                  <span *ngIf="!release.risk_assessment_url" class="doc-empty">Not set</span>
+                </div>
+              </div>
+
+            </div>
+
+            <div class="doc-actions" *ngIf="isAdmin">
+              <button mat-stroked-button color="primary" (click)="startEditDocs()">
+                <mat-icon>edit</mat-icon> Edit Documentation Links
+              </button>
+            </div>
+          </ng-container>
+
+          <!-- Edit mode (admin only) -->
+          <ng-container *ngIf="editingDocs && isAdmin">
+            <div class="doc-edit-form">
+
+              <mat-form-field appearance="outline" class="doc-edit-field">
+                <mat-label>Target CAB Meeting Date</mat-label>
+                <input matInput [matDatepicker]="editCabPicker" [(ngModel)]="docsForm.cab_date_obj" placeholder="Select date">
+                <mat-datepicker-toggle matIconSuffix [for]="editCabPicker"></mat-datepicker-toggle>
+                <mat-datepicker #editCabPicker></mat-datepicker>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="doc-edit-field">
+                <mat-label>TSD Ticket URL</mat-label>
+                <input matInput [(ngModel)]="docsForm.tsd_ticket_url" placeholder="https://...">
+                <mat-icon matSuffix>link</mat-icon>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="doc-edit-field">
+                <mat-label>Confluence Page URL</mat-label>
+                <input matInput [(ngModel)]="docsForm.confluence_url" placeholder="https://...">
+                <mat-icon matSuffix>article</mat-icon>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="doc-edit-field">
+                <mat-label>Risk Assessment Ticket URL</mat-label>
+                <input matInput [(ngModel)]="docsForm.risk_assessment_url" placeholder="https://...">
+                <mat-icon matSuffix>security</mat-icon>
+              </mat-form-field>
+
+              <div class="doc-edit-actions">
+                <button mat-button (click)="cancelEditDocs()" [disabled]="savingDocs">Cancel</button>
+                <button mat-raised-button color="primary" (click)="saveDocs()" [disabled]="savingDocs">
+                  <mat-spinner *ngIf="savingDocs" diameter="18" style="display:inline-block;margin-right:6px;"></mat-spinner>
+                  Save
+                </button>
+              </div>
+
+              <div *ngIf="docsError" class="doc-error">{{ docsError }}</div>
+            </div>
+          </ng-container>
+
+        </div>
+      </mat-tab>
+
     </mat-tab-group>
   </ng-container>
 </div>

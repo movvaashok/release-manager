@@ -12,6 +12,8 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
 import { JiraService } from '../../core/services/jira.service';
 import { ReleaseService } from '../../core/services/release.service';
 import { JiraTicket, RepoReference } from '../../core/models/release.model';
@@ -34,6 +36,8 @@ type Step = 'version' | 'tickets' | 'repos';
     MatDividerModule,
     MatCheckboxModule,
     MatChipsModule,
+    MatDatepickerModule,
+    MatNativeDateModule,
   ],
   templateUrl: './new-release.component.html',
   styleUrls: ['./new-release.component.scss'],
@@ -65,6 +69,8 @@ export class NewReleaseComponent {
   ) {
     this.form = this.fb.group({
       version: ['', [Validators.required, Validators.pattern(/^\d+\.\d+\.\d+$/)]],
+      cab_date: [null],
+      tsd_ticket_url: [''],
     });
   }
 
@@ -162,8 +168,18 @@ export class NewReleaseComponent {
     this.submitting = true;
     this.errorMessage = '';
 
+    const cabDateRaw: Date | null = this.form.value.cab_date;
+    const cabDateStr = cabDateRaw
+      ? `${cabDateRaw.getFullYear()}-${String(cabDateRaw.getMonth() + 1).padStart(2, '0')}-${String(cabDateRaw.getDate()).padStart(2, '0')}`
+      : null;
+
     this.releaseService
-      .createRelease({ version: this.form.value.version, repo_names: Array.from(this.selectedRepos) })
+      .createRelease({
+        version: this.form.value.version,
+        repo_names: Array.from(this.selectedRepos),
+        cab_date: cabDateStr,
+        tsd_ticket_url: this.form.value.tsd_ticket_url || null,
+      })
       .subscribe({
         next: (state) => this.router.navigate(['/releases', state.version]),
         error: (err) => {

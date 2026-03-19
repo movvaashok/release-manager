@@ -2,7 +2,7 @@ from typing import List
 
 from fastapi import APIRouter, Header, HTTPException, Query
 
-from app.models import AddReposRequest, CreateReleaseRequest, ReleaseState, ReleaseSummary
+from app.models import AddReposRequest, CreateReleaseRequest, ReleaseState, ReleaseSummary, UpdateDocsRequest
 from app.services import release_service
 from app.services import audit_service
 
@@ -211,6 +211,32 @@ async def refresh_pipelines(
             action="pipeline_refresh",
             project=project,
             release_version=version,
+        )
+        return state
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+
+# ── Documentation links ──────────────────────────────────────────────────────────────
+
+@router.patch("/{version}/docs", response_model=ReleaseState)
+def update_docs(
+    version: str,
+    req: UpdateDocsRequest,
+    project: str = Query("pioneer"),
+    x_role: str | None = Header(default=None),
+    x_username: str | None = Header(default=None),
+):
+    if x_role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    try:
+        state = release_service.update_docs(project, version, req)
+        audit_service.record(
+            username=_u(x_username),
+            action="docs_updated",
+            project=project,
+            release_version=version,
+            details={k: v for k, v in req.model_dump().items() if v is not None},
         )
         return state
     except ValueError as exc:

@@ -51,6 +51,11 @@ export interface ReleaseState {
   stage1: Stage1Repo[];
   stage2: Stage2Repo[];
   stage3: Stage3Repo[];
+  // Documentation
+  cab_date: string | null;
+  tsd_ticket_url: string | null;
+  confluence_url: string | null;
+  risk_assessment_url: string | null;
 }
 
 export interface ReleaseSummary {
@@ -70,6 +75,15 @@ export interface ReleaseSummary {
 export interface CreateReleaseRequest {
   version: string;
   repo_names: string[];
+  cab_date?: string | null;
+  tsd_ticket_url?: string | null;
+}
+
+export interface UpdateDocsRequest {
+  confluence_url?: string | null;
+  risk_assessment_url?: string | null;
+  cab_date?: string | null;
+  tsd_ticket_url?: string | null;
 }
 
 export interface Project {

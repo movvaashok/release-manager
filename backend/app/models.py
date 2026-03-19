@@ -94,6 +94,11 @@ class ReleaseState(BaseModel):
     stage1: List[Stage1Repo] = []
     stage2: List[Stage2Repo] = []
     stage3: List[Stage3Repo] = []
+    # Documentation links
+    cab_date: Optional[str] = None             # ISO date string e.g. "2024-06-15"
+    tsd_ticket_url: Optional[str] = None       # Set at creation time
+    confluence_url: Optional[str] = None       # Added after release is created
+    risk_assessment_url: Optional[str] = None  # Added after release is created
 
 
 # ---------------------------------------------------------------------------
@@ -103,6 +108,8 @@ class ReleaseState(BaseModel):
 class CreateReleaseRequest(BaseModel):
     version: str
     repo_names: List[str]
+    cab_date: Optional[str] = None
+    tsd_ticket_url: Optional[str] = None
 
     @field_validator("version")
     @classmethod
@@ -110,6 +117,13 @@ class CreateReleaseRequest(BaseModel):
         if not re.match(r"^\d+\.\d+\.\d+$", v):
             raise ValueError("Version must follow format X.Y.Z (e.g. 2.15.0)")
         return v
+
+
+class UpdateDocsRequest(BaseModel):
+    confluence_url: Optional[str] = None
+    risk_assessment_url: Optional[str] = None
+    cab_date: Optional[str] = None
+    tsd_ticket_url: Optional[str] = None
 
 
 class AddReposRequest(BaseModel):

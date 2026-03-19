@@ -30,7 +30,7 @@
 
   <!-- ── Step 1: Enter Version ── -->
   <div *ngIf="step === 'version'" class="step-card">
-    <h2 class="step-title">Enter Release Version</h2>
+    <h2 class="step-title">Enter Release Details</h2>
     <p class="step-subtitle">
       Jira tickets with this fix version will be fetched from project <strong>TSSA</strong>.
     </p>
@@ -43,13 +43,30 @@
         <mat-error *ngIf="form.get('version')?.hasError('pattern')">Must follow X.Y.Z format</mat-error>
         <mat-error *ngIf="form.get('version')?.hasError('required')">Version is required</mat-error>
       </mat-form-field>
+
+      <div class="doc-fields">
+        <mat-form-field appearance="outline" class="cab-field">
+          <mat-label>Target CAB Meeting Date</mat-label>
+          <input matInput [matDatepicker]="cabPicker" formControlName="cab_date" placeholder="Select date">
+          <mat-datepicker-toggle matIconSuffix [for]="cabPicker"></mat-datepicker-toggle>
+          <mat-datepicker #cabPicker></mat-datepicker>
+          <mat-hint>Change Advisory Board meeting date</mat-hint>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="tsd-field">
+          <mat-label>TSD Ticket URL</mat-label>
+          <input matInput formControlName="tsd_ticket_url" placeholder="https://yourcompany.atlassian.net/browse/TSD-..." />
+          <mat-icon matSuffix>link</mat-icon>
+          <mat-hint>Self-service TSD ticket for this release</mat-hint>
+        </mat-form-field>
+      </div>
     </form>
 
     <div *ngIf="errorMessage" class="error-msg">{{ errorMessage }}</div>
 
     <div class="step-actions">
       <button mat-button (click)="goToDashboard()">Cancel</button>
-      <button mat-raised-button color="primary" [disabled]="!form.valid || loadingTickets" (click)="fetchTickets()">
+      <button mat-raised-button color="primary" [disabled]="!form.get('version')?.valid || loadingTickets" (click)="fetchTickets()">
         <mat-spinner *ngIf="loadingTickets" diameter="18" class="btn-spinner"></mat-spinner>
         Fetch Jira Tickets
       </button>

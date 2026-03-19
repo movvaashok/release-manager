@@ -155,6 +155,8 @@ def create_release(project_id: str, req: CreateReleaseRequest) -> ReleaseState:
         stage1=stage1,
         stage2=stage2,
         stage3=stage3,
+        cab_date=req.cab_date,
+        tsd_ticket_url=req.tsd_ticket_url,
     )
     _save_release(project_id, state)
     return state
@@ -482,5 +484,24 @@ async def run_stage3_repo(project_id: str, version: str, repo_name: str, gitlab_
     repo.pipeline_url = None
 
     state.stage3[idx] = await _run_stage3_repo(version, repo, gitlab_token)
+    _save_release(project_id, state)
+    return state
+
+
+def update_docs(project_id: str, version: str, req) -> ReleaseState:
+    """Update documentation links for a release (admin only)."""
+    state = _load_release(project_id, version)
+    if state is None:
+        raise ValueError(f"Release {version} not found")
+
+    if req.cab_date is not None:
+        state.cab_date = req.cab_date
+    if req.tsd_ticket_url is not None:
+        state.tsd_ticket_url = req.tsd_ticket_url
+    if req.confluence_url is not None:
+        state.confluence_url = req.confluence_url
+    if req.risk_assessment_url is not None:
+        state.risk_assessment_url = req.risk_assessment_url
+
     _save_release(project_id, state)
     return state

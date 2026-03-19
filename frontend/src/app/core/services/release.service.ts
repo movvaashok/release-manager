@@ -8,6 +8,7 @@ import {
   ReleaseSummary,
   ReleaseState,
   RepoReference,
+  UpdateDocsRequest,
 } from '../models/release.model';
 import { ProjectService } from './project.service';
 
@@ -88,6 +89,14 @@ export class ReleaseService {
   removeRepo(version: string, repoName: string): Observable<ReleaseState> {
     return this.http.delete<ReleaseState>(
       `${this.base}/releases/${version}/repos/${encodeURIComponent(repoName)}`,
+      { params: this.p },
+    );
+  }
+
+  updateDocs(version: string, req: UpdateDocsRequest): Observable<ReleaseState> {
+    return this.http.patch<ReleaseState>(
+      `${this.base}/releases/${version}/docs`,
+      req,
       { params: this.p },
     );
   }
