@@ -48,6 +48,14 @@ export class ReleaseService {
     );
   }
 
+  diffCheckStage2(version: string): Observable<ReleaseState> {
+    return this.http.post<ReleaseState>(
+      `${this.base}/releases/${version}/stage2/diff-check`,
+      {},
+      { params: this.p },
+    );
+  }
+
   runStage3(version: string): Observable<ReleaseState> {
     return this.http.post<ReleaseState>(`${this.base}/releases/${version}/stage3`, {}, { params: this.p });
   }

@@ -28,6 +28,9 @@ export interface Stage2Repo {
   error: string | null;
   pipeline_status: string | null;
   pipeline_url: string | null;
+  has_new_commits: boolean | null;
+  commits_ahead: number | null;
+  compare_url: string | null;
 }
 
 export interface Stage3Repo {

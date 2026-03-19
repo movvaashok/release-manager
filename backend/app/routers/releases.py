@@ -53,6 +53,15 @@ async def run_stage2(version: str, x_gitlab_token: str = Header(...), project: s
         raise HTTPException(status_code=404, detail=str(exc))
 
 
+# NOTE: this specific route must be declared BEFORE the /{repo_name}/retry wildcard
+@router.post("/{version}/stage2/diff-check", response_model=ReleaseState)
+async def diff_check_stage2(version: str, x_gitlab_token: str = Header(...), project: str = Query("pioneer")):
+    try:
+        return await release_service.run_diff_check(project, version, x_gitlab_token)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+
 @router.post("/{version}/stage2/{repo_name}/retry", response_model=ReleaseState)
 async def retry_stage2_repo(version: str, repo_name: str, x_gitlab_token: str = Header(...), project: str = Query("pioneer")):
     try:

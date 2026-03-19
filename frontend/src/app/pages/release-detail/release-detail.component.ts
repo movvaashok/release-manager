@@ -54,10 +54,11 @@ export class ReleaseDetailComponent implements OnInit {
   username = '';
   runningStage2 = false;
   runningStage3 = false;
+  runningDiffCheck = false;
   retryingRepo: string | null = null;
 
   stage1Columns = ['name', 'path', 'actions'];
-  stage2Columns = ['name', 'status', 'branch_info', 'pipeline', 'error', 'actions'];
+  stage2Columns = ['name', 'status', 'branch_info', 'diff', 'pipeline', 'error', 'actions'];
   stage3Columns = ['name', 'status', 'mr', 'pipeline3', 'error', 'actions'];
   removingRepo: string | null = null;
 
@@ -138,6 +139,29 @@ export class ReleaseDetailComponent implements OnInit {
 
   get stage2HasPendingOrFailed(): boolean {
     return !!this.release?.stage2.some(r => r.status === 'pending' || r.status === 'failed' || r.status === 'conflict');
+  }
+
+  get stage2HasBranches(): boolean {
+    return !!this.release?.stage2.some(r => r.branch_created || r.branch_existed || r.status === 'success');
+  }
+
+  runDiffCheck(): void {
+    this.runningDiffCheck = true;
+    this.releaseService.diffCheckStage2(this.version).subscribe({
+      next: (r) => {
+        this.release = r;
+        this.runningDiffCheck = false;
+        const ahead = r.stage2.filter(x => x.has_new_commits).length;
+        const msg = ahead > 0
+          ? `${ahead} repo${ahead > 1 ? 's have' : ' has'} new commits in develop.`
+          : 'All branches are up to date with develop.';
+        this.snackBar.open(msg, 'Close', { duration: 4000 });
+      },
+      error: () => {
+        this.runningDiffCheck = false;
+        this.snackBar.open('Diff check failed.', 'Close', { duration: 4000 });
+      },
+    });
   }
 
   // -----------------------------------------------------------------------

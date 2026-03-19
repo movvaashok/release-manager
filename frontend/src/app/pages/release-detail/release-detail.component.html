@@ -130,10 +130,18 @@
           <div class="action-bar">
             <button mat-raised-button color="primary"
               (click)="runStage2()"
-              [disabled]="runningStage2 || !stage2HasPendingOrFailed">
+              [disabled]="runningStage2 || runningDiffCheck || !stage2HasPendingOrFailed">
               <mat-spinner *ngIf="runningStage2" diameter="18" style="display:inline-block;margin-right:6px;"></mat-spinner>
               <mat-icon *ngIf="!runningStage2">sync</mat-icon>
               {{ runningStage2 ? 'Syncing…' : 'Sync All' }}
+            </button>
+            <button mat-stroked-button
+              (click)="runDiffCheck()"
+              [disabled]="runningDiffCheck || runningStage2 || !stage2HasBranches"
+              matTooltip="Compare develop against each release branch">
+              <mat-spinner *ngIf="runningDiffCheck" diameter="18" style="display:inline-block;margin-right:6px;"></mat-spinner>
+              <mat-icon *ngIf="!runningDiffCheck">compare_arrows</mat-icon>
+              {{ runningDiffCheck ? 'Checking…' : 'Diff Check' }}
             </button>
             <span style="font-size:13px;color:rgba(0,0,0,0.54);">
               Merges develop into release/{{ version }} for pending/failed repos
@@ -157,6 +165,34 @@
             <ng-container matColumnDef="branch_info">
               <th mat-header-cell *matHeaderCellDef>Branch Info</th>
               <td mat-cell *matCellDef="let r">{{ branchInfo(r) }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="diff">
+              <th mat-header-cell *matHeaderCellDef>Develop Diff</th>
+              <td mat-cell *matCellDef="let r">
+                <!-- Not yet checked -->
+                <span *ngIf="r.has_new_commits === null || r.has_new_commits === undefined"
+                      style="color:#bdbdbd;font-size:13px;">–</span>
+
+                <!-- Up to date -->
+                <span *ngIf="r.has_new_commits === false"
+                      style="display:inline-flex;align-items:center;gap:4px;color:#2e7d32;font-size:12px;font-weight:500;">
+                  <mat-icon style="font-size:16px;width:16px;height:16px;">check_circle</mat-icon>
+                  Up to date
+                </span>
+
+                <!-- Has new commits -->
+                <a *ngIf="r.has_new_commits === true"
+                   [href]="r.compare_url" target="_blank" rel="noopener"
+                   style="display:inline-flex;align-items:center;gap:4px;text-decoration:none;"
+                   [matTooltip]="r.commits_ahead + ' commit(s) in develop not in release branch'">
+                  <mat-icon style="font-size:16px;width:16px;height:16px;color:#e65100;">arrow_upward</mat-icon>
+                  <span style="color:#e65100;font-size:12px;font-weight:600;">
+                    {{ r.commits_ahead }} ahead
+                  </span>
+                  <mat-icon style="font-size:12px;width:12px;height:12px;color:#9e9e9e;">open_in_new</mat-icon>
+                </a>
+              </td>
             </ng-container>
 
             <ng-container matColumnDef="pipeline">
@@ -197,7 +233,8 @@
             <tr mat-header-row *matHeaderRowDef="stage2Columns"></tr>
             <tr mat-row *matRowDef="let row; columns: stage2Columns;"
                 [class.row-conflict]="row.status === 'conflict'"
-                [class.row-failed]="row.status === 'failed'">
+                [class.row-failed]="row.status === 'failed'"
+                [class.row-has-new-commits]="row.has_new_commits === true">
             </tr>
           </table>
         </div>

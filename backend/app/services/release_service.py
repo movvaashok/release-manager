@@ -290,8 +290,58 @@ async def run_stage2_repo(project_id: str, version: str, repo_name: str, gitlab_
     repo.error = None
     repo.pipeline_status = None
     repo.pipeline_url = None
+    repo.has_new_commits = None
+    repo.commits_ahead = None
+    repo.compare_url = None
 
     state.stage2[idx] = await _run_stage2_repo(version, repo, gitlab_token)
+    _save_release(project_id, state)
+    return state
+
+
+# ---------------------------------------------------------------------------
+# Stage 2 – diff check (develop vs release branch)
+# ---------------------------------------------------------------------------
+
+async def run_diff_check(project_id: str, version: str, gitlab_token: str) -> ReleaseState:
+    """For every stage-2 repo that has a release branch, compare develop against
+    it and record whether develop is ahead (has new commits)."""
+    state = _load_release(project_id, version)
+    if state is None:
+        raise ValueError(f"Release {version} not found")
+
+    gitlab = get_gitlab_client(gitlab_token)
+    release_branch = f"release/{version}"
+
+    # Build a lookup of web_url from stage1 so we can construct compare links
+    web_urls = {r.name: r.web_url for r in state.stage1 if r.web_url}
+
+    for i, repo in enumerate(state.stage2):
+        # Only check repos that already have a release branch
+        if not (repo.branch_created or repo.branch_existed or repo.status == RepoStage2Status.SUCCESS):
+            continue
+        try:
+            comparison = await gitlab.compare_branches(repo.project_id, release_branch, "develop")
+            commits = comparison.get("commits", [])
+            repo.commits_ahead = len(commits)
+            repo.has_new_commits = len(commits) > 0
+
+            # Build GitLab web compare URL: shows what develop has that release doesn't
+            web_url = web_urls.get(repo.name, "")
+            if web_url:
+                from urllib.parse import quote
+                encoded_release = quote(release_branch, safe="")
+                repo.compare_url = f"{web_url}/-/compare/{encoded_release}...develop"
+            else:
+                repo.compare_url = None
+        except Exception as exc:
+            # Non-blocking: mark as unchecked and surface error in compare_url field
+            repo.has_new_commits = None
+            repo.commits_ahead = None
+            repo.compare_url = None
+
+        state.stage2[i] = repo
+
     _save_release(project_id, state)
     return state
 

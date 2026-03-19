@@ -71,6 +71,9 @@ class Stage2Repo(BaseModel):
     error: Optional[str] = None
     pipeline_status: Optional[str] = None
     pipeline_url: Optional[str] = None
+    has_new_commits: Optional[bool] = None
+    commits_ahead: Optional[int] = None
+    compare_url: Optional[str] = None
 
 
 class Stage3Repo(BaseModel):
