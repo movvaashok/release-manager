@@ -6,7 +6,9 @@ Storage layout:
         {project_id}/
             repositories.json     – reference repo list per project
             releases/
-                2.15.0.json       – one file per release
+                {version}/
+                    state.json    – release state
+                    audit.jsonl   – append-only audit log (managed by audit_service)
 """
 from __future__ import annotations
 
@@ -33,10 +35,17 @@ from app.services.gitlab_client import get_gitlab_client
 
 
 # ---------------------------------------------------------------------------
-# One-time migration: move legacy flat data into pioneer/ subdirectory
+# Migrations
 # ---------------------------------------------------------------------------
 
 def migrate_legacy_data() -> None:
+    """Run all one-time migrations in order."""
+    _migrate_flat_to_pioneer()
+    _migrate_flat_files_to_subfolders()
+
+
+def _migrate_flat_to_pioneer() -> None:
+    """Move legacy top-level data/ files into pioneer/ subdirectory."""
     pioneer_releases = settings.data_dir / "pioneer" / "releases"
     legacy_releases = settings.data_dir / "releases"
     if legacy_releases.exists() and not pioneer_releases.exists():
@@ -51,6 +60,37 @@ def migrate_legacy_data() -> None:
         shutil.copy2(legacy_repos, pioneer_repos)
 
 
+def _migrate_flat_files_to_subfolders() -> None:
+    """Move flat {version}.json and {version}_audit.jsonl into {version}/ subfolders."""
+    for project_dir in settings.data_dir.iterdir():
+        if not project_dir.is_dir():
+            continue
+        releases_dir = project_dir / "releases"
+        if not releases_dir.exists():
+            continue
+        for state_file in list(releases_dir.glob("*.json")):
+            version = state_file.stem  # e.g. "2.15.0"
+            version_dir = releases_dir / version
+            new_state = version_dir / "state.json"
+            if not new_state.exists():
+                version_dir.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(state_file, new_state)
+                state_file.unlink()
+            else:
+                state_file.unlink()  # already migrated, remove old file
+
+        for audit_file in list(releases_dir.glob("*_audit.jsonl")):
+            version = audit_file.stem.replace("_audit", "")  # e.g. "2.15.0"
+            version_dir = releases_dir / version
+            new_audit = version_dir / "audit.jsonl"
+            if not new_audit.exists():
+                version_dir.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(audit_file, new_audit)
+                audit_file.unlink()
+            else:
+                audit_file.unlink()  # already migrated, remove old file
+
+
 # ---------------------------------------------------------------------------
 # Helpers – JSON persistence
 # ---------------------------------------------------------------------------
@@ -61,8 +101,15 @@ def _releases_dir(project_id: str) -> Path:
     return d
 
 
+def _release_dir(project_id: str, version: str) -> Path:
+    """Return (and create) the per-release subfolder: data/{project}/releases/{version}/"""
+    d = _releases_dir(project_id) / version
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
 def _release_path(project_id: str, version: str) -> Path:
-    return _releases_dir(project_id) / f"{version}.json"
+    return _release_dir(project_id, version) / "state.json"
 
 
 def _load_release(project_id: str, version: str) -> Optional[ReleaseState]:
@@ -115,9 +162,16 @@ def get_references(project_id: str) -> List[RepoReference]:
 
 def list_releases(project_id: str) -> List[ReleaseSummary]:
     summaries = []
-    for path in sorted(_releases_dir(project_id).glob("*.json")):
+    releases_dir = _releases_dir(project_id)
+    # Each release lives in its own subfolder: releases/{version}/state.json
+    for version_dir in sorted(releases_dir.iterdir()):
+        if not version_dir.is_dir():
+            continue
+        state_file = version_dir / "state.json"
+        if not state_file.exists():
+            continue
         try:
-            state = ReleaseState.model_validate_json(path.read_text())
+            state = ReleaseState.model_validate_json(state_file.read_text())
             summaries.append(_to_summary(state))
         except Exception:
             pass
@@ -129,7 +183,7 @@ def get_release(project_id: str, version: str) -> Optional[ReleaseState]:
 
 
 def create_release(project_id: str, req: CreateReleaseRequest) -> ReleaseState:
-    if _release_path(project_id, req.version).exists():
+    if (_releases_dir(project_id) / req.version).exists():
         raise ValueError(f"Release {req.version} already exists")
 
     refs = {r.name: r for r in _load_references(project_id)}

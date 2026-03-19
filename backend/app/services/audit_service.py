@@ -2,7 +2,7 @@
 Append-only JSON-lines audit log — one file per release.
 
 Storage layout:
-  data/{project}/releases/{version}_audit.jsonl
+  data/{project}/releases/{version}/audit.jsonl
 
 Each line is a JSON object:
 {
@@ -14,7 +14,7 @@ Each line is a JSON object:
   "details": { ... }    # optional extra context
 }
 
-Keeping the log co-located with the release data file means:
+Keeping the log inside the release subfolder means:
 - No cross-release file contention when multiple users act on different releases.
 - Reads scan only the relevant file (never grows with unrelated data).
 - Deleting a release can cleanly remove its audit log too.
@@ -30,7 +30,7 @@ from app.config import settings
 
 def _log_path(project: str, release_version: str) -> Path:
     """Return the path for a release-scoped audit log file, creating dirs as needed."""
-    path = settings.data_dir / project / "releases" / f"{release_version}_audit.jsonl"
+    path = settings.data_dir / project / "releases" / release_version / "audit.jsonl"
     path.parent.mkdir(parents=True, exist_ok=True)
     return path
 
