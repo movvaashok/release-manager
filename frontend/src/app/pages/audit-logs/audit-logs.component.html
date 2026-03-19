@@ -1,0 +1,134 @@
+<!-- Toolbar -->
+<mat-toolbar color="primary" class="toolbar">
+  <button mat-icon-button (click)="goBack()" matTooltip="Back to release">
+    <mat-icon>arrow_back</mat-icon>
+  </button>
+  <mat-icon style="margin: 0 8px;">history</mat-icon>
+  <span>Audit Logs — Release {{ version }}</span>
+</mat-toolbar>
+
+<div class="page-container">
+
+  <!-- Filter card -->
+  <mat-card class="filter-card">
+    <mat-card-content>
+      <div class="filter-row">
+
+        <!-- User filter -->
+        <mat-form-field appearance="outline" class="filter-field">
+          <mat-label>Filter by user</mat-label>
+          <mat-select [(ngModel)]="selectedUser">
+            <mat-option value="">All users</mat-option>
+            <mat-option *ngFor="let u of allUsers" [value]="u">{{ u }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <!-- From date -->
+        <mat-form-field appearance="outline" class="filter-field">
+          <mat-label>From date</mat-label>
+          <input matInput [matDatepicker]="pickerFrom" [(ngModel)]="fromDate" placeholder="YYYY-MM-DD">
+          <mat-datepicker-toggle matIconSuffix [for]="pickerFrom"></mat-datepicker-toggle>
+          <mat-datepicker #pickerFrom></mat-datepicker>
+        </mat-form-field>
+
+        <!-- To date -->
+        <mat-form-field appearance="outline" class="filter-field">
+          <mat-label>To date</mat-label>
+          <input matInput [matDatepicker]="pickerTo" [(ngModel)]="toDate" placeholder="YYYY-MM-DD">
+          <mat-datepicker-toggle matIconSuffix [for]="pickerTo"></mat-datepicker-toggle>
+          <mat-datepicker #pickerTo></mat-datepicker>
+        </mat-form-field>
+
+        <!-- Actions -->
+        <div class="filter-actions">
+          <button mat-raised-button color="primary" (click)="applyFilters()">
+            <mat-icon>search</mat-icon> Apply
+          </button>
+          <button mat-stroked-button (click)="clearFilters()" *ngIf="selectedUser || fromDate || toDate">
+            <mat-icon>clear</mat-icon> Clear
+          </button>
+        </div>
+
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="loading-center">
+    <mat-spinner diameter="48"></mat-spinner>
+  </div>
+
+  <!-- Error -->
+  <div *ngIf="errorMessage" class="error-msg">
+    <mat-icon>error</mat-icon> {{ errorMessage }}
+  </div>
+
+  <!-- Empty state -->
+  <div *ngIf="!loading && !errorMessage && logs.length === 0" class="empty-state">
+    <mat-icon>history_toggle_off</mat-icon>
+    <p>No audit log entries found for the selected filters.</p>
+  </div>
+
+  <!-- Summary chips -->
+  <div *ngIf="!loading && logs.length > 0" class="summary-row">
+    <span class="summary-label">{{ logs.length }} {{ logs.length === 1 ? 'entry' : 'entries' }}</span>
+  </div>
+
+  <!-- Logs table -->
+  <div *ngIf="!loading && logs.length > 0" class="table-wrapper">
+    <table mat-table [dataSource]="logs" class="audit-table">
+
+      <!-- Timestamp column -->
+      <ng-container matColumnDef="timestamp">
+        <th mat-header-cell *matHeaderCellDef>Timestamp</th>
+        <td mat-cell *matCellDef="let row" class="ts-cell">
+          <div class="ts-date">{{ row.timestamp | date:'mediumDate' }}</div>
+          <div class="ts-time">{{ row.timestamp | date:'HH:mm:ss' }}</div>
+        </td>
+      </ng-container>
+
+      <!-- Username column -->
+      <ng-container matColumnDef="username">
+        <th mat-header-cell *matHeaderCellDef>User</th>
+        <td mat-cell *matCellDef="let row">
+          <div class="user-chip">
+            <mat-icon class="user-icon">person</mat-icon>
+            {{ row.username }}
+          </div>
+        </td>
+      </ng-container>
+
+      <!-- Action column -->
+      <ng-container matColumnDef="action">
+        <th mat-header-cell *matHeaderCellDef>Action</th>
+        <td mat-cell *matCellDef="let row">
+          <span class="action-chip" [style.background-color]="actionColor(row.action)">
+            {{ actionLabel(row.action) }}
+          </span>
+        </td>
+      </ng-container>
+
+      <!-- Repo column -->
+      <ng-container matColumnDef="repo">
+        <th mat-header-cell *matHeaderCellDef>Repository</th>
+        <td mat-cell *matCellDef="let row">
+          <span *ngIf="row.repo_name" class="repo-name">{{ row.repo_name }}</span>
+          <span *ngIf="!row.repo_name" class="muted">—</span>
+        </td>
+      </ng-container>
+
+      <!-- Details column -->
+      <ng-container matColumnDef="details">
+        <th mat-header-cell *matHeaderCellDef>Details</th>
+        <td mat-cell *matCellDef="let row" class="details-cell">
+          {{ formatDetails(row) }}
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+
+    </table>
+  </div>
+
+</div>

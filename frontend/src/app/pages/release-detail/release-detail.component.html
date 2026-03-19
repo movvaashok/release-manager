@@ -8,6 +8,11 @@
   <button mat-icon-button (click)="loadRelease()" matTooltip="Refresh">
     <mat-icon>refresh</mat-icon>
   </button>
+  <button *ngIf="isAdmin" mat-stroked-button (click)="openAuditLogs()"
+          matTooltip="View audit logs for this release"
+          style="margin-right:8px; color:white; border-color:rgba(255,255,255,0.6);">
+    <mat-icon>history</mat-icon> Audit Logs
+  </button>
   <!-- User menu -->
   <button mat-icon-button [matMenuTriggerFor]="userMenu" matTooltip="{{ username }}">
     <mat-icon>account_circle</mat-icon>

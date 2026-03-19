@@ -78,6 +78,22 @@ export interface Project {
   jira_project_key: string;
 }
 
+export interface AuditLog {
+  id: string;
+  timestamp: string;
+  username: string;
+  action: string;
+  project: string;
+  release_version: string;
+  repo_name: string | null;
+  details: Record<string, unknown>;
+}
+
+export interface AuditLogsResponse {
+  logs: AuditLog[];
+  users: string[];
+}
+
 export interface JiraTicket {
   key: string;
   summary: string;

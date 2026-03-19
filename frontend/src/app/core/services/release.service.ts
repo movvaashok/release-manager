@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
+  AuditLogsResponse,
   CreateReleaseRequest,
   ReleaseSummary,
   ReleaseState,
@@ -88,6 +89,22 @@ export class ReleaseService {
     return this.http.delete<ReleaseState>(
       `${this.base}/releases/${version}/repos/${encodeURIComponent(repoName)}`,
       { params: this.p },
+    );
+  }
+
+  getAuditLogs(
+    version: string,
+    username?: string,
+    fromTs?: string,
+    toTs?: string,
+  ): Observable<AuditLogsResponse> {
+    const params: Record<string, string> = { ...this.p };
+    if (username) params['username'] = username;
+    if (fromTs) params['from_ts'] = fromTs;
+    if (toTs) params['to_ts'] = toTs;
+    return this.http.get<AuditLogsResponse>(
+      `${this.base}/releases/${version}/audit-logs`,
+      { params },
     );
   }
 

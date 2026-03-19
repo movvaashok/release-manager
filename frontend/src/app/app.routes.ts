@@ -26,6 +26,12 @@ export const routes: Routes = [
       import('./pages/new-release/new-release.component').then(m => m.NewReleaseComponent),
   },
   {
+    path: 'releases/:version/audit-logs',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/audit-logs/audit-logs.component').then(m => m.AuditLogsComponent),
+  },
+  {
     path: 'releases/:version',
     canActivate: [authGuard],
     loadComponent: () =>

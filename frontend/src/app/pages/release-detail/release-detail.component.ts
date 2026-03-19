@@ -152,6 +152,10 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
     this.router.navigate(['/releases']);
   }
 
+  openAuditLogs(): void {
+    this.router.navigate(['/releases', this.version, 'audit-logs']);
+  }
+
   // -----------------------------------------------------------------------
   // Stage 2
   // -----------------------------------------------------------------------

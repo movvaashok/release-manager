@@ -10,8 +10,14 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   session.resetActivity();
 
   const token = auth.getToken();
-  if (token) {
-    req = req.clone({ setHeaders: { 'X-Gitlab-Token': token } });
+  const username = auth.getUsername();
+  const role = auth.getRole();
+  const headers: Record<string, string> = {};
+  if (token) headers['X-Gitlab-Token'] = token;
+  if (username) headers['X-Username'] = username;
+  if (role) headers['X-Role'] = role;
+  if (Object.keys(headers).length) {
+    req = req.clone({ setHeaders: headers });
   }
   return next(req);
 };
