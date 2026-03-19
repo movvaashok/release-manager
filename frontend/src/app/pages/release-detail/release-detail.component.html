@@ -60,7 +60,7 @@
 
     <mat-tab-group animationDuration="150ms" mat-stretch-tabs="false"
       [selectedIndex]="activeTabIndex"
-      (selectedIndexChange)="activeTabIndex = $event">
+      (selectedIndexChange)="activeTabIndex = $event; activeTabIndex === 3 && onDocTabSelected()">
 
       <!-- ================================================================
            Stage 1 – Release Candidates
@@ -356,6 +356,12 @@
 
         <div class="tab-content doc-tab">
 
+          <!-- Confluence searching indicator -->
+          <div *ngIf="confluenceSearching" class="confluence-searching">
+            <mat-spinner diameter="18"></mat-spinner>
+            <span>Searching Confluence for release page…</span>
+          </div>
+
           <!-- View mode -->
           <ng-container *ngIf="!editingDocs">
             <div class="doc-grid">
@@ -385,13 +391,14 @@
               <div class="doc-card">
                 <div class="doc-label">
                   <mat-icon>article</mat-icon> Confluence Page
+                  <span *ngIf="confluenceFound === true && release.confluence_url" class="auto-found-badge">Auto-linked</span>
                 </div>
                 <div class="doc-value">
                   <a *ngIf="release.confluence_url" [href]="release.confluence_url" target="_blank" rel="noopener" class="doc-link">
                     <mat-icon class="link-icon">open_in_new</mat-icon>
                     {{ release.confluence_url }}
                   </a>
-                  <span *ngIf="!release.confluence_url" class="doc-empty">Not set</span>
+                  <span *ngIf="!release.confluence_url && !confluenceSearching" class="doc-empty">Not found</span>
                 </div>
               </div>
 
@@ -410,8 +417,14 @@
 
             </div>
 
-            <div class="doc-actions" *ngIf="isAdmin">
-              <button mat-stroked-button color="primary" (click)="startEditDocs()">
+            <div class="doc-actions">
+              <button mat-raised-button (click)="copyDocMessage()"
+                      [color]="messageCopied ? 'accent' : 'primary'"
+                      matTooltip="Copy a Teams/Slack message with all documentation links">
+                <mat-icon>{{ messageCopied ? 'check' : 'content_copy' }}</mat-icon>
+                {{ messageCopied ? 'Copied!' : 'Copy Message' }}
+              </button>
+              <button *ngIf="isAdmin" mat-stroked-button (click)="startEditDocs()">
                 <mat-icon>edit</mat-icon> Edit Documentation Links
               </button>
             </div>

@@ -5,6 +5,7 @@ from fastapi import APIRouter, Header, HTTPException, Query
 from app.models import AddReposRequest, CreateReleaseRequest, ReleaseState, ReleaseSummary, UpdateDocsRequest
 from app.services import release_service
 from app.services import audit_service
+from app.services import confluence_client
 
 router = APIRouter(prefix="/releases", tags=["releases"])
 
@@ -241,6 +242,46 @@ def update_docs(
         return state
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
+
+
+# ── Confluence auto-populate ─────────────────────────────────────────────────────────
+
+@router.post("/{version}/docs/confluence-search", response_model=ReleaseState)
+async def confluence_search(
+    version: str,
+    project: str = Query("pioneer"),
+    x_role: str | None = Header(default=None),
+    x_username: str | None = Header(default=None),
+):
+    """
+    Search Confluence for a page titled 'Pioneer {version}'.
+    If found and the release doesn't already have a confluence_url, save it automatically.
+    Always returns the up-to-date ReleaseState.
+    """
+    state = release_service.get_release(project, version)
+    if state is None:
+        raise HTTPException(status_code=404, detail=f"Release {version} not found")
+
+    # Already set — nothing to do
+    if state.confluence_url:
+        return state
+
+    page_title = f"Pioneer {version}"
+    page = await confluence_client.find_page_by_title(page_title)
+
+    if page:
+        from app.models import UpdateDocsRequest as _UDR
+        req = _UDR(confluence_url=page["web_url"])
+        state = release_service.update_docs(project, version, req)
+        audit_service.record(
+            username=_u(x_username),
+            action="confluence_auto_linked",
+            project=project,
+            release_version=version,
+            details={"confluence_url": page["web_url"], "page_title": page["title"]},
+        )
+
+    return state
 
 
 # ── Audit logs (admin-only enforced on frontend; backend validates role via header) ──

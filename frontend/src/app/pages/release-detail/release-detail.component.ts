@@ -89,6 +89,9 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
     confluence_url: '',
     risk_assessment_url: '',
   };
+  confluenceSearching = false;
+  confluenceFound: boolean | null = null; // null = not yet searched
+  messageCopied = false;
 
   constructor(
     private route: ActivatedRoute,
@@ -224,6 +227,73 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
         this.docsError = err?.error?.detail ?? 'Failed to save documentation links.';
         this.savingDocs = false;
       },
+    });
+  }
+
+  // -----------------------------------------------------------------------
+  // Documentation – Confluence auto-populate
+  // -----------------------------------------------------------------------
+
+  tryPopulateConfluence(): void {
+    if (!this.release || this.release.confluence_url || this.confluenceSearching) return;
+    this.confluenceSearching = true;
+    this.releaseService.confluenceSearch(this.version).subscribe({
+      next: (r) => {
+        const found = !!r.confluence_url && !this.release?.confluence_url;
+        this.release = r;
+        this.confluenceSearching = false;
+        this.confluenceFound = !!r.confluence_url;
+        if (found) {
+          this.snackBar.open('Confluence page found and linked automatically.', 'Close', { duration: 4000 });
+        }
+      },
+      error: () => {
+        this.confluenceSearching = false;
+        this.confluenceFound = false;
+      },
+    });
+  }
+
+  onDocTabSelected(): void {
+    this.tryPopulateConfluence();
+  }
+
+  // -----------------------------------------------------------------------
+  // Documentation – Copy message
+  // -----------------------------------------------------------------------
+
+  copyDocMessage(): void {
+    if (!this.release) return;
+    const r = this.release;
+
+    const cabLine = r.cab_date
+      ? `📅 *CAB Meeting Date:* ${new Date(r.cab_date + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}`
+      : '📅 *CAB Meeting Date:* Not set';
+
+    const tsdLine = r.tsd_ticket_url
+      ? `🎫 *TSD Ticket:* ${r.tsd_ticket_url}`
+      : '🎫 *TSD Ticket:* Not set';
+
+    const confluenceLine = r.confluence_url
+      ? `📄 *Confluence Page:* ${r.confluence_url}`
+      : '📄 *Confluence Page:* Not set';
+
+    const raLine = r.risk_assessment_url
+      ? `🛡️ *Risk Assessment:* ${r.risk_assessment_url}`
+      : '🛡️ *Risk Assessment:* Not set';
+
+    const message = [
+      `📦 *Release v${r.version} — Documentation Links*`,
+      '',
+      cabLine,
+      tsdLine,
+      confluenceLine,
+      raLine,
+    ].join('\n');
+
+    navigator.clipboard.writeText(message).then(() => {
+      this.messageCopied = true;
+      setTimeout(() => (this.messageCopied = false), 3000);
     });
   }
 
