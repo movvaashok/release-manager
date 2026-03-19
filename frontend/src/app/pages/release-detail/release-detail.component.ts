@@ -26,6 +26,7 @@ import { StatusChipComponent } from '../../shared/components/status-chip/status-
 import { AddReposDialogComponent } from './add-repos-dialog/add-repos-dialog.component';
 import { AddViaJiraDialogComponent } from './add-via-jira-dialog/add-via-jira-dialog.component';
 import { AuthService } from '../../core/services/auth.service';
+import { ProjectService } from '../../core/services/project.service';
 
 const ACTIVE_PIPELINE_STATUSES = new Set([
   'created', 'waiting_for_resource', 'preparing', 'pending', 'running',
@@ -104,8 +105,13 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
     private releaseService: ReleaseService,
     private snackBar: MatSnackBar,
     private dialog: MatDialog,
-    private auth: AuthService
+    private auth: AuthService,
+    private projectService: ProjectService,
   ) {}
+
+  get isPioneerProject(): boolean {
+    return this.projectService.currentId === 'pioneer';
+  }
 
   isAdmin = false;
 

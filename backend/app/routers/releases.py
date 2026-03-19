@@ -266,6 +266,7 @@ async def confluence_search(
         raise HTTPException(status_code=404, detail=f"Release {version} not found")
 
     # Determine the page URL — use existing if already linked, else search
+    # Page title uses the "Pioneer <version>" naming convention
     confluence_url = state.confluence_url
     if not confluence_url:
         page_title = f"Pioneer {version}"
@@ -283,8 +284,9 @@ async def confluence_search(
                 details={"confluence_url": page["web_url"], "page_title": page["title"]},
             )
 
-    # Fetch RA requirements from page content (works whether URL was just found or already set)
-    if confluence_url:
+    # RA requirements are specific to the Pioneer project —
+    # other projects (e.g. Calibrate) do not use the RA column.
+    if confluence_url and project == "pioneer":
         ra_map = await confluence_client.get_ra_requirements(confluence_url)
         if ra_map:
             state = release_service.apply_ra_requirements(project, version, ra_map)
@@ -307,8 +309,11 @@ async def refresh_ra_requirements(
 ):
     """
     Re-fetch the Confluence page and re-apply RA requirements to Stage 3 repos.
-    Useful after the Confluence page content has been updated.
+    Only applies to the Pioneer project — other projects do not use RA requirements.
     """
+    if project != "pioneer":
+        raise HTTPException(status_code=400, detail="RA requirements only apply to the Pioneer project")
+
     state = release_service.get_release(project, version)
     if state is None:
         raise HTTPException(status_code=404, detail=f"Release {version} not found")
