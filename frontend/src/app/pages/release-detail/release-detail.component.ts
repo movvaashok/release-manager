@@ -22,6 +22,11 @@ import { AddReposDialogComponent } from './add-repos-dialog/add-repos-dialog.com
 import { AddViaJiraDialogComponent } from './add-via-jira-dialog/add-via-jira-dialog.component';
 import { AuthService } from '../../core/services/auth.service';
 
+const ACTIVE_PIPELINE_STATUSES = new Set([
+  'created', 'waiting_for_resource', 'preparing', 'pending', 'running',
+]);
+const POLL_INTERVAL_MS = 30_000;
+
 @Component({
   selector: 'app-release-detail',
   standalone: true,
@@ -47,11 +52,6 @@ import { AuthService } from '../../core/services/auth.service';
   templateUrl: './release-detail.component.html',
   styleUrls: ['./release-detail.component.scss'],
 })
-const ACTIVE_PIPELINE_STATUSES = new Set([
-  'created', 'waiting_for_resource', 'preparing', 'pending', 'running',
-]);
-const POLL_INTERVAL_MS = 30_000;
-
 export class ReleaseDetailComponent implements OnInit, OnDestroy {
   version = '';
   release: ReleaseState | null = null;
