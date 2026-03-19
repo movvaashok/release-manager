@@ -323,23 +323,23 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
     const r = this.release;
 
     const cabLine = r.cab_date
-      ? `📅 *CAB Meeting Date:* ${new Date(r.cab_date + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}`
-      : '📅 *CAB Meeting Date:* Not set';
+      ? `📅 CAB Meeting Date: ${new Date(r.cab_date + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}`
+      : '📅 CAB Meeting Date: Not set';
 
     const tsdLine = r.tsd_ticket_url
-      ? `🎫 *TSD Ticket:* ${r.tsd_ticket_url}`
-      : '🎫 *TSD Ticket:* Not set';
+      ? `🎫 TSD Ticket: ${r.tsd_ticket_url}`
+      : '🎫 TSD Ticket: Not set';
 
     const confluenceLine = r.confluence_url
-      ? `📄 *Confluence Page:* ${r.confluence_url}`
-      : '📄 *Confluence Page:* Not set';
+      ? `📄 Confluence Page: ${r.confluence_url}`
+      : '📄 Confluence Page: Not set';
 
     const raLine = r.risk_assessment_url
-      ? `🛡️ *Risk Assessment:* ${r.risk_assessment_url}`
-      : '🛡️ *Risk Assessment:* Not set';
+      ? `🛡️ Risk Assessment: ${r.risk_assessment_url}`
+      : '🛡️ Risk Assessment: Not set';
 
     const message = [
-      `📦 *Release v${r.version} — Documentation Links*`,
+      `📦 Release v${r.version} — Documentation Links`,
       '',
       cabLine,
       tsdLine,
