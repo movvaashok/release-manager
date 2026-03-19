@@ -53,7 +53,9 @@
       </mat-card-content>
     </mat-card>
 
-    <mat-tab-group animationDuration="150ms" mat-stretch-tabs="false">
+    <mat-tab-group animationDuration="150ms" mat-stretch-tabs="false"
+      [selectedIndex]="activeTabIndex"
+      (selectedIndexChange)="activeTabIndex = $event">
 
       <!-- ================================================================
            Stage 1 – Release Candidates

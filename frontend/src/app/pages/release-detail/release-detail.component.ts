@@ -61,6 +61,7 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
   runningStage3 = false;
   runningDiffCheck = false;
   retryingRepo: string | null = null;
+  activeTabIndex = 0;
   private pollTimer: ReturnType<typeof setInterval> | null = null;
 
   stage1Columns = ['name', 'path', 'actions'];
