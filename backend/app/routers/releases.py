@@ -84,3 +84,12 @@ async def retry_stage3_repo(version: str, repo_name: str, x_gitlab_token: str = 
         return await release_service.run_stage3_repo(project, version, repo_name, x_gitlab_token)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
+
+
+# NOTE: declared after all stage2/stage3 sub-routes to avoid wildcard shadowing
+@router.post("/{version}/pipelines/refresh", response_model=ReleaseState)
+async def refresh_pipelines(version: str, x_gitlab_token: str = Header(...), project: str = Query("pioneer")):
+    try:
+        return await release_service.refresh_pipeline_statuses(project, version, x_gitlab_token)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -47,7 +47,12 @@ import { AuthService } from '../../core/services/auth.service';
   templateUrl: './release-detail.component.html',
   styleUrls: ['./release-detail.component.scss'],
 })
-export class ReleaseDetailComponent implements OnInit {
+const ACTIVE_PIPELINE_STATUSES = new Set([
+  'created', 'waiting_for_resource', 'preparing', 'pending', 'running',
+]);
+const POLL_INTERVAL_MS = 30_000;
+
+export class ReleaseDetailComponent implements OnInit, OnDestroy {
   version = '';
   release: ReleaseState | null = null;
   loading = true;
@@ -56,6 +61,7 @@ export class ReleaseDetailComponent implements OnInit {
   runningStage3 = false;
   runningDiffCheck = false;
   retryingRepo: string | null = null;
+  private pollTimer: ReturnType<typeof setInterval> | null = null;
 
   stage1Columns = ['name', 'path', 'actions'];
   stage2Columns = ['name', 'status', 'branch_info', 'diff', 'pipeline', 'error', 'actions'];
@@ -91,12 +97,51 @@ export class ReleaseDetailComponent implements OnInit {
       next: (r) => {
         this.release = r;
         this.loading = false;
+        // Immediately fetch live pipeline statuses from GitLab
+        this.refreshPipelinesQuiet();
       },
       error: () => {
         this.loading = false;
         this.snackBar.open('Failed to load release.', 'Close', { duration: 4000 });
       },
     });
+  }
+
+  /** Refresh pipeline statuses silently (no spinner, no snackbar). */
+  private refreshPipelinesQuiet(): void {
+    this.releaseService.refreshPipelines(this.version).subscribe({
+      next: (r) => {
+        this.release = r;
+        this.managePollTimer();
+      },
+      error: () => { /* silent — don't disrupt the page */ },
+    });
+  }
+
+  /** Start polling if any pipeline is still active; stop it if all are done. */
+  private managePollTimer(): void {
+    const hasActive = this.hasActivePipelines();
+    if (hasActive && !this.pollTimer) {
+      this.pollTimer = setInterval(() => this.refreshPipelinesQuiet(), POLL_INTERVAL_MS);
+    } else if (!hasActive && this.pollTimer) {
+      clearInterval(this.pollTimer);
+      this.pollTimer = null;
+    }
+  }
+
+  private hasActivePipelines(): boolean {
+    if (!this.release) return false;
+    return (
+      this.release.stage2.some(r => ACTIVE_PIPELINE_STATUSES.has(r.pipeline_status ?? '')) ||
+      this.release.stage3.some(r => ACTIVE_PIPELINE_STATUSES.has(r.pipeline_status ?? ''))
+    );
+  }
+
+  ngOnDestroy(): void {
+    if (this.pollTimer) {
+      clearInterval(this.pollTimer);
+      this.pollTimer = null;
+    }
   }
 
   goBack(): void {
@@ -113,6 +158,7 @@ export class ReleaseDetailComponent implements OnInit {
       next: (r) => {
         this.release = r;
         this.runningStage2 = false;
+        this.managePollTimer();
         this.snackBar.open('Stage 2 completed.', 'Close', { duration: 3000 });
       },
       error: () => {
@@ -128,6 +174,7 @@ export class ReleaseDetailComponent implements OnInit {
       next: (r) => {
         this.release = r;
         this.retryingRepo = null;
+        this.managePollTimer();
         this.snackBar.open(`Retry complete for ${repo.name}.`, 'Close', { duration: 3000 });
       },
       error: () => {
@@ -174,6 +221,7 @@ export class ReleaseDetailComponent implements OnInit {
       next: (r) => {
         this.release = r;
         this.runningStage3 = false;
+        this.managePollTimer();
         this.snackBar.open('Stage 3 completed.', 'Close', { duration: 3000 });
       },
       error: () => {
@@ -189,6 +237,7 @@ export class ReleaseDetailComponent implements OnInit {
       next: (r) => {
         this.release = r;
         this.retryingRepo = null;
+        this.managePollTimer();
         this.snackBar.open(`Retry complete for ${repo.name}.`, 'Close', { duration: 3000 });
       },
       error: () => {

@@ -56,6 +56,14 @@ export class ReleaseService {
     );
   }
 
+  refreshPipelines(version: string): Observable<ReleaseState> {
+    return this.http.post<ReleaseState>(
+      `${this.base}/releases/${version}/pipelines/refresh`,
+      {},
+      { params: this.p },
+    );
+  }
+
   runStage3(version: string): Observable<ReleaseState> {
     return this.http.post<ReleaseState>(`${this.base}/releases/${version}/stage3`, {}, { params: this.p });
   }

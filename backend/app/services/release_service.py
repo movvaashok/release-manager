@@ -347,6 +347,61 @@ async def run_diff_check(project_id: str, version: str, gitlab_token: str) -> Re
 
 
 # ---------------------------------------------------------------------------
+# Pipeline status refresh (called on page load to get live statuses)
+# ---------------------------------------------------------------------------
+
+ACTIVE_PIPELINE_STATUSES = {"created", "waiting_for_resource", "preparing", "pending", "running"}
+
+
+async def refresh_pipeline_statuses(project_id: str, version: str, gitlab_token: str) -> ReleaseState:
+    """Re-fetch the latest pipeline status from GitLab for every repo in
+    stage 2 (by branch) and stage 3 (by MR). Persists and returns the updated state."""
+    state = _load_release(project_id, version)
+    if state is None:
+        raise ValueError(f"Release {version} not found")
+
+    gitlab = get_gitlab_client(gitlab_token)
+    release_branch = f"release/{version}"
+    changed = False
+
+    # Stage 2 – fetch pipeline for the release branch on each repo that has one
+    for i, repo in enumerate(state.stage2):
+        if not (repo.branch_created or repo.branch_existed or repo.status == RepoStage2Status.SUCCESS):
+            continue
+        try:
+            pipeline = await gitlab.get_latest_pipeline_for_branch(repo.project_id, release_branch)
+            new_status = pipeline.get("status") if pipeline else None
+            new_url = pipeline.get("web_url") if pipeline else None
+            if repo.pipeline_status != new_status or repo.pipeline_url != new_url:
+                repo.pipeline_status = new_status
+                repo.pipeline_url = new_url
+                state.stage2[i] = repo
+                changed = True
+        except Exception:
+            pass  # Non-blocking
+
+    # Stage 3 – fetch pipeline for each MR
+    for i, repo in enumerate(state.stage3):
+        if repo.mr_iid is None:
+            continue
+        try:
+            pipeline = await gitlab.get_latest_pipeline_for_mr(repo.project_id, repo.mr_iid)
+            new_status = pipeline.get("status") if pipeline else None
+            new_url = pipeline.get("web_url") if pipeline else None
+            if repo.pipeline_status != new_status or repo.pipeline_url != new_url:
+                repo.pipeline_status = new_status
+                repo.pipeline_url = new_url
+                state.stage3[i] = repo
+                changed = True
+        except Exception:
+            pass  # Non-blocking
+
+    if changed:
+        _save_release(project_id, state)
+    return state
+
+
+# ---------------------------------------------------------------------------
 # Stage 3 – merge request creation
 # ---------------------------------------------------------------------------
 
