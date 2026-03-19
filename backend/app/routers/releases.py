@@ -329,49 +329,49 @@ async def confluence_search(
     return state
 
 
-@router.post("/{version}/docs/tsd-search", response_model=ReleaseState)
-async def tsd_search(
+@router.post("/{version}/docs/cab-ticket-search", response_model=ReleaseState)
+async def cab_ticket_search(
     version: str,
     project: str = Query("pioneer"),
     x_role: str | None = Header(default=None),
     x_username: str | None = Header(default=None),
 ):
     """
-    Search Jira TSD project for a ticket matching '<Project> v<version>'.
+    Search Jira TSD project for a CAB ticket matching '<Project> v<version>'.
     If found:
-      - Saves tsd_ticket_url if not already set.
-      - Reads the TSD ticket's issue links to find an RA blocker
-        (TSD 'is blocked by' RA-XXX) and saves risk_assessment_url if found.
+      - Saves cab_ticket_url if not already set.
+      - Reads the ticket's issue links to find an RA blocker
+        (CAB ticket 'is blocked by' RA-XXX) and saves risk_assessment_url if found.
     Always returns the up-to-date ReleaseState.
     """
     state = release_service.get_release(project, version)
     if state is None:
         raise HTTPException(status_code=404, detail=f"Release {version} not found")
 
-    need_tsd = not state.tsd_ticket_url
+    need_cab = not state.cab_ticket_url
     need_ra = not state.risk_assessment_url
 
-    # Only call Jira if we're missing TSD or RA links
-    if need_tsd or need_ra:
-        ticket = await jira_client.find_tsd_ticket(project, version)
+    # Only call Jira if we're missing CAB ticket or RA links
+    if need_cab or need_ra:
+        ticket = await jira_client.find_cab_ticket(project, version)
         if ticket:
             updates: dict = {}
-            if need_tsd:
-                updates["tsd_ticket_url"] = ticket["url"]
+            if need_cab:
+                updates["cab_ticket_url"] = ticket["url"]
             if need_ra and ticket.get("ra_url"):
                 updates["risk_assessment_url"] = ticket["ra_url"]
 
             if updates:
                 state = release_service.update_docs(project, version, UpdateDocsRequest(**updates))
-                if "tsd_ticket_url" in updates:
+                if "cab_ticket_url" in updates:
                     audit_service.record(
                         username=_u(x_username),
-                        action="tsd_auto_linked",
+                        action="cab_ticket_auto_linked",
                         project=project,
                         release_version=version,
                         details={
-                            "tsd_key": ticket["key"],
-                            "tsd_url": ticket["url"],
+                            "cab_ticket_key": ticket["key"],
+                            "cab_ticket_url": ticket["url"],
                             "summary": ticket["summary"],
                         },
                     )
@@ -381,7 +381,7 @@ async def tsd_search(
                         action="ra_auto_linked",
                         project=project,
                         release_version=version,
-                        details={"ra_url": ticket["ra_url"], "tsd_key": ticket["key"]},
+                        details={"ra_url": ticket["ra_url"], "cab_ticket_key": ticket["key"]},
                     )
 
     return state

@@ -51,9 +51,9 @@ async def get_tickets_by_fix_version(version: str, project: str) -> List[dict]:
         return response.json().get("issues", [])
 
 
-async def find_tsd_ticket(project: str, version: str) -> Optional[dict]:
+async def find_cab_ticket(project: str, version: str) -> Optional[dict]:
     """
-    Search the TSD Jira project for a ticket whose summary matches
+    Search the TSD Jira project for a CAB ticket whose summary matches
     '<Project> v<version>'  e.g. 'Pioneer v2.14.0' or 'Calibrate v2.14.0'.
 
     Returns a dict with:
@@ -128,9 +128,9 @@ async def find_tsd_ticket(project: str, version: str) -> Optional[dict]:
 
 def _extract_ra_from_links(issue_links: list) -> Optional[str]:
     """
-    Scan Jira issue links on a TSD ticket for an RA blocker.
+    Scan Jira issue links on a CAB ticket for an RA blocker.
 
-    Jira link types for "TSD is blocked by RA-XXX":
+    Jira link types for "CAB ticket is blocked by RA-XXX":
       - link["type"]["inward"]  == "is blocked by"   AND link["inwardIssue"]["key"] starts with "RA"
     Also handles the reverse direction in case the link was created the other way:
       - link["type"]["outward"] == "blocks"           AND link["outwardIssue"]["key"] starts with "RA"

@@ -101,9 +101,9 @@ export class ReleaseService {
     );
   }
 
-  tsdSearch(version: string): Observable<ReleaseState> {
+  cabTicketSearch(version: string): Observable<ReleaseState> {
     return this.http.post<ReleaseState>(
-      `${this.base}/releases/${version}/docs/tsd-search`,
+      `${this.base}/releases/${version}/docs/cab-ticket-search`,
       {},
       { params: this.p },
     );

@@ -150,7 +150,7 @@ def _to_summary(state: ReleaseState) -> ReleaseSummary:
         stage3_failed=_count(state.stage3, RepoStage3Status.FAILED),
         stage3_pending=_count(state.stage3, RepoStage3Status.PENDING),
         cab_date=state.cab_date,
-        tsd_ticket_url=state.tsd_ticket_url,
+        cab_ticket_url=state.cab_ticket_url,
         confluence_url=state.confluence_url,
         risk_assessment_url=state.risk_assessment_url,
     )
@@ -216,7 +216,7 @@ def create_release(project_id: str, req: CreateReleaseRequest) -> ReleaseState:
         stage2=stage2,
         stage3=stage3,
         cab_date=req.cab_date,
-        tsd_ticket_url=req.tsd_ticket_url,
+        cab_ticket_url=req.cab_ticket_url,
     )
     _save_release(project_id, state)
     return state
@@ -556,8 +556,8 @@ def update_docs(project_id: str, version: str, req) -> ReleaseState:
 
     if req.cab_date is not None:
         state.cab_date = req.cab_date
-    if req.tsd_ticket_url is not None:
-        state.tsd_ticket_url = req.tsd_ticket_url
+    if req.cab_ticket_url is not None:
+        state.cab_ticket_url = req.cab_ticket_url
     if req.confluence_url is not None:
         state.confluence_url = req.confluence_url
     if req.risk_assessment_url is not None:

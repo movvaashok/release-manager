@@ -84,16 +84,16 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
   editingDocs = false;
   savingDocs = false;
   docsError = '';
-  docsForm: { cab_date_obj: Date | null; tsd_ticket_url: string; confluence_url: string; risk_assessment_url: string } = {
+  docsForm: { cab_date_obj: Date | null; cab_ticket_url: string; confluence_url: string; risk_assessment_url: string } = {
     cab_date_obj: null,
-    tsd_ticket_url: '',
+    cab_ticket_url: '',
     confluence_url: '',
     risk_assessment_url: '',
   };
   confluenceSearching = false;
   confluenceFound: boolean | null = null; // null = not yet searched
-  tsdSearching = false;
-  tsdFound: boolean | null = null; // null = not yet searched
+  cabTicketSearching = false;
+  cabTicketFound: boolean | null = null; // null = not yet searched
   messageCopied = false;
   refreshingRa = false;
 
@@ -220,7 +220,7 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
     // Pre-populate form from current release state
     this.docsForm = {
       cab_date_obj: this.release.cab_date ? new Date(this.release.cab_date + 'T12:00:00') : null,
-      tsd_ticket_url: this.release.tsd_ticket_url ?? '',
+      cab_ticket_url: this.release.cab_ticket_url ?? '',
       confluence_url: this.release.confluence_url ?? '',
       risk_assessment_url: this.release.risk_assessment_url ?? '',
     };
@@ -243,7 +243,7 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
 
     this.releaseService.updateDocs(this.version, {
       cab_date: cabDateStr,
-      tsd_ticket_url: this.docsForm.tsd_ticket_url || null,
+      cab_ticket_url: this.docsForm.cab_ticket_url || null,
       confluence_url: this.docsForm.confluence_url || null,
       risk_assessment_url: this.docsForm.risk_assessment_url || null,
     }).subscribe({
@@ -284,29 +284,29 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
     });
   }
 
-  tryPopulateTsd(): void {
-    if (!this.release || this.release.tsd_ticket_url || this.tsdSearching) return;
-    this.tsdSearching = true;
-    this.releaseService.tsdSearch(this.version).subscribe({
+  tryPopulateCabTicket(): void {
+    if (!this.release || this.release.cab_ticket_url || this.cabTicketSearching) return;
+    this.cabTicketSearching = true;
+    this.releaseService.cabTicketSearch(this.version).subscribe({
       next: (r) => {
-        const found = !!r.tsd_ticket_url && !this.release?.tsd_ticket_url;
+        const found = !!r.cab_ticket_url && !this.release?.cab_ticket_url;
         this.release = r;
-        this.tsdSearching = false;
-        this.tsdFound = !!r.tsd_ticket_url;
+        this.cabTicketSearching = false;
+        this.cabTicketFound = !!r.cab_ticket_url;
         if (found) {
-          this.snackBar.open('TSD ticket found and linked automatically.', 'Close', { duration: 4000 });
+          this.snackBar.open('CAB ticket found and linked automatically.', 'Close', { duration: 4000 });
         }
       },
       error: () => {
-        this.tsdSearching = false;
-        this.tsdFound = false;
+        this.cabTicketSearching = false;
+        this.cabTicketFound = false;
       },
     });
   }
 
   onDocTabSelected(): void {
     this.tryPopulateConfluence();
-    this.tryPopulateTsd();
+    this.tryPopulateCabTicket();
   }
 
   refreshRaRequirements(): void {
@@ -343,9 +343,9 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
       ? `📅 CAB Meeting Date: ${new Date(r.cab_date + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}`
       : '📅 CAB Meeting Date: Not set';
 
-    const tsdLine = r.tsd_ticket_url
-      ? `🎫 TSD Ticket: ${r.tsd_ticket_url}`
-      : '🎫 TSD Ticket: Not set';
+    const cabTicketLine = r.cab_ticket_url
+      ? `🎫 CAB Ticket: ${r.cab_ticket_url}`
+      : '🎫 CAB Ticket: Not set';
 
     const confluenceLine = r.confluence_url
       ? `📄 Confluence Page: ${r.confluence_url}`
@@ -359,7 +359,7 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
       `📦 Release v${r.version} — Documentation Links`,
       '',
       cabLine,
-      tsdLine,
+      cabTicketLine,
       confluenceLine,
       raLine,
     ].join('\n');

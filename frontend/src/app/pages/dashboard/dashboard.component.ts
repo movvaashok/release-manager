@@ -125,7 +125,7 @@ export class DashboardComponent implements OnInit {
   }
 
   hasDocumentation(r: ReleaseSummary): boolean {
-    return !!(r.cab_date || r.tsd_ticket_url || r.confluence_url || r.risk_assessment_url);
+    return !!(r.cab_date || r.cab_ticket_url || r.confluence_url || r.risk_assessment_url);
   }
 
   copyDocMessage(event: Event, r: ReleaseSummary): void {
@@ -135,9 +135,9 @@ export class DashboardComponent implements OnInit {
       ? `📅 CAB Meeting Date: ${new Date(r.cab_date + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}`
       : '📅 CAB Meeting Date: Not set';
 
-    const tsdLine = r.tsd_ticket_url
-      ? `🎫 TSD Ticket: ${r.tsd_ticket_url}`
-      : '🎫 TSD Ticket: Not set';
+    const cabTicketLine = r.cab_ticket_url
+      ? `🎫 CAB Ticket: ${r.cab_ticket_url}`
+      : '🎫 CAB Ticket: Not set';
 
     const confluenceLine = r.confluence_url
       ? `📄 Confluence Page: ${r.confluence_url}`
@@ -151,7 +151,7 @@ export class DashboardComponent implements OnInit {
       `📦 Release v${r.version} — Documentation Links`,
       '',
       cabLine,
-      tsdLine,
+      cabTicketLine,
       confluenceLine,
       raLine,
     ].join('\n');

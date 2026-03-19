@@ -70,7 +70,7 @@ export class NewReleaseComponent {
     this.form = this.fb.group({
       version: ['', [Validators.required, Validators.pattern(/^\d+\.\d+\.\d+$/)]],
       cab_date: [null],
-      tsd_ticket_url: [''],
+      cab_ticket_url: [''],
     });
   }
 
@@ -178,7 +178,7 @@ export class NewReleaseComponent {
         version: this.form.value.version,
         repo_names: Array.from(this.selectedRepos),
         cab_date: cabDateStr,
-        tsd_ticket_url: this.form.value.tsd_ticket_url || null,
+        cab_ticket_url: this.form.value.cab_ticket_url || null,
       })
       .subscribe({
         next: (state) => this.router.navigate(['/releases', state.version]),
