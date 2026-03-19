@@ -10,6 +10,7 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 
 import { ReleaseService } from '../../core/services/release.service';
 import { ReleaseSummary, Project } from '../../core/models/release.model';
@@ -24,7 +25,7 @@ import { ManageUsersDialogComponent } from './manage-users-dialog/manage-users-d
   imports: [
     CommonModule, MatButtonModule, MatIconModule, MatCardModule,
     MatProgressSpinnerModule, MatDialogModule, MatToolbarModule,
-    MatTooltipModule, MatMenuModule, MatDividerModule,
+    MatTooltipModule, MatMenuModule, MatDividerModule, MatSnackBarModule,
   ],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss'],
@@ -35,13 +36,15 @@ export class DashboardComponent implements OnInit {
   errorMessage = '';
   username = '';
   isAdmin = false;
+  copiedVersion: string | null = null;
 
   constructor(
     private releaseService: ReleaseService,
     private dialog: MatDialog,
     private router: Router,
     private auth: AuthService,
-    public projectService: ProjectService
+    public projectService: ProjectService,
+    private snackBar: MatSnackBar,
   ) {}
 
   ngOnInit(): void {
@@ -119,5 +122,46 @@ export class DashboardComponent implements OnInit {
     if (r.stage3_failed > 0) return 'status-warn';
     if (r.stage3_pending > 0) return 'status-pending';
     return 'status-done';
+  }
+
+  hasDocumentation(r: ReleaseSummary): boolean {
+    return !!(r.cab_date || r.tsd_ticket_url || r.confluence_url || r.risk_assessment_url);
+  }
+
+  copyDocMessage(event: Event, r: ReleaseSummary): void {
+    event.stopPropagation(); // prevent navigating into the release
+
+    const cabLine = r.cab_date
+      ? `📅 CAB Meeting Date: ${new Date(r.cab_date + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}`
+      : '📅 CAB Meeting Date: Not set';
+
+    const tsdLine = r.tsd_ticket_url
+      ? `🎫 TSD Ticket: ${r.tsd_ticket_url}`
+      : '🎫 TSD Ticket: Not set';
+
+    const confluenceLine = r.confluence_url
+      ? `📄 Confluence Page: ${r.confluence_url}`
+      : '📄 Confluence Page: Not set';
+
+    const raLine = r.risk_assessment_url
+      ? `🛡️ Risk Assessment: ${r.risk_assessment_url}`
+      : '🛡️ Risk Assessment: Not set';
+
+    const message = [
+      `📦 Release v${r.version} — Documentation Links`,
+      '',
+      cabLine,
+      tsdLine,
+      confluenceLine,
+      raLine,
+    ].join('\n');
+
+    navigator.clipboard.writeText(message).then(() => {
+      this.copiedVersion = r.version;
+      this.snackBar.open('Documentation links copied to clipboard.', 'Close', { duration: 3000 });
+      setTimeout(() => { this.copiedVersion = null; }, 3000);
+    }).catch(() => {
+      this.snackBar.open('Failed to copy to clipboard.', 'Close', { duration: 3000 });
+    });
   }
 }

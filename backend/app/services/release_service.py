@@ -149,6 +149,10 @@ def _to_summary(state: ReleaseState) -> ReleaseSummary:
         stage3_already_exists=_count(state.stage3, RepoStage3Status.ALREADY_EXISTS),
         stage3_failed=_count(state.stage3, RepoStage3Status.FAILED),
         stage3_pending=_count(state.stage3, RepoStage3Status.PENDING),
+        cab_date=state.cab_date,
+        tsd_ticket_url=state.tsd_ticket_url,
+        confluence_url=state.confluence_url,
+        risk_assessment_url=state.risk_assessment_url,
     )
 
 

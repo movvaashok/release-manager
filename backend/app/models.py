@@ -192,3 +192,8 @@ class ReleaseSummary(BaseModel):
     stage3_already_exists: int
     stage3_failed: int
     stage3_pending: int
+    # Documentation links — included so dashboard can copy without an extra fetch
+    cab_date: Optional[str] = None
+    tsd_ticket_url: Optional[str] = None
+    confluence_url: Optional[str] = None
+    risk_assessment_url: Optional[str] = None

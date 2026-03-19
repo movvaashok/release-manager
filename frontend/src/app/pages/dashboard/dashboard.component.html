@@ -146,6 +146,13 @@
         </mat-card-content>
 
         <mat-card-actions align="end">
+          <button mat-icon-button
+                  *ngIf="hasDocumentation(r)"
+                  (click)="copyDocMessage($event, r)"
+                  [color]="copiedVersion === r.version ? 'accent' : ''"
+                  [matTooltip]="copiedVersion === r.version ? 'Copied!' : 'Copy documentation links'">
+            <mat-icon>{{ copiedVersion === r.version ? 'check' : 'content_copy' }}</mat-icon>
+          </button>
           <button mat-button color="primary" (click)="$event.stopPropagation(); viewRelease(r.version)">
             View Details <mat-icon>arrow_forward</mat-icon>
           </button>

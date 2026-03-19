@@ -71,6 +71,11 @@ export interface ReleaseSummary {
   stage3_already_exists: number;
   stage3_failed: number;
   stage3_pending: number;
+  // Documentation links
+  cab_date: string | null;
+  tsd_ticket_url: string | null;
+  confluence_url: string | null;
+  risk_assessment_url: string | null;
 }
 
 export interface CreateReleaseRequest {
