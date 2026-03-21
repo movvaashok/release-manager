@@ -93,16 +93,17 @@ export class AddViaJiraDialogComponent implements OnInit {
   }
 
   // ── Status grouping ──────────────────────────────────────────────────────
+  // Known statuses: Done, Abandoned | Ready for QA, IN TESTING | In Progress, Selected for development
   private statusGroup(status: string): 0 | 1 | 2 {
     const s = status.toLowerCase().trim();
-    // Group 0 — Done
-    if (s === 'done' || s === 'resolved' || s === 'closed' || s === 'fixed' ||
-        s.includes('done') || s.includes('resolved') || s.includes('closed') || s.includes('fixed')) return 0;
-    // Group 1 — Testing / QA (check for 'qa' as a word boundary to avoid false matches)
-    if (s === 'qa' || s === 'uat' || s === 'sit' ||
-        s.includes('testing') || s.includes('ready for qa') || s.includes('ready to test') ||
-        s.includes('in qa') || s.includes('in uat') || s.includes('in sit') ||
-        /\bqa\b/.test(s) || /\buat\b/.test(s)) return 1;
+    // Group 0 — Done / closed
+    if (s === 'done' || s === 'abandoned' || s === 'resolved' || s === 'closed' || s === 'fixed' ||
+        s.includes('done') || s.includes('abandoned') || s.includes('resolved') ||
+        s.includes('closed') || s.includes('fixed')) return 0;
+    // Group 1 — Testing / QA
+    if (s.includes('testing') || s.includes('ready for qa') || s.includes('ready to test') ||
+        s.includes('in qa') || /\bqa\b/.test(s)) return 1;
+    // Group 2 — In Progress, Selected for development, and anything else
     return 2;
   }
 
@@ -137,10 +138,10 @@ export class AddViaJiraDialogComponent implements OnInit {
   }
 
   statusClass(status: string): string {
-    const s = status.toLowerCase();
-    if (s.includes('done') || s.includes('resolved') || s.includes('closed') || s.includes('fixed')) return 'status-done';
-    if (s.includes('progress') || s.includes('review') || s.includes('open')) return 'status-inprogress';
-    return 'status-other';
+    const group = this.statusGroup(status);
+    if (group === 0) return 'status-done';
+    if (group === 1) return 'status-testing';
+    return 'status-inprogress';
   }
 
   proceedToRepos(): void {
