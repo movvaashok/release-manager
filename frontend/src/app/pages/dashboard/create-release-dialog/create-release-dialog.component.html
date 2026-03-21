@@ -12,12 +12,8 @@
         <mat-label>Version</mat-label>
         <input matInput formControlName="version" placeholder="e.g. 2.15.0" />
         <mat-hint>Format: X.Y.Z</mat-hint>
-        <mat-error *ngIf="form.get('version')?.hasError('pattern')">
-          Version must follow X.Y.Z format (e.g. 2.15.0)
-        </mat-error>
-        <mat-error *ngIf="form.get('version')?.hasError('required')">
-          Version is required
-        </mat-error>
+        <mat-error *ngIf="form.get('version')?.hasError('pattern')">Version must follow X.Y.Z format (e.g. 2.15.0)</mat-error>
+        <mat-error *ngIf="form.get('version')?.hasError('required')">Version is required</mat-error>
       </mat-form-field>
     </form>
     <p style="margin-top: 16px; color: #616161; font-size: 14px;">
@@ -30,9 +26,7 @@
   <div *ngIf="step === 'tickets'">
     <div *ngIf="loadingTickets" style="text-align: center; padding: 40px;">
       <mat-spinner diameter="36"></mat-spinner>
-      <p style="margin-top: 12px; color: #757575;">
-        Fetching Jira tickets for version <strong>{{ form.value.version }}</strong>…
-      </p>
+      <p style="margin-top: 12px; color: #757575;">Fetching Jira tickets for version <strong>{{ form.value.version }}</strong>…</p>
     </div>
 
     <div *ngIf="!loadingTickets">
@@ -43,37 +37,9 @@
 
       <div *ngIf="tickets.length > 0">
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-          <span style="font-size:14px; color:rgba(0,0,0,0.6);">
-            {{ selectedTicketKeys.size }} / {{ tickets.length }} selected
-          </span>
-          <button mat-stroked-button (click)="toggleAllTickets()">
-            {{ allTicketsSelected ? 'Deselect All' : 'Select All' }}
-          </button>
+          <span style="font-size:14px; color:rgba(0,0,0,0.6);">{{ selectedTicketKeys.size }} / {{ tickets.length }} selected</span>
+          <button mat-stroked-button (click)="toggleAllTickets()">{{ allTicketsSelected ? 'Deselect All' : 'Select All' }}</button>
         </div>
-
-        <!-- Shared ticket row template -->
-        <ng-template #ticketRow let-ticket>
-          <div class="ticket-row"
-               [class.ticket-selected]="selectedTicketKeys.has(ticket.key)"
-               (click)="toggleTicket(ticket.key)">
-            <mat-checkbox
-              [checked]="selectedTicketKeys.has(ticket.key)"
-              (click)="$event.stopPropagation()"
-              (change)="toggleTicket(ticket.key)"
-              style="flex-shrink:0;">
-            </mat-checkbox>
-            <div class="ticket-body">
-              <div class="ticket-top">
-                <span class="ticket-key">{{ ticket.key }}</span>
-                <span class="ticket-status-badge" [ngClass]="statusClass(ticket.status)">{{ ticket.status }}</span>
-              </div>
-              <div class="ticket-summary">{{ ticket.summary }}</div>
-              <div *ngIf="ticket.components.length > 0" class="ticket-components">
-                {{ ticket.components.join(', ') }}
-              </div>
-            </div>
-          </div>
-        </ng-template>
 
         <div class="ticket-list">
 
@@ -87,7 +53,17 @@
               </button>
             </div>
             <ng-container *ngFor="let ticket of doneTickets">
-              <ng-container *ngTemplateOutlet="ticketRow; context: { $implicit: ticket }"></ng-container>
+              <div class="ticket-row" [class.ticket-selected]="selectedTicketKeys.has(ticket.key)" (click)="toggleTicket(ticket.key)">
+                <mat-checkbox [checked]="selectedTicketKeys.has(ticket.key)" (click)="$event.stopPropagation()" (change)="toggleTicket(ticket.key)" style="flex-shrink:0;"></mat-checkbox>
+                <div class="ticket-body">
+                  <div class="ticket-top">
+                    <span class="ticket-key">{{ ticket.key }}</span>
+                    <span class="ticket-status-badge" [ngClass]="statusClass(ticket.status)">{{ ticket.status }}</span>
+                  </div>
+                  <div class="ticket-summary">{{ ticket.summary }}</div>
+                  <div *ngIf="ticket.components.length > 0" class="ticket-components">{{ ticket.components.join(', ') }}</div>
+                </div>
+              </div>
             </ng-container>
           </ng-container>
 
@@ -101,7 +77,17 @@
               </button>
             </div>
             <ng-container *ngFor="let ticket of testingTickets">
-              <ng-container *ngTemplateOutlet="ticketRow; context: { $implicit: ticket }"></ng-container>
+              <div class="ticket-row" [class.ticket-selected]="selectedTicketKeys.has(ticket.key)" (click)="toggleTicket(ticket.key)">
+                <mat-checkbox [checked]="selectedTicketKeys.has(ticket.key)" (click)="$event.stopPropagation()" (change)="toggleTicket(ticket.key)" style="flex-shrink:0;"></mat-checkbox>
+                <div class="ticket-body">
+                  <div class="ticket-top">
+                    <span class="ticket-key">{{ ticket.key }}</span>
+                    <span class="ticket-status-badge" [ngClass]="statusClass(ticket.status)">{{ ticket.status }}</span>
+                  </div>
+                  <div class="ticket-summary">{{ ticket.summary }}</div>
+                  <div *ngIf="ticket.components.length > 0" class="ticket-components">{{ ticket.components.join(', ') }}</div>
+                </div>
+              </div>
             </ng-container>
           </ng-container>
 
@@ -115,7 +101,17 @@
               </button>
             </div>
             <ng-container *ngFor="let ticket of otherTickets">
-              <ng-container *ngTemplateOutlet="ticketRow; context: { $implicit: ticket }"></ng-container>
+              <div class="ticket-row" [class.ticket-selected]="selectedTicketKeys.has(ticket.key)" (click)="toggleTicket(ticket.key)">
+                <mat-checkbox [checked]="selectedTicketKeys.has(ticket.key)" (click)="$event.stopPropagation()" (change)="toggleTicket(ticket.key)" style="flex-shrink:0;"></mat-checkbox>
+                <div class="ticket-body">
+                  <div class="ticket-top">
+                    <span class="ticket-key">{{ ticket.key }}</span>
+                    <span class="ticket-status-badge" [ngClass]="statusClass(ticket.status)">{{ ticket.status }}</span>
+                  </div>
+                  <div class="ticket-summary">{{ ticket.summary }}</div>
+                  <div *ngIf="ticket.components.length > 0" class="ticket-components">{{ ticket.components.join(', ') }}</div>
+                </div>
+              </div>
             </ng-container>
           </ng-container>
 
@@ -130,27 +126,17 @@
       <mat-spinner diameter="36"></mat-spinner>
       <p style="margin-top: 12px; color: #757575;">Loading repositories…</p>
     </div>
-
     <div *ngIf="!loadingRepos">
       <p style="margin: 0 0 12px; font-size: 14px; color: #616161;">
         Repositories below are pre-selected based on components from the chosen Jira tickets.
         Adjust the selection as needed before creating the release.
       </p>
-
       <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
         <strong>{{ selectedRepos.size }} / {{ repos.length }} repositories selected</strong>
-        <button mat-stroked-button (click)="toggleAllRepos()">
-          {{ allReposSelected ? 'Deselect All' : 'Select All' }}
-        </button>
+        <button mat-stroked-button (click)="toggleAllRepos()">{{ allReposSelected ? 'Deselect All' : 'Select All' }}</button>
       </div>
-
       <mat-selection-list style="max-height: 360px; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 4px;">
-        <mat-list-option
-          *ngFor="let repo of repos"
-          [value]="repo.name"
-          [selected]="selectedRepos.has(repo.name)"
-          (click)="toggleRepo(repo.name)"
-        >
+        <mat-list-option *ngFor="let repo of repos" [value]="repo.name" [selected]="selectedRepos.has(repo.name)" (click)="toggleRepo(repo.name)">
           <span matListItemTitle>{{ repo.name }}</span>
           <span matListItemLine>{{ repo.path_with_namespace }}</span>
         </mat-list-option>
@@ -158,56 +144,25 @@
     </div>
   </div>
 
-  <div *ngIf="errorMessage" style="margin-top: 12px; color: #c62828; font-size: 14px;">
-    {{ errorMessage }}
-  </div>
+  <div *ngIf="errorMessage" style="margin-top: 12px; color: #c62828; font-size: 14px;">{{ errorMessage }}</div>
 
 </mat-dialog-content>
 
 <mat-dialog-actions align="end">
   <button mat-button (click)="cancel()" [disabled]="submitting">Cancel</button>
+  <button mat-stroked-button *ngIf="step !== 'version'" (click)="back()" [disabled]="loadingTickets || loadingRepos || submitting">Back</button>
 
-  <button
-    mat-stroked-button
-    *ngIf="step !== 'version'"
-    (click)="back()"
-    [disabled]="loadingTickets || loadingRepos || submitting"
-  >
-    Back
-  </button>
-
-  <!-- Step 1 → Fetch Tickets -->
-  <button
-    *ngIf="step === 'version'"
-    mat-raised-button
-    color="primary"
-    [disabled]="!form.valid || loadingTickets"
-    (click)="fetchTickets()"
-  >
+  <button *ngIf="step === 'version'" mat-raised-button color="primary" [disabled]="!form.valid || loadingTickets" (click)="fetchTickets()">
     <mat-spinner *ngIf="loadingTickets" diameter="18" style="display: inline-block; margin-right: 8px;"></mat-spinner>
     Fetch Jira Tickets
   </button>
 
-  <!-- Step 2 → Use Selected -->
-  <button
-    *ngIf="step === 'tickets'"
-    mat-raised-button
-    color="primary"
-    [disabled]="selectedTicketKeys.size === 0 || loadingRepos"
-    (click)="useSelectedTickets()"
-  >
+  <button *ngIf="step === 'tickets'" mat-raised-button color="primary" [disabled]="selectedTicketKeys.size === 0 || loadingRepos" (click)="useSelectedTickets()">
     <mat-spinner *ngIf="loadingRepos" diameter="18" style="display: inline-block; margin-right: 8px;"></mat-spinner>
     Use Selected ({{ selectedTicketKeys.size }})
   </button>
 
-  <!-- Step 3 → Create Release -->
-  <button
-    *ngIf="step === 'repos'"
-    mat-raised-button
-    color="primary"
-    [disabled]="!canSubmit"
-    (click)="submit()"
-  >
+  <button *ngIf="step === 'repos'" mat-raised-button color="primary" [disabled]="!canSubmit" (click)="submit()">
     <mat-spinner *ngIf="submitting" diameter="18" style="display: inline-block; margin-right: 8px;"></mat-spinner>
     Create Release
   </button>
@@ -219,11 +174,9 @@
 .ticket-list { border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; }
 
 .group-header {
-  display: flex; align-items: center; gap: 8px;
-  padding: 7px 14px;
+  display: flex; align-items: center; gap: 8px; padding: 7px 14px;
   font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
-  border-bottom: 1px solid transparent;
-  position: sticky; top: 0; z-index: 1;
+  border-bottom: 1px solid transparent; position: sticky; top: 0; z-index: 1;
 }
 .group-header mat-icon { font-size: 16px; width: 16px; height: 16px; flex-shrink: 0; }
 .group-count { font-weight: 400; opacity: 0.75; }
@@ -248,15 +201,13 @@
 .ticket-row:hover { background: #f5f5f5; }
 .ticket-selected { background: #e8f0fe !important; }
 .ticket-body { flex: 1; min-width: 0; }
-.ticket-top { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
+.ticket-top { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; flex-wrap: wrap; }
 .ticket-key { font-weight: 700; color: #1565c0; font-size: 13px; flex-shrink: 0; }
 .ticket-summary { font-size: 13px; color: rgba(0,0,0,0.75); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ticket-components { font-size: 11px; color: rgba(0,0,0,0.45); margin-top: 2px; font-style: italic; }
 
-.ticket-status-badge {
-  font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 10px; flex-shrink: 0;
-}
-.status-done     { background: #e8f5e9; color: #2e7d32; }
-.status-testing  { background: #e3f2fd; color: #0d47a1; }
+.ticket-status-badge { font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 10px; flex-shrink: 0; }
+.status-done       { background: #e8f5e9; color: #2e7d32; }
+.status-testing    { background: #e3f2fd; color: #0d47a1; }
 .status-inprogress { background: #fff3e0; color: #e65100; }
 </style>
