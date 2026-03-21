@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.routers import auth, jira, projects, repos, releases
 from app.services.release_service import migrate_legacy_data
+from app.services.token_service import migrate_tokens
 
 app = FastAPI(
     title="GitLab Release Manager",
@@ -26,4 +27,5 @@ app.include_router(jira.router, prefix="/api")
 
 @app.on_event("startup")
 def startup():
-    migrate_legacy_data()
+    migrate_tokens()        # move tokens from .env / users.json → data/tokens.json
+    migrate_legacy_data()   # move release data to per-version subfolders

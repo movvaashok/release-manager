@@ -4,11 +4,18 @@ from typing import List, Optional
 import httpx
 
 from app.config import settings
+from app.services import token_service
 
 
 def _auth_header() -> str:
-    credentials = f"{settings.jira_email}:{settings.jira_api_token}"
+    jira_email, jira_api_token = token_service.get_jira_credentials()
+    credentials = f"{jira_email}:{jira_api_token}"
     return "Basic " + base64.b64encode(credentials.encode()).decode()
+
+
+def _jira_configured() -> bool:
+    jira_email, jira_api_token = token_service.get_jira_credentials()
+    return bool(settings.jira_url and jira_email and jira_api_token)
 
 
 async def _resolve_fix_version(client: httpx.AsyncClient, project: str, version: str, headers: dict) -> str:
@@ -64,7 +71,7 @@ async def find_cab_ticket(project: str, version: str) -> Optional[dict]:
 
     Returns None if Jira is not configured or no matching ticket is found.
     """
-    if not (settings.jira_url and settings.jira_email and settings.jira_api_token):
+    if not _jira_configured():
         return None
 
     # Title format: "Pioneer v2.14.0" / "Calibrate v2.14.0"

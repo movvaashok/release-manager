@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
 from app.config import settings
-from app.services import jira_client, project_service
+from app.services import jira_client, project_service, token_service
 
 router = APIRouter(prefix="/jira", tags=["jira"])
 
@@ -25,10 +25,11 @@ class JiraTicketsResponse(BaseModel):
 
 
 def _check_configured() -> None:
-    if not all([settings.jira_url, settings.jira_email, settings.jira_api_token]):
+    jira_email, jira_api_token = token_service.get_jira_credentials()
+    if not all([settings.jira_url, jira_email, jira_api_token]):
         raise HTTPException(
             status_code=503,
-            detail="Jira integration is not configured. Set JIRA_URL, JIRA_EMAIL, and JIRA_API_TOKEN in .env.",
+            detail="Jira integration is not configured. Add jira_email and jira_api_token to data/tokens.json.",
         )
 
 

@@ -12,6 +12,7 @@ from typing import Dict, Optional
 import httpx
 
 from app.config import settings
+from app.services import token_service
 
 
 # ---------------------------------------------------------------------------
@@ -19,7 +20,8 @@ from app.config import settings
 # ---------------------------------------------------------------------------
 
 def _auth_header() -> str:
-    credentials = f"{settings.jira_email}:{settings.jira_api_token}"
+    jira_email, jira_api_token = token_service.get_jira_credentials()
+    credentials = f"{jira_email}:{jira_api_token}"
     return "Basic " + base64.b64encode(credentials.encode()).decode()
 
 
@@ -154,7 +156,8 @@ async def find_page_by_title(title: str) -> Optional[dict]:
 
     Returns None if not found or Confluence is not configured.
     """
-    if not (settings.jira_url and settings.jira_email and settings.jira_api_token):
+    jira_email, jira_api_token = token_service.get_jira_credentials()
+    if not (settings.jira_url and jira_email and jira_api_token):
         return None
 
     headers = {
@@ -215,7 +218,8 @@ async def get_ra_requirements(page_url: str) -> Dict[str, str]:
     Returns: {normalised_component -> ra_value}   e.g. {"my service": "Y"}
     Returns an empty dict if not configured, page not found, or table not found.
     """
-    if not (settings.jira_url and settings.jira_email and settings.jira_api_token):
+    jira_email, jira_api_token = token_service.get_jira_credentials()
+    if not (settings.jira_url and jira_email and jira_api_token):
         return {}
 
     page_id = _extract_page_id(page_url)

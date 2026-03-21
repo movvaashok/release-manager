@@ -4,6 +4,7 @@ from typing import List
 
 from app.config import settings
 from app.models import CreateUserRequest, LoginRequest, LoginResponse, UserSummary
+from app.services import token_service
 
 
 def _users_path() -> Path:
@@ -31,13 +32,13 @@ def login(req: LoginRequest) -> LoginResponse:
         raise ValueError("Invalid username or password")
 
     if req.gitlab_token:
-        user["gitlab_token"] = req.gitlab_token
-        _save_users(users)
+        token_service.set_user_token(user["username"], req.gitlab_token)
 
+    stored_token = token_service.get_user_token(user["username"])
     return LoginResponse(
         username=user["username"],
-        gitlab_token=user.get("gitlab_token"),
-        has_token=bool(user.get("gitlab_token")),
+        gitlab_token=stored_token,
+        has_token=bool(stored_token),
         role=user.get("role", "user"),
         projects=user.get("projects", []),
     )
@@ -49,7 +50,7 @@ def get_all_users() -> List[UserSummary]:
         UserSummary(
             username=u["username"],
             role=u.get("role", "user"),
-            has_token=bool(u.get("gitlab_token")),
+            has_token=token_service.has_user_token(u["username"]),
             projects=u.get("projects", []),
         )
         for u in users
@@ -63,7 +64,6 @@ def create_user(req: CreateUserRequest) -> UserSummary:
     new_user = {
         "username": req.username,
         "password": req.password,
-        "gitlab_token": None,
         "role": req.role,
         "projects": req.projects,
     }
