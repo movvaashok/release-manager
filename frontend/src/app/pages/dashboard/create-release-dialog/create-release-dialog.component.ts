@@ -10,6 +10,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { ReleaseService } from '../../../core/services/release.service';
 import { JiraService } from '../../../core/services/jira.service';
 import { JiraTicket, RepoReference } from '../../../core/models/release.model';
@@ -31,6 +32,7 @@ type DialogStep = 'version' | 'tickets' | 'repos';
     MatIconModule,
     MatDividerModule,
     MatChipsModule,
+    MatCheckboxModule,
   ],
   templateUrl: './create-release-dialog.component.html',
 })
@@ -82,6 +84,48 @@ export class CreateReleaseDialogComponent {
     });
   }
 
+  // ── Status grouping ──────────────────────────────────────────────────────
+  // Known statuses: Done | Ready for QA, IN TESTING | In Progress, Selected for development, Abandoned
+  private statusGroup(status: string): 0 | 1 | 2 {
+    const s = status.toLowerCase().trim();
+    if (s === 'done' || s === 'resolved' || s === 'closed' || s === 'fixed' ||
+        s.includes('done') || s.includes('resolved') || s.includes('closed') || s.includes('fixed')) return 0;
+    if (s.includes('testing') || s.includes('ready for qa') || s.includes('ready to test') ||
+        s.includes('in qa') || /\bqa\b/.test(s)) return 1;
+    return 2;
+  }
+
+  get doneTickets(): JiraTicket[] {
+    return this.tickets.filter(t => this.statusGroup(t.status) === 0);
+  }
+
+  get testingTickets(): JiraTicket[] {
+    return this.tickets.filter(t => this.statusGroup(t.status) === 1);
+  }
+
+  get otherTickets(): JiraTicket[] {
+    return this.tickets.filter(t => this.statusGroup(t.status) === 2);
+  }
+
+  allInGroupSelected(group: JiraTicket[]): boolean {
+    return group.length > 0 && group.every(t => this.selectedTicketKeys.has(t.key));
+  }
+
+  toggleGroupSelection(group: JiraTicket[]): void {
+    if (this.allInGroupSelected(group)) {
+      group.forEach(t => this.selectedTicketKeys.delete(t.key));
+    } else {
+      group.forEach(t => this.selectedTicketKeys.add(t.key));
+    }
+  }
+
+  statusClass(status: string): string {
+    const group = this.statusGroup(status);
+    if (group === 0) return 'status-done';
+    if (group === 1) return 'status-testing';
+    return 'status-inprogress';
+  }
+
   toggleTicket(key: string): void {
     if (this.selectedTicketKeys.has(key)) {
       this.selectedTicketKeys.delete(key);
@@ -103,7 +147,6 @@ export class CreateReleaseDialogComponent {
     this.loadingRepos = true;
     this.errorMessage = '';
 
-    // Collect component names from selected tickets
     const selectedTickets = this.tickets.filter((t) => this.selectedTicketKeys.has(t.key));
     const componentNames = new Set<string>();
     selectedTickets.forEach((t) => t.components.forEach((c) => componentNames.add(c)));
@@ -112,15 +155,12 @@ export class CreateReleaseDialogComponent {
       next: (repos) => {
         this.repos = repos;
         this.selectedRepos.clear();
-
-        // Pre-select repos whose name matches a Jira component (case-insensitive)
         const lowerComponents = new Set([...componentNames].map((c) => c.toLowerCase()));
         repos.forEach((r) => {
           if (lowerComponents.has(r.name.toLowerCase())) {
             this.selectedRepos.add(r.name);
           }
         });
-
         this.loadingRepos = false;
         this.step = 'repos';
       },
@@ -178,7 +218,6 @@ export class CreateReleaseDialogComponent {
     if (!this.canSubmit) return;
     this.submitting = true;
     this.errorMessage = '';
-
     this.releaseService
       .createRelease({ version: this.form.value.version, repo_names: Array.from(this.selectedRepos) })
       .subscribe({
