@@ -11,6 +11,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { ReleaseService } from '../../../core/services/release.service';
 import { JiraService } from '../../../core/services/jira.service';
 import { JiraTicket, RepoReference } from '../../../core/models/release.model';
@@ -33,6 +34,7 @@ type DialogStep = 'version' | 'tickets' | 'repos';
     MatDividerModule,
     MatChipsModule,
     MatCheckboxModule,
+    MatTooltipModule,
   ],
   templateUrl: './create-release-dialog.component.html',
 })
@@ -43,6 +45,7 @@ export class CreateReleaseDialogComponent {
   // Jira state
   tickets: JiraTicket[] = [];
   selectedTicketKeys = new Set<string>();
+  expandedTickets = new Set<string>();
   loadingTickets = false;
 
   // Repo state
@@ -124,6 +127,15 @@ export class CreateReleaseDialogComponent {
     if (group === 0) return 'status-done';
     if (group === 1) return 'status-testing';
     return 'status-inprogress';
+  }
+
+  toggleExpand(key: string, event: MouseEvent): void {
+    event.stopPropagation();
+    if (this.expandedTickets.has(key)) {
+      this.expandedTickets.delete(key);
+    } else {
+      this.expandedTickets.add(key);
+    }
   }
 
   toggleTicket(key: string): void {

@@ -61,8 +61,13 @@
                     <span class="ticket-status-badge" [ngClass]="statusClass(ticket.status)">{{ ticket.status }}</span>
                   </div>
                   <div class="ticket-summary">{{ ticket.summary }}</div>
-                  <div *ngIf="ticket.components.length > 0" class="ticket-components">{{ ticket.components.join(', ') }}</div>
                 </div>
+                <button *ngIf="ticket.components.length > 0" mat-icon-button class="expand-btn" (click)="toggleExpand(ticket.key, $event)" matTooltip="Components">
+                  <mat-icon>{{ expandedTickets.has(ticket.key) ? 'expand_less' : 'expand_more' }}</mat-icon>
+                </button>
+              </div>
+              <div *ngIf="expandedTickets.has(ticket.key)" class="component-row">
+                <mat-chip-set><mat-chip *ngFor="let c of ticket.components" style="font-size:12px;">{{ c }}</mat-chip></mat-chip-set>
               </div>
             </ng-container>
           </ng-container>
@@ -85,8 +90,13 @@
                     <span class="ticket-status-badge" [ngClass]="statusClass(ticket.status)">{{ ticket.status }}</span>
                   </div>
                   <div class="ticket-summary">{{ ticket.summary }}</div>
-                  <div *ngIf="ticket.components.length > 0" class="ticket-components">{{ ticket.components.join(', ') }}</div>
                 </div>
+                <button *ngIf="ticket.components.length > 0" mat-icon-button class="expand-btn" (click)="toggleExpand(ticket.key, $event)" matTooltip="Components">
+                  <mat-icon>{{ expandedTickets.has(ticket.key) ? 'expand_less' : 'expand_more' }}</mat-icon>
+                </button>
+              </div>
+              <div *ngIf="expandedTickets.has(ticket.key)" class="component-row">
+                <mat-chip-set><mat-chip *ngFor="let c of ticket.components" style="font-size:12px;">{{ c }}</mat-chip></mat-chip-set>
               </div>
             </ng-container>
           </ng-container>
@@ -109,8 +119,13 @@
                     <span class="ticket-status-badge" [ngClass]="statusClass(ticket.status)">{{ ticket.status }}</span>
                   </div>
                   <div class="ticket-summary">{{ ticket.summary }}</div>
-                  <div *ngIf="ticket.components.length > 0" class="ticket-components">{{ ticket.components.join(', ') }}</div>
                 </div>
+                <button *ngIf="ticket.components.length > 0" mat-icon-button class="expand-btn" (click)="toggleExpand(ticket.key, $event)" matTooltip="Components">
+                  <mat-icon>{{ expandedTickets.has(ticket.key) ? 'expand_less' : 'expand_more' }}</mat-icon>
+                </button>
+              </div>
+              <div *ngIf="expandedTickets.has(ticket.key)" class="component-row">
+                <mat-chip-set><mat-chip *ngFor="let c of ticket.components" style="font-size:12px;">{{ c }}</mat-chip></mat-chip-set>
               </div>
             </ng-container>
           </ng-container>
@@ -210,4 +225,6 @@
 .status-done       { background: #e8f5e9; color: #2e7d32; }
 .status-testing    { background: #e3f2fd; color: #0d47a1; }
 .status-inprogress { background: #fff3e0; color: #e65100; }
+.expand-btn { flex-shrink: 0; width: 32px; height: 32px; line-height: 32px; }
+.component-row { padding: 8px 14px 10px 52px; background: #fafafa; border-bottom: 1px solid #f0f0f0; }
 </style>
