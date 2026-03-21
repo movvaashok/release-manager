@@ -93,17 +93,16 @@ export class AddViaJiraDialogComponent implements OnInit {
   }
 
   // ── Status grouping ──────────────────────────────────────────────────────
-  // Known statuses: Done, Abandoned | Ready for QA, IN TESTING | In Progress, Selected for development
+  // Known statuses: Done | Ready for QA, IN TESTING | In Progress, Selected for development, Abandoned
   private statusGroup(status: string): 0 | 1 | 2 {
     const s = status.toLowerCase().trim();
-    // Group 0 — Done / closed
-    if (s === 'done' || s === 'abandoned' || s === 'resolved' || s === 'closed' || s === 'fixed' ||
-        s.includes('done') || s.includes('abandoned') || s.includes('resolved') ||
-        s.includes('closed') || s.includes('fixed')) return 0;
+    // Group 0 — Done
+    if (s === 'done' || s === 'resolved' || s === 'closed' || s === 'fixed' ||
+        s.includes('done') || s.includes('resolved') || s.includes('closed') || s.includes('fixed')) return 0;
     // Group 1 — Testing / QA
     if (s.includes('testing') || s.includes('ready for qa') || s.includes('ready to test') ||
         s.includes('in qa') || /\bqa\b/.test(s)) return 1;
-    // Group 2 — In Progress, Selected for development, and anything else
+    // Group 2 — In Progress, Selected for development, Abandoned, and anything else
     return 2;
   }
 
