@@ -33,8 +33,6 @@ export interface Stage2Repo {
   has_new_commits: boolean | null;
   commits_ahead: number | null;
   compare_url: string | null;
-  config_branches: string[];
-  config_branch_error: string | null;
 }
 
 export interface Stage3Repo {
@@ -50,8 +48,6 @@ export interface Stage3Repo {
   requires_ra: boolean;
   config_repo: string | null;          // linked config repo name (from repo registry)
   config_repo_in_release: boolean;     // true when config repo is already in this release
-  config_branches: string[];
-  config_branch_error: string | null;
 }
 
 export interface ReleaseState {

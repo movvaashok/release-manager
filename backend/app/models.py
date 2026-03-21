@@ -47,7 +47,6 @@ class RepoReference(BaseModel):
     web_url: str
     default_branch: str
     develop_branch: str
-    preprod_branch: str = "preprod"     # branch used for preprod config changes
     config_repo: Optional[str] = None   # name of the linked config repository, if any
 
 
@@ -77,8 +76,6 @@ class Stage2Repo(BaseModel):
     has_new_commits: Optional[bool] = None
     commits_ahead: Optional[int] = None
     compare_url: Optional[str] = None
-    config_branches: List[str] = []         # config repo preprod branches created (e.g. feature/TSSA-2277-preprod)
-    config_branch_error: Optional[str] = None
 
 
 class Stage3Repo(BaseModel):
@@ -94,8 +91,6 @@ class Stage3Repo(BaseModel):
     requires_ra: bool = False           # Populated from Confluence release plan table
     config_repo: Optional[str] = None  # Linked config repo name (from repo registry) — ephemeral
     config_repo_in_release: bool = False  # True if the config repo is already in this release — ephemeral
-    config_branches: List[str] = []         # config repo prod branches created (e.g. feature/TSSA-2277-prod)
-    config_branch_error: Optional[str] = None
 
 
 class ReleaseState(BaseModel):
@@ -231,7 +226,6 @@ class UpdateReferenceRepoRequest(BaseModel):
     web_url: Optional[str] = None
     default_branch: Optional[str] = None
     develop_branch: Optional[str] = None
-    preprod_branch: Optional[str] = None
     config_repo: Optional[str] = None   # set to "" to clear the link
 
 

@@ -76,7 +76,7 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
   private pollTimer: ReturnType<typeof setInterval> | null = null;
 
   stage1Columns = ['name', 'path', 'actions'];
-  stage2Columns = ['name', 'status', 'branch_info', 'diff', 'config_branches', 'pipeline', 'error', 'actions'];
+  stage2Columns = ['name', 'status', 'branch_info', 'diff', 'pipeline', 'error', 'actions'];
   stage3Columns = ['name', 'config_repo', 'status', 'mr', 'pipeline3', 'error', 'actions'];
   removingRepo: string | null = null;
 
