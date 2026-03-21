@@ -511,7 +511,8 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
   openAddViaJiraDialog(): void {
     const existingRepoNames = this.release?.stage1.map(r => r.name) ?? [];
     const ref = this.dialog.open(AddViaJiraDialogComponent, {
-      width: '600px',
+      width: '860px',
+      maxWidth: '95vw',
       disableClose: true,
       data: { version: this.version, existingRepoNames },
     });

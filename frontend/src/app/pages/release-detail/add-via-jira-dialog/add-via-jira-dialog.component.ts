@@ -92,6 +92,12 @@ export class AddViaJiraDialogComponent implements OnInit {
     return this.tickets.length > 0 && this.selectedTicketKeys.size === this.tickets.length;
   }
 
+  get uniqueComponents(): string[] {
+    const selected = this.tickets.filter(t => this.selectedTicketKeys.has(t.key));
+    const set = new Set<string>(selected.flatMap(t => t.components));
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }
+
   statusClass(status: string): string {
     const s = status.toLowerCase();
     if (s.includes('done') || s.includes('resolved') || s.includes('closed') || s.includes('fixed')) return 'status-done';
