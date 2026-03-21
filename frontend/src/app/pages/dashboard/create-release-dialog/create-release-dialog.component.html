@@ -26,7 +26,7 @@
   <div *ngIf="step === 'tickets'">
     <div *ngIf="loadingTickets" style="text-align: center; padding: 40px;">
       <mat-spinner diameter="36"></mat-spinner>
-      <p style="margin-top: 12px; color: #757575;">Fetching Jira tickets for version <strong>{{ form.value.version }}</strong>…</p>
+      <p style="margin-top: 12px; color: #757575;">Fetching Jira tickets for fix version <strong>{{ form.value.version }}</strong>…</p>
     </div>
 
     <div *ngIf="!loadingTickets">
@@ -57,7 +57,8 @@
                 <mat-checkbox [checked]="selectedTicketKeys.has(ticket.key)" (click)="$event.stopPropagation()" (change)="toggleTicket(ticket.key)" style="flex-shrink:0;"></mat-checkbox>
                 <div class="ticket-body">
                   <div class="ticket-top">
-                    <span class="ticket-key">{{ ticket.key }}</span>
+                    <a *ngIf="ticket.url" class="ticket-key" [href]="ticket.url" target="_blank" rel="noopener" (click)="$event.stopPropagation()">{{ ticket.key }}</a>
+                    <span *ngIf="!ticket.url" class="ticket-key">{{ ticket.key }}</span>
                     <span class="ticket-status-badge" [ngClass]="statusClass(ticket.status)">{{ ticket.status }}</span>
                   </div>
                   <div class="ticket-summary">{{ ticket.summary }}</div>
@@ -86,7 +87,8 @@
                 <mat-checkbox [checked]="selectedTicketKeys.has(ticket.key)" (click)="$event.stopPropagation()" (change)="toggleTicket(ticket.key)" style="flex-shrink:0;"></mat-checkbox>
                 <div class="ticket-body">
                   <div class="ticket-top">
-                    <span class="ticket-key">{{ ticket.key }}</span>
+                    <a *ngIf="ticket.url" class="ticket-key" [href]="ticket.url" target="_blank" rel="noopener" (click)="$event.stopPropagation()">{{ ticket.key }}</a>
+                    <span *ngIf="!ticket.url" class="ticket-key">{{ ticket.key }}</span>
                     <span class="ticket-status-badge" [ngClass]="statusClass(ticket.status)">{{ ticket.status }}</span>
                   </div>
                   <div class="ticket-summary">{{ ticket.summary }}</div>
@@ -115,7 +117,8 @@
                 <mat-checkbox [checked]="selectedTicketKeys.has(ticket.key)" (click)="$event.stopPropagation()" (change)="toggleTicket(ticket.key)" style="flex-shrink:0;"></mat-checkbox>
                 <div class="ticket-body">
                   <div class="ticket-top">
-                    <span class="ticket-key">{{ ticket.key }}</span>
+                    <a *ngIf="ticket.url" class="ticket-key" [href]="ticket.url" target="_blank" rel="noopener" (click)="$event.stopPropagation()">{{ ticket.key }}</a>
+                    <span *ngIf="!ticket.url" class="ticket-key">{{ ticket.key }}</span>
                     <span class="ticket-status-badge" [ngClass]="statusClass(ticket.status)">{{ ticket.status }}</span>
                   </div>
                   <div class="ticket-summary">{{ ticket.summary }}</div>
@@ -131,6 +134,22 @@
           </ng-container>
 
         </div>
+
+        <!-- ── Unique Components Summary ── -->
+        <div *ngIf="selectedTicketKeys.size > 0 && uniqueComponents.length > 0" class="components-summary">
+          <div class="components-summary-header">
+            <mat-icon>extension</mat-icon>
+            Unique Components from Selected Tickets ({{ uniqueComponents.length }})
+          </div>
+          <mat-chip-set>
+            <mat-chip *ngFor="let c of uniqueComponents" class="component-chip">{{ c }}</mat-chip>
+          </mat-chip-set>
+        </div>
+        <div *ngIf="selectedTicketKeys.size > 0 && uniqueComponents.length === 0" class="components-summary components-summary--empty">
+          <mat-icon>info_outline</mat-icon>
+          No components tagged on the selected tickets — all repositories will appear unmatched.
+        </div>
+
       </div>
     </div>
   </div>
@@ -227,4 +246,17 @@
 .status-inprogress { background: #fff3e0; color: #e65100; }
 .expand-btn { flex-shrink: 0; width: 32px; height: 32px; line-height: 32px; }
 .component-row { padding: 8px 14px 10px 52px; background: #fafafa; border-bottom: 1px solid #f0f0f0; }
+a.ticket-key:hover { text-decoration: underline; }
+
+.components-summary {
+  margin-top: 16px; padding: 12px 16px;
+  background: #f3f6ff; border: 1px solid #c5d3f5; border-radius: 8px;
+}
+.components-summary-header {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.05em; color: #1565c0; margin-bottom: 10px;
+}
+.component-chip { font-size: 12px !important; height: 26px !important; background: #fff !important; border: 1px solid #90b4f7 !important; color: #1565c0 !important; }
+.components-summary--empty { display: flex; align-items: center; gap: 8px; background: #fff8e1; border-color: #ffe082; color: #e65100; font-size: 13px; }
 </style>

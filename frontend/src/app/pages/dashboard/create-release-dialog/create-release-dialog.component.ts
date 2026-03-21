@@ -74,14 +74,15 @@ export class CreateReleaseDialogComponent {
     this.tickets = [];
     this.selectedTicketKeys.clear();
 
+    this.step = 'tickets';   // switch view first so the spinner renders in the content area
     this.jiraService.getTickets(this.form.value.version).subscribe({
       next: (tickets) => {
         this.tickets = tickets;
         this.loadingTickets = false;
-        this.step = 'tickets';
       },
       error: (err) => {
         this.loadingTickets = false;
+        this.step = 'version';
         this.errorMessage = err?.error?.detail ?? 'Failed to fetch Jira tickets.';
       },
     });
@@ -108,6 +109,13 @@ export class CreateReleaseDialogComponent {
 
   get otherTickets(): JiraTicket[] {
     return this.tickets.filter(t => this.statusGroup(t.status) === 2);
+  }
+
+  get uniqueComponents(): string[] {
+    const selected = this.tickets.filter(t => this.selectedTicketKeys.has(t.key));
+    const set = new Set<string>();
+    selected.forEach(t => t.components.forEach(c => set.add(c)));
+    return Array.from(set).sort();
   }
 
   allInGroupSelected(group: JiraTicket[]): boolean {
