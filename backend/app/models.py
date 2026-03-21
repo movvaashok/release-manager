@@ -47,6 +47,7 @@ class RepoReference(BaseModel):
     web_url: str
     default_branch: str
     develop_branch: str
+    config_repo: Optional[str] = None   # name of the linked config repository, if any
 
 
 # ---------------------------------------------------------------------------
@@ -86,7 +87,9 @@ class Stage3Repo(BaseModel):
     error: Optional[str] = None
     pipeline_status: Optional[str] = None
     pipeline_url: Optional[str] = None
-    requires_ra: bool = False   # Populated from Confluence release plan table
+    requires_ra: bool = False           # Populated from Confluence release plan table
+    config_repo: Optional[str] = None  # Linked config repo name (from repo registry)
+    config_repo_in_release: bool = False  # True if the config repo is already in this release
 
 
 class ReleaseState(BaseModel):
@@ -178,6 +181,7 @@ class UpdateReferenceRepoRequest(BaseModel):
     web_url: Optional[str] = None
     default_branch: Optional[str] = None
     develop_branch: Optional[str] = None
+    config_repo: Optional[str] = None   # set to "" to clear the link
 
 
 class ReleaseSummary(BaseModel):

@@ -10,6 +10,7 @@ import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatSelectModule } from '@angular/material/select';
 import { ReleaseService } from '../../../core/services/release.service';
 import { RepoReference } from '../../../core/models/release.model';
 
@@ -19,7 +20,7 @@ import { RepoReference } from '../../../core/models/release.model';
   imports: [
     CommonModule, ReactiveFormsModule, MatDialogModule, MatButtonModule,
     MatFormFieldModule, MatInputModule, MatIconModule, MatTableModule,
-    MatTooltipModule, MatProgressSpinnerModule, MatDividerModule,
+    MatTooltipModule, MatProgressSpinnerModule, MatDividerModule, MatSelectModule,
   ],
   templateUrl: './manage-repos-dialog.component.html',
   styles: [`
@@ -32,11 +33,16 @@ import { RepoReference } from '../../../core/models/release.model';
     .form-row { display: flex; gap: 12px; flex-wrap: wrap; }
     .form-row mat-form-field { flex: 1; min-width: 180px; }
     .form-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
+    .config-repo-badge {
+      display: inline-flex; align-items: center;
+      background: #e8f0fe; color: #1565c0;
+      border-radius: 4px; padding: 2px 8px; font-size: 12px; font-weight: 500;
+    }
   `],
 })
 export class ManageReposDialogComponent implements OnInit {
   repos: RepoReference[] = [];
-  displayedColumns = ['name', 'path', 'web_url', 'branches', 'actions'];
+  displayedColumns = ['name', 'path', 'branches', 'config_repo', 'actions'];
   loading = true;
   editingName: string | null = null;
   showAddForm = false;
@@ -57,6 +63,7 @@ export class ManageReposDialogComponent implements OnInit {
       web_url: ['', Validators.required],
       default_branch: ['master', Validators.required],
       develop_branch: ['develop', Validators.required],
+      config_repo: [null],
     });
     this.addForm = this.fb.group({
       name: ['', Validators.required],
@@ -88,6 +95,7 @@ export class ManageReposDialogComponent implements OnInit {
       web_url: repo.web_url,
       default_branch: repo.default_branch,
       develop_branch: repo.develop_branch,
+      config_repo: repo.config_repo ?? null,
     });
   }
 
@@ -101,6 +109,10 @@ export class ManageReposDialogComponent implements OnInit {
   }
 
   cancelEdit(): void { this.editingName = null; }
+
+  otherRepos(currentName: string): RepoReference[] {
+    return this.repos.filter(r => r.name !== currentName);
+  }
 
   deleteRepo(name: string): void {
     if (!confirm(`Delete repository "${name}"?`)) return;

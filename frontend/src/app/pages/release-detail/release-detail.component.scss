@@ -215,3 +215,54 @@
     height: 16px;
   }
 }
+
+// ── Stage 3 Config Repo badges ───────────────────────────────────────────────
+
+.config-linked-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #e8f5e9;
+  color: #2e7d32;
+  font-size: 12px;
+  font-weight: 500;
+
+  mat-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+  }
+}
+
+.config-missing-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px 2px 6px;
+  border-radius: 4px;
+  background: #fff3e0;
+  border: 1px solid #ffcc80;
+  color: #e65100;
+  font-size: 12px;
+  font-weight: 500;
+
+  mat-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+  }
+}
+
+.config-add-btn {
+  margin-left: 4px;
+  height: 22px;
+  line-height: 22px;
+  font-size: 11px;
+  padding: 0 8px;
+  min-width: 0;
+  color: #e65100 !important;
+  border: 1px solid #ffcc80 !important;
+  background: #fff !important;
+}

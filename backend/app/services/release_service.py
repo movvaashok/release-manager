@@ -116,12 +116,19 @@ def _load_release(project_id: str, version: str) -> Optional[ReleaseState]:
     path = _release_path(project_id, version)
     if not path.exists():
         return None
-    return ReleaseState.model_validate_json(path.read_text())
+    state = ReleaseState.model_validate_json(path.read_text())
+    _enrich_config_repos(state, project_id)
+    return state
 
 
 def _save_release(project_id: str, state: ReleaseState) -> None:
+    # Exclude ephemeral config-repo fields — they are recomputed on every load
+    data = state.model_dump()
+    for repo in data.get("stage3", []):
+        repo.pop("config_repo", None)
+        repo.pop("config_repo_in_release", None)
     _release_path(project_id, state.version).write_text(
-        state.model_dump_json(indent=2)
+        json.dumps(data, indent=2, default=str)
     )
 
 
@@ -131,6 +138,26 @@ def _load_references(project_id: str) -> List[RepoReference]:
         return []
     data = json.loads(path.read_text())
     return [RepoReference.model_validate(r) for r in data]
+
+
+def _enrich_config_repos(state: ReleaseState, project_id: str) -> None:
+    """
+    For each Stage3 repo, look up its config_repo link from the reference list
+    and determine whether that config repo is already in the release (stage1).
+
+    This is computed on every load so it stays fresh even when the repo registry
+    or the release composition changes.
+
+    config_repo / config_repo_in_release are NOT persisted to state.json —
+    they are ephemeral view-time fields.
+    """
+    refs = {r.name: r for r in _load_references(project_id)}
+    stage1_names = {r.name for r in state.stage1}
+    for repo in state.stage3:
+        ref = refs.get(repo.name)
+        linked = ref.config_repo if ref else None
+        repo.config_repo = linked if linked else None
+        repo.config_repo_in_release = bool(linked and linked in stage1_names)
 
 
 def _to_summary(state: ReleaseState) -> ReleaseSummary:

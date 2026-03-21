@@ -5,6 +5,7 @@ export interface RepoReference {
   web_url: string;
   default_branch: string;
   develop_branch: string;
+  config_repo?: string | null;  // name of the linked config repository
 }
 
 export type Stage2Status = 'pending' | 'success' | 'conflict' | 'failed';
@@ -44,6 +45,8 @@ export interface Stage3Repo {
   pipeline_status: string | null;
   pipeline_url: string | null;
   requires_ra: boolean;
+  config_repo: string | null;          // linked config repo name (from repo registry)
+  config_repo_in_release: boolean;     // true when config repo is already in this release
 }
 
 export interface ReleaseState {

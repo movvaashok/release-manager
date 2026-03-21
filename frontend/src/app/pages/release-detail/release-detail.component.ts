@@ -77,7 +77,7 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
 
   stage1Columns = ['name', 'path', 'actions'];
   stage2Columns = ['name', 'status', 'branch_info', 'diff', 'pipeline', 'error', 'actions'];
-  stage3Columns = ['name', 'status', 'mr', 'pipeline3', 'error', 'actions'];
+  stage3Columns = ['name', 'config_repo', 'status', 'mr', 'pipeline3', 'error', 'actions'];
   removingRepo: string | null = null;
 
   // Documentation tab
@@ -489,6 +489,19 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
       error: () => {
         this.removingRepo = null;
         this.snackBar.open(`Failed to remove ${repoName}.`, 'Close', { duration: 4000 });
+      },
+    });
+  }
+
+  addConfigRepo(configRepoName: string): void {
+    if (!confirm(`Add config repo "${configRepoName}" to this release?`)) return;
+    this.releaseService.addRepos(this.version, [configRepoName]).subscribe({
+      next: (r) => {
+        this.release = r;
+        this.snackBar.open(`"${configRepoName}" added to release.`, 'Close', { duration: 3000 });
+      },
+      error: (err: any) => {
+        this.snackBar.open(err?.error?.detail ?? `Failed to add "${configRepoName}".`, 'Close', { duration: 4000 });
       },
     });
   }
