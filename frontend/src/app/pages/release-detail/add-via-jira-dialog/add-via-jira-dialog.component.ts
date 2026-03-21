@@ -92,6 +92,38 @@ export class AddViaJiraDialogComponent implements OnInit {
     return this.tickets.length > 0 && this.selectedTicketKeys.size === this.tickets.length;
   }
 
+  // ── Status grouping ──────────────────────────────────────────────────────
+  private statusGroup(status: string): 0 | 1 | 2 {
+    const s = status.toLowerCase();
+    if (s.includes('done') || s.includes('resolved') || s.includes('closed') || s.includes('fixed')) return 0;
+    if (s.includes('testing') || s.includes('ready for qa') || s.includes('ready to test') || s.includes(' qa')) return 1;
+    return 2;
+  }
+
+  get doneTickets(): JiraTicket[] {
+    return this.tickets.filter(t => this.statusGroup(t.status) === 0);
+  }
+
+  get testingTickets(): JiraTicket[] {
+    return this.tickets.filter(t => this.statusGroup(t.status) === 1);
+  }
+
+  get otherTickets(): JiraTicket[] {
+    return this.tickets.filter(t => this.statusGroup(t.status) === 2);
+  }
+
+  allInGroupSelected(group: JiraTicket[]): boolean {
+    return group.length > 0 && group.every(t => this.selectedTicketKeys.has(t.key));
+  }
+
+  toggleGroupSelection(group: JiraTicket[]): void {
+    if (this.allInGroupSelected(group)) {
+      group.forEach(t => this.selectedTicketKeys.delete(t.key));
+    } else {
+      group.forEach(t => this.selectedTicketKeys.add(t.key));
+    }
+  }
+
   get uniqueComponents(): string[] {
     const selected = this.tickets.filter(t => this.selectedTicketKeys.has(t.key));
     const set = new Set<string>(selected.flatMap(t => t.components));

@@ -33,54 +33,99 @@
         </div>
 
         <div class="ticket-list">
-          <ng-container *ngFor="let ticket of tickets">
-            <div
-              class="ticket-row"
-              [class.ticket-selected]="selectedTicketKeys.has(ticket.key)"
-              (click)="toggleTicket(ticket.key)"
-            >
-              <mat-checkbox
-                [checked]="selectedTicketKeys.has(ticket.key)"
-                (click)="$event.stopPropagation()"
-                (change)="toggleTicket(ticket.key)"
-                style="flex-shrink:0;"
-              ></mat-checkbox>
 
-              <div class="ticket-body">
-                <div class="ticket-top">
-                  <a
-                    *ngIf="ticket.url"
-                    class="ticket-key"
-                    [href]="ticket.url"
-                    target="_blank"
-                    rel="noopener"
-                    (click)="$event.stopPropagation()"
-                  >{{ ticket.key }}</a>
-                  <span *ngIf="!ticket.url" class="ticket-key">{{ ticket.key }}</span>
-                  <span class="ticket-status-badge" [ngClass]="statusClass(ticket.status)">{{ ticket.status }}</span>
-                </div>
-                <div class="ticket-summary">{{ ticket.summary }}</div>
-              </div>
-
-              <button
-                *ngIf="ticket.components.length > 0"
-                mat-icon-button
-                class="expand-btn"
-                (click)="toggleExpand(ticket.key, $event)"
-                matTooltip="Components"
-              >
-                <mat-icon>{{ expandedTickets.has(ticket.key) ? 'expand_less' : 'expand_more' }}</mat-icon>
+          <!-- ── Done ── -->
+          <ng-container *ngIf="doneTickets.length > 0">
+            <div class="group-header group-done">
+              <mat-icon>check_circle</mat-icon>
+              <span>Done <span class="group-count">({{ doneTickets.length }})</span></span>
+              <button mat-button class="group-select-btn" (click)="toggleGroupSelection(doneTickets)">
+                {{ allInGroupSelected(doneTickets) ? 'Deselect all' : 'Select all' }}
               </button>
             </div>
-
-            <!-- Component row renders directly below its ticket -->
-            <div *ngIf="expandedTickets.has(ticket.key)" class="component-row">
-              <mat-chip-set>
-                <mat-chip *ngFor="let c of ticket.components" style="font-size:12px;">{{ c }}</mat-chip>
-              </mat-chip-set>
-            </div>
+            <ng-container *ngFor="let ticket of doneTickets">
+              <ng-container *ngTemplateOutlet="ticketRow; context: { $implicit: ticket }"></ng-container>
+            </ng-container>
           </ng-container>
+
+          <!-- ── Testing / QA ── -->
+          <ng-container *ngIf="testingTickets.length > 0">
+            <div class="group-header group-testing">
+              <mat-icon>science</mat-icon>
+              <span>Testing / QA <span class="group-count">({{ testingTickets.length }})</span></span>
+              <button mat-button class="group-select-btn" (click)="toggleGroupSelection(testingTickets)">
+                {{ allInGroupSelected(testingTickets) ? 'Deselect all' : 'Select all' }}
+              </button>
+            </div>
+            <ng-container *ngFor="let ticket of testingTickets">
+              <ng-container *ngTemplateOutlet="ticketRow; context: { $implicit: ticket }"></ng-container>
+            </ng-container>
+          </ng-container>
+
+          <!-- ── In Progress & Other ── -->
+          <ng-container *ngIf="otherTickets.length > 0">
+            <div class="group-header group-other">
+              <mat-icon>pending</mat-icon>
+              <span>In Progress &amp; Other <span class="group-count">({{ otherTickets.length }})</span></span>
+              <button mat-button class="group-select-btn" (click)="toggleGroupSelection(otherTickets)">
+                {{ allInGroupSelected(otherTickets) ? 'Deselect all' : 'Select all' }}
+              </button>
+            </div>
+            <ng-container *ngFor="let ticket of otherTickets">
+              <ng-container *ngTemplateOutlet="ticketRow; context: { $implicit: ticket }"></ng-container>
+            </ng-container>
+          </ng-container>
+
         </div>
+
+        <!-- Shared ticket row template -->
+        <ng-template #ticketRow let-ticket>
+          <div
+            class="ticket-row"
+            [class.ticket-selected]="selectedTicketKeys.has(ticket.key)"
+            (click)="toggleTicket(ticket.key)"
+          >
+            <mat-checkbox
+              [checked]="selectedTicketKeys.has(ticket.key)"
+              (click)="$event.stopPropagation()"
+              (change)="toggleTicket(ticket.key)"
+              style="flex-shrink:0;"
+            ></mat-checkbox>
+
+            <div class="ticket-body">
+              <div class="ticket-top">
+                <a
+                  *ngIf="ticket.url"
+                  class="ticket-key"
+                  [href]="ticket.url"
+                  target="_blank"
+                  rel="noopener"
+                  (click)="$event.stopPropagation()"
+                >{{ ticket.key }}</a>
+                <span *ngIf="!ticket.url" class="ticket-key">{{ ticket.key }}</span>
+                <span class="ticket-status-badge" [ngClass]="statusClass(ticket.status)">{{ ticket.status }}</span>
+              </div>
+              <div class="ticket-summary">{{ ticket.summary }}</div>
+            </div>
+
+            <button
+              *ngIf="ticket.components.length > 0"
+              mat-icon-button
+              class="expand-btn"
+              (click)="toggleExpand(ticket.key, $event)"
+              matTooltip="Components"
+            >
+              <mat-icon>{{ expandedTickets.has(ticket.key) ? 'expand_less' : 'expand_more' }}</mat-icon>
+            </button>
+          </div>
+
+          <!-- Component row renders directly below its ticket -->
+          <div *ngIf="expandedTickets.has(ticket.key)" class="component-row">
+            <mat-chip-set>
+              <mat-chip *ngFor="let c of ticket.components" style="font-size:12px;">{{ c }}</mat-chip>
+            </mat-chip-set>
+          </div>
+        </ng-template>
       </div>
 
       <!-- Unique components summary -->
@@ -183,6 +228,29 @@
 
 <style>
 .ticket-list { border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; }
+
+.group-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 14px;
+  font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+  border-bottom: 1px solid transparent;
+  position: sticky; top: 0; z-index: 1;
+}
+.group-header mat-icon { font-size: 16px; width: 16px; height: 16px; flex-shrink: 0; }
+.group-count { font-weight: 400; opacity: 0.75; }
+.group-select-btn { margin-left: auto; font-size: 11px; height: 24px; line-height: 24px; padding: 0 8px; min-width: 0; }
+
+.group-done    { background: #e8f5e9; color: #1b5e20; border-color: #c8e6c9; }
+.group-done mat-icon { color: #2e7d32; }
+.group-done .group-select-btn { color: #2e7d32; }
+
+.group-testing { background: #e3f2fd; color: #0d47a1; border-color: #bbdefb; }
+.group-testing mat-icon { color: #1565c0; }
+.group-testing .group-select-btn { color: #1565c0; }
+
+.group-other   { background: #fafafa; color: rgba(0,0,0,0.5); border-color: #f0f0f0; }
+.group-other mat-icon { color: rgba(0,0,0,0.38); }
+.group-other .group-select-btn { color: rgba(0,0,0,0.45); }
 .ticket-row {
   display: flex; align-items: center; gap: 12px; padding: 10px 14px;
   cursor: pointer; transition: background 0.15s; border-bottom: 1px solid #f5f5f5;
