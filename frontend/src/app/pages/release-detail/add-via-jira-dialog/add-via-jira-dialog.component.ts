@@ -8,6 +8,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatListModule } from '@angular/material/list';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { JiraService } from '../../../core/services/jira.service';
 import { ReleaseService } from '../../../core/services/release.service';
@@ -32,6 +33,7 @@ function normalize(s: string): string {
     MatChipsModule,
     MatDividerModule,
     MatListModule,
+    MatTooltipModule,
   ],
   templateUrl: './add-via-jira-dialog.component.html',
 })
