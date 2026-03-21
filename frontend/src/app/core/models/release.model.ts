@@ -16,6 +16,7 @@ export interface Stage1Repo {
   project_id: number;
   path_with_namespace: string;
   web_url?: string;
+  jira_tickets: string[];
 }
 
 export interface Stage2Repo {
@@ -32,6 +33,8 @@ export interface Stage2Repo {
   has_new_commits: boolean | null;
   commits_ahead: number | null;
   compare_url: string | null;
+  config_branches: string[];
+  config_branch_error: string | null;
 }
 
 export interface Stage3Repo {
@@ -47,6 +50,8 @@ export interface Stage3Repo {
   requires_ra: boolean;
   config_repo: string | null;          // linked config repo name (from repo registry)
   config_repo_in_release: boolean;     // true when config repo is already in this release
+  config_branches: string[];
+  config_branch_error: string | null;
 }
 
 export interface ReleaseState {
@@ -125,4 +130,36 @@ export interface JiraTicket {
   priority?: string;
   components: string[];
   url?: string;
+}
+
+export interface RepoWithTickets {
+  name: string;
+  jira_tickets: string[];
+}
+
+export interface ConfigMR {
+  main_repo: string;
+  config_repo: string;
+  mr_iid: number;
+  mr_url: string;
+  title: string;
+  source_branch: string;
+  target_branch: string;
+  state: string;
+  tracked_at: string;
+}
+
+export interface OpenMR {
+  mr_iid: number;
+  mr_url: string;
+  title: string;
+  source_branch: string;
+  target_branch: string;
+  state: string;
+  author: string;
+}
+
+export interface ConfigMrsResponse {
+  tracked: ConfigMR[];
+  open_mrs: OpenMR[];
 }

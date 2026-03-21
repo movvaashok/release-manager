@@ -11,7 +11,7 @@ import { MatListModule } from '@angular/material/list';
 
 import { JiraService } from '../../../core/services/jira.service';
 import { ReleaseService } from '../../../core/services/release.service';
-import { JiraTicket, RepoReference } from '../../../core/models/release.model';
+import { JiraTicket, RepoReference, RepoWithTickets } from '../../../core/models/release.model';
 
 type Step = 'tickets' | 'repos';
 
@@ -167,11 +167,25 @@ export class AddViaJiraDialogComponent implements OnInit {
     else this.selectedRepos.add(name);
   }
 
+  /** Build a per-repo ticket list from the selected tickets. */
+  private buildReposWithTickets(): RepoWithTickets[] {
+    const selectedTickets = this.tickets.filter(t => this.selectedTicketKeys.has(t.key));
+    return Array.from(this.selectedRepos).map(repoName => {
+      // A ticket is associated with this repo if the repo name appears in the
+      // ticket's components (case-insensitive, underscore-normalised match)
+      const tickets = selectedTickets
+        .filter(t => t.components.some(c => normalize(c) === normalize(repoName)))
+        .map(t => t.key);
+      return { name: repoName, jira_tickets: tickets };
+    });
+  }
+
   submit(): void {
     if (this.selectedRepos.size === 0) return;
     this.submitting = true;
     this.errorMessage = '';
-    this.releaseService.addRepos(this.data.version, Array.from(this.selectedRepos)).subscribe({
+    const repos = this.buildReposWithTickets();
+    this.releaseService.addReposWithTickets(this.data.version, repos).subscribe({
       next: (state) => this.dialogRef.close(state),
       error: (err) => {
         this.submitting = false;

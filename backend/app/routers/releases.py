@@ -2,11 +2,20 @@ from typing import List
 
 from fastapi import APIRouter, Header, HTTPException, Query
 
-from app.models import AddReposRequest, CreateReleaseRequest, ReleaseState, ReleaseSummary, UpdateDocsRequest
+from app.models import (
+    AddReposRequest,
+    ConfigMrsResponse,
+    CreateReleaseRequest,
+    ReleaseState,
+    ReleaseSummary,
+    TrackConfigMrRequest,
+    UpdateDocsRequest,
+)
 from app.services import release_service
 from app.services import audit_service
 from app.services import confluence_client
 from app.services import jira_client
+from app.services import config_mr_service
 
 router = APIRouter(prefix="/releases", tags=["releases"])
 
@@ -85,13 +94,20 @@ def add_repos(
     x_username: str | None = Header(default=None),
 ):
     try:
-        state = release_service.add_repos_to_release(project, version, req.repo_names)
+        # Build ticket_map from the richer `repos` list if provided, else fall back to plain names
+        if req.repos:
+            repo_names = [r.name for r in req.repos]
+            ticket_map = {r.name: r.jira_tickets for r in req.repos}
+        else:
+            repo_names = req.repo_names
+            ticket_map = None
+        state = release_service.add_repos_to_release(project, version, repo_names, ticket_map)
         audit_service.record(
             username=_u(x_username),
             action="repos_added",
             project=project,
             release_version=version,
-            details={"repos": req.repo_names},
+            details={"repos": repo_names},
         )
         return state
     except ValueError as exc:
@@ -416,6 +432,95 @@ async def refresh_ra_requirements(
         details={"ra_map": ra_map},
     )
     return state
+
+
+# ── Config repo MR tracking ──────────────────────────────────────────────────────────
+
+@router.get("/{version}/config-mrs", response_model=ConfigMrsResponse)
+async def get_config_mrs(
+    version: str,
+    main_repo: str = Query(...),
+    x_gitlab_token: str = Header(...),
+    project: str = Query("pioneer"),
+):
+    """
+    Return tracked config MRs for *main_repo* plus live open MRs from its linked config repo.
+    """
+    refs = release_service.get_references(project)
+    main = next((r for r in refs if r.name == main_repo), None)
+    if main is None:
+        raise HTTPException(status_code=404, detail=f"Repository {main_repo!r} not found in registry")
+    if not main.config_repo:
+        raise HTTPException(status_code=400, detail=f"Repository {main_repo!r} has no linked config repo")
+    config_ref = next((r for r in refs if r.name == main.config_repo), None)
+    if config_ref is None:
+        raise HTTPException(status_code=404, detail=f"Config repo {main.config_repo!r} not found in registry")
+
+    try:
+        return await config_mr_service.get_config_mrs_response(
+            project_id=project,
+            version=version,
+            main_repo=main_repo,
+            config_repo_project_id=config_ref.project_id,
+            gitlab_token=x_gitlab_token,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"GitLab error: {exc}")
+
+
+@router.post("/{version}/config-mrs", response_model=List)
+def track_config_mr(
+    version: str,
+    req: TrackConfigMrRequest,
+    project: str = Query("pioneer"),
+    x_username: str | None = Header(default=None),
+):
+    """Track a config repo MR as part of this release."""
+    tracked = config_mr_service.track_mr(
+        project_id=project,
+        version=version,
+        main_repo=req.main_repo,
+        config_repo=req.config_repo,
+        mr_iid=req.mr_iid,
+        mr_url=req.mr_url,
+        title=req.title,
+        source_branch=req.source_branch,
+        target_branch=req.target_branch,
+        state=req.state,
+    )
+    audit_service.record(
+        username=_u(x_username),
+        action="config_mr_tracked",
+        project=project,
+        release_version=version,
+        details={"config_repo": req.config_repo, "mr_iid": req.mr_iid, "title": req.title},
+    )
+    return tracked
+
+
+@router.delete("/{version}/config-mrs/{mr_iid}", response_model=List)
+def untrack_config_mr(
+    version: str,
+    mr_iid: int,
+    config_repo: str = Query(...),
+    project: str = Query("pioneer"),
+    x_username: str | None = Header(default=None),
+):
+    """Remove a config repo MR from tracking."""
+    remaining = config_mr_service.untrack_mr(
+        project_id=project,
+        version=version,
+        config_repo=config_repo,
+        mr_iid=mr_iid,
+    )
+    audit_service.record(
+        username=_u(x_username),
+        action="config_mr_untracked",
+        project=project,
+        release_version=version,
+        details={"config_repo": config_repo, "mr_iid": mr_iid},
+    )
+    return remaining
 
 
 # ── Audit logs (admin-only enforced on frontend; backend validates role via header) ──

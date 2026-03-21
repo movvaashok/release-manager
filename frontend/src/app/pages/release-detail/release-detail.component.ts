@@ -76,7 +76,7 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
   private pollTimer: ReturnType<typeof setInterval> | null = null;
 
   stage1Columns = ['name', 'path', 'actions'];
-  stage2Columns = ['name', 'status', 'branch_info', 'diff', 'pipeline', 'error', 'actions'];
+  stage2Columns = ['name', 'status', 'branch_info', 'diff', 'config_branches', 'pipeline', 'error', 'actions'];
   stage3Columns = ['name', 'config_repo', 'status', 'mr', 'pipeline3', 'error', 'actions'];
   removingRepo: string | null = null;
 
@@ -503,6 +503,17 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
       error: (err: any) => {
         this.snackBar.open(err?.error?.detail ?? `Failed to add "${configRepoName}".`, 'Close', { duration: 4000 });
       },
+    });
+  }
+
+  openConfigMrDialog(repo: Stage3Repo): void {
+    import('./config-mr-dialog/config-mr-dialog.component').then(m => {
+      const ref = this.dialog.open(m.ConfigMrDialogComponent, {
+        width: '720px',
+        disableClose: false,
+        data: { version: this.version, mainRepo: repo.name, configRepo: repo.config_repo },
+      });
+      ref.afterClosed().subscribe();
     });
   }
 

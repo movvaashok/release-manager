@@ -4,10 +4,13 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   AuditLogsResponse,
+  ConfigMR,
+  ConfigMrsResponse,
   CreateReleaseRequest,
   ReleaseSummary,
   ReleaseState,
   RepoReference,
+  RepoWithTickets,
   UpdateDocsRequest,
 } from '../models/release.model';
 import { ProjectService } from './project.service';
@@ -83,6 +86,36 @@ export class ReleaseService {
       `${this.base}/releases/${version}/repos`,
       { repo_names: repoNames },
       { params: this.p },
+    );
+  }
+
+  addReposWithTickets(version: string, repos: RepoWithTickets[]): Observable<ReleaseState> {
+    return this.http.post<ReleaseState>(
+      `${this.base}/releases/${version}/repos`,
+      { repo_names: repos.map(r => r.name), repos },
+      { params: this.p },
+    );
+  }
+
+  getConfigMrs(version: string, mainRepo: string): Observable<ConfigMrsResponse> {
+    return this.http.get<ConfigMrsResponse>(
+      `${this.base}/releases/${version}/config-mrs`,
+      { params: { ...this.p, main_repo: mainRepo } },
+    );
+  }
+
+  trackConfigMr(version: string, mr: Omit<ConfigMR, 'tracked_at'>): Observable<ConfigMR[]> {
+    return this.http.post<ConfigMR[]>(
+      `${this.base}/releases/${version}/config-mrs`,
+      mr,
+      { params: this.p },
+    );
+  }
+
+  untrackConfigMr(version: string, configRepo: string, mrIid: number): Observable<ConfigMR[]> {
+    return this.http.delete<ConfigMR[]>(
+      `${this.base}/releases/${version}/config-mrs/${mrIid}`,
+      { params: { ...this.p, config_repo: configRepo } },
     );
   }
 

@@ -47,6 +47,7 @@ class RepoReference(BaseModel):
     web_url: str
     default_branch: str
     develop_branch: str
+    preprod_branch: str = "preprod"     # branch used for preprod config changes
     config_repo: Optional[str] = None   # name of the linked config repository, if any
 
 
@@ -59,6 +60,7 @@ class Stage1Repo(BaseModel):
     project_id: int
     path_with_namespace: str
     web_url: Optional[str] = None
+    jira_tickets: List[str] = []    # ticket keys that brought this repo into the release
 
 
 class Stage2Repo(BaseModel):
@@ -75,6 +77,8 @@ class Stage2Repo(BaseModel):
     has_new_commits: Optional[bool] = None
     commits_ahead: Optional[int] = None
     compare_url: Optional[str] = None
+    config_branches: List[str] = []         # config repo preprod branches created (e.g. feature/TSSA-2277-preprod)
+    config_branch_error: Optional[str] = None
 
 
 class Stage3Repo(BaseModel):
@@ -88,8 +92,10 @@ class Stage3Repo(BaseModel):
     pipeline_status: Optional[str] = None
     pipeline_url: Optional[str] = None
     requires_ra: bool = False           # Populated from Confluence release plan table
-    config_repo: Optional[str] = None  # Linked config repo name (from repo registry)
-    config_repo_in_release: bool = False  # True if the config repo is already in this release
+    config_repo: Optional[str] = None  # Linked config repo name (from repo registry) — ephemeral
+    config_repo_in_release: bool = False  # True if the config repo is already in this release — ephemeral
+    config_branches: List[str] = []         # config repo prod branches created (e.g. feature/TSSA-2277-prod)
+    config_branch_error: Optional[str] = None
 
 
 class ReleaseState(BaseModel):
@@ -130,8 +136,52 @@ class UpdateDocsRequest(BaseModel):
     cab_ticket_url: Optional[str] = None
 
 
+class RepoWithTickets(BaseModel):
+    name: str
+    jira_tickets: List[str] = []
+
+
 class AddReposRequest(BaseModel):
-    repo_names: List[str]
+    repo_names: List[str]           # kept for backward-compat (simple add)
+    repos: List[RepoWithTickets] = []  # preferred: carries ticket associations
+
+
+class ConfigMR(BaseModel):
+    main_repo: str
+    config_repo: str
+    mr_iid: int
+    mr_url: str
+    title: str
+    source_branch: str
+    target_branch: str
+    state: str
+    tracked_at: str
+
+
+class TrackConfigMrRequest(BaseModel):
+    main_repo: str
+    config_repo: str
+    mr_iid: int
+    mr_url: str
+    title: str
+    source_branch: str
+    target_branch: str
+    state: str
+
+
+class OpenMR(BaseModel):
+    mr_iid: int
+    mr_url: str
+    title: str
+    source_branch: str
+    target_branch: str
+    state: str
+    author: str
+
+
+class ConfigMrsResponse(BaseModel):
+    tracked: List[ConfigMR]
+    open_mrs: List[OpenMR]
 
 
 class LoginRequest(BaseModel):
@@ -181,6 +231,7 @@ class UpdateReferenceRepoRequest(BaseModel):
     web_url: Optional[str] = None
     default_branch: Optional[str] = None
     develop_branch: Optional[str] = None
+    preprod_branch: Optional[str] = None
     config_repo: Optional[str] = None   # set to "" to clear the link
 
 

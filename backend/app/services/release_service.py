@@ -272,7 +272,18 @@ async def remove_repo_from_release(project_id: str, version: str, repo_name: str
     return state
 
 
-def add_repos_to_release(project_id: str, version: str, repo_names: list) -> ReleaseState:
+def add_repos_to_release(
+    project_id: str,
+    version: str,
+    repo_names: list,
+    ticket_map: dict | None = None,
+) -> ReleaseState:
+    """
+    Add repositories to a release.
+
+    ticket_map: optional dict of {repo_name: [ticket_key, ...]} that records
+                which Jira tickets brought each repo into the release.
+    """
     state = _load_release(project_id, version)
     if state is None:
         raise ValueError(f"Release {version} not found")
@@ -287,7 +298,14 @@ def add_repos_to_release(project_id: str, version: str, repo_names: list) -> Rel
         if n in existing_names:
             continue
         ref = refs[n]
-        state.stage1.append(Stage1Repo(name=ref.name, project_id=ref.project_id, path_with_namespace=ref.path_with_namespace, web_url=ref.web_url))
+        tickets = (ticket_map or {}).get(n, [])
+        state.stage1.append(Stage1Repo(
+            name=ref.name,
+            project_id=ref.project_id,
+            path_with_namespace=ref.path_with_namespace,
+            web_url=ref.web_url,
+            jira_tickets=tickets,
+        ))
         state.stage2.append(Stage2Repo(name=ref.name, project_id=ref.project_id))
         state.stage3.append(Stage3Repo(name=ref.name, project_id=ref.project_id))
 
@@ -299,7 +317,60 @@ def add_repos_to_release(project_id: str, version: str, repo_names: list) -> Rel
 # Stage 2 – branch management
 # ---------------------------------------------------------------------------
 
-async def _run_stage2_repo(version: str, repo: Stage2Repo, gitlab_token: str) -> Stage2Repo:
+async def _create_config_branches(
+    repo: Stage2Repo | Stage3Repo,
+    suffix: str,
+    source_branch_attr: str,
+    gitlab_token: str,
+    project_id: str,
+    stage1_tickets: list[str],
+) -> None:
+    """
+    For each Jira ticket associated with the main repo, create a branch in the
+    linked config repo.
+
+    suffix:              e.g. "preprod" (Stage 2) or "prod" (Stage 3)
+    source_branch_attr:  attribute name on RepoReference for the source branch
+                         ("preprod_branch" or "default_branch")
+    stage1_tickets:      ticket keys from Stage1Repo.jira_tickets
+    """
+    if not stage1_tickets:
+        return
+
+    refs = {r.name: r for r in _load_references(project_id)}
+    main_ref = refs.get(repo.name)
+    if not main_ref or not main_ref.config_repo:
+        return
+
+    config_ref = refs.get(main_ref.config_repo)
+    if not config_ref:
+        return
+
+    source_branch = getattr(config_ref, source_branch_attr, config_ref.default_branch)
+    gitlab = get_gitlab_client(gitlab_token)
+    created: list[str] = []
+
+    for ticket in stage1_tickets:
+        branch_name = f"feature/{ticket}-{suffix}"
+        try:
+            existing = await gitlab.get_branch(config_ref.project_id, branch_name)
+            if existing is None:
+                await gitlab.create_branch(config_ref.project_id, branch_name, source_branch)
+            created.append(branch_name)
+        except Exception as exc:
+            repo.config_branch_error = str(exc)
+
+    if created:
+        repo.config_branches = created
+
+
+async def _run_stage2_repo(
+    version: str,
+    repo: Stage2Repo,
+    gitlab_token: str,
+    project_id: str = "",
+    stage1_tickets: list[str] | None = None,
+) -> Stage2Repo:
     """Execute stage-2 logic for a single repository and return updated model."""
     gitlab = get_gitlab_client(gitlab_token)
     release_branch = f"release/{version}"
@@ -340,6 +411,15 @@ async def _run_stage2_repo(version: str, repo: Stage2Repo, gitlab_token: str) ->
         except Exception:
             pass  # Pipeline fetch failure should not block stage result
 
+        # Create config repo preprod branches (best-effort, won't fail the stage)
+        if project_id and stage1_tickets:
+            try:
+                await _create_config_branches(
+                    repo, "preprod", "preprod_branch", gitlab_token, project_id, stage1_tickets
+                )
+            except Exception:
+                pass
+
     except Exception as exc:
         repo.status = RepoStage2Status.FAILED
         repo.error = str(exc)
@@ -352,10 +432,16 @@ async def run_stage2(project_id: str, version: str, gitlab_token: str) -> Releas
     if state is None:
         raise ValueError(f"Release {version} not found")
 
+    # Build ticket lookup from stage1
+    ticket_lookup = {r.name: r.jira_tickets for r in state.stage1}
+
     for i, repo in enumerate(state.stage2):
         if repo.status == RepoStage2Status.SUCCESS:
             continue
-        state.stage2[i] = await _run_stage2_repo(version, repo, gitlab_token)
+        tickets = ticket_lookup.get(repo.name, [])
+        state.stage2[i] = await _run_stage2_repo(
+            version, repo, gitlab_token, project_id=project_id, stage1_tickets=tickets
+        )
 
     _save_release(project_id, state)
     return state
@@ -383,7 +469,10 @@ async def run_stage2_repo(project_id: str, version: str, repo_name: str, gitlab_
     repo.commits_ahead = None
     repo.compare_url = None
 
-    state.stage2[idx] = await _run_stage2_repo(version, repo, gitlab_token)
+    tickets = next((r.jira_tickets for r in state.stage1 if r.name == repo_name), [])
+    state.stage2[idx] = await _run_stage2_repo(
+        version, repo, gitlab_token, project_id=project_id, stage1_tickets=tickets
+    )
     _save_release(project_id, state)
     return state
 
@@ -494,7 +583,13 @@ async def refresh_pipeline_statuses(project_id: str, version: str, gitlab_token:
 # Stage 3 – merge request creation
 # ---------------------------------------------------------------------------
 
-async def _run_stage3_repo(version: str, repo: Stage3Repo, gitlab_token: str) -> Stage3Repo:
+async def _run_stage3_repo(
+    version: str,
+    repo: Stage3Repo,
+    gitlab_token: str,
+    project_id: str = "",
+    stage1_tickets: list[str] | None = None,
+) -> Stage3Repo:
     """Execute stage-3 logic for a single repository and return updated model."""
     gitlab = get_gitlab_client(gitlab_token)
     release_branch = f"release/{version}"
@@ -531,6 +626,15 @@ async def _run_stage3_repo(version: str, repo: Stage3Repo, gitlab_token: str) ->
             except Exception:
                 pass  # Pipeline fetch failure should not block stage result
 
+        # Create config repo prod branches (best-effort)
+        if project_id and stage1_tickets:
+            try:
+                await _create_config_branches(
+                    repo, "prod", "default_branch", gitlab_token, project_id, stage1_tickets
+                )
+            except Exception:
+                pass
+
     except Exception as exc:
         repo.status = RepoStage3Status.FAILED
         repo.error = str(exc)
@@ -543,10 +647,15 @@ async def run_stage3(project_id: str, version: str, gitlab_token: str) -> Releas
     if state is None:
         raise ValueError(f"Release {version} not found")
 
+    ticket_lookup = {r.name: r.jira_tickets for r in state.stage1}
+
     for i, repo in enumerate(state.stage3):
         if repo.status in (RepoStage3Status.SUCCESS, RepoStage3Status.ALREADY_EXISTS):
             continue
-        state.stage3[i] = await _run_stage3_repo(version, repo, gitlab_token)
+        tickets = ticket_lookup.get(repo.name, [])
+        state.stage3[i] = await _run_stage3_repo(
+            version, repo, gitlab_token, project_id=project_id, stage1_tickets=tickets
+        )
 
     _save_release(project_id, state)
     return state
@@ -570,7 +679,10 @@ async def run_stage3_repo(project_id: str, version: str, repo_name: str, gitlab_
     repo.pipeline_status = None
     repo.pipeline_url = None
 
-    state.stage3[idx] = await _run_stage3_repo(version, repo, gitlab_token)
+    tickets = next((r.jira_tickets for r in state.stage1 if r.name == repo_name), [])
+    state.stage3[idx] = await _run_stage3_repo(
+        version, repo, gitlab_token, project_id=project_id, stage1_tickets=tickets
+    )
     _save_release(project_id, state)
     return state
 

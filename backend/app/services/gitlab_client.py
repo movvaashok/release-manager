@@ -163,6 +163,18 @@ class GitLabClient:
             resp.raise_for_status()
             return resp.json()
 
+    async def get_open_mrs(self, project_id: int) -> List[Dict[str, Any]]:
+        """Return all open merge requests for a project (paginated, up to 100)."""
+        url = f"{self._base}/projects/{project_id}/merge_requests"
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                url,
+                headers=self._headers,
+                params={"state": "opened", "per_page": 100, "order_by": "updated_at", "sort": "desc"},
+                timeout=30,
+            )
+            resp.raise_for_status()
+            return resp.json()
 
     # ------------------------------------------------------------------
     # Pipelines
