@@ -63,7 +63,6 @@
     <!-- Repos list header -->
     <div *ngIf="repos.length > 0" class="repo-list-header repo-grid-row">
       <span class="col">Name</span>
-      <span class="col">Path</span>
       <span class="col">Default</span>
       <span class="col">Develop</span>
       <span class="col">Config Repo</span>
@@ -74,16 +73,22 @@
     <div *ngFor="let r of repos" class="repo-list-item-wrapper">
       <!-- Main row -->
       <div class="repo-list-row repo-grid-row">
-        <span class="col" style="font-weight:600;color:rgba(0,0,0,0.85);" [title]="r.name">{{ r.name }}</span>
-        <span class="col" style="color:rgba(0,0,0,0.55);" [title]="r.path_with_namespace">{{ r.path_with_namespace }}</span>
+        <span class="col">
+          <a class="repo-name-link" [href]="r.web_url" target="_blank" rel="noopener" [title]="r.path_with_namespace">
+            {{ toTitleCase(r.name) }}
+          </a>
+        </span>
         <span class="col" style="color:rgba(0,0,0,0.65);" [title]="r.default_branch">{{ r.default_branch }}</span>
         <span class="col" style="color:rgba(0,0,0,0.65);" [title]="r.develop_branch">{{ r.develop_branch }}</span>
         <span class="col">
-          <span *ngIf="r.config_repo" class="config-repo-badge" [title]="r.config_repo">
-            <mat-icon style="font-size:13px;width:13px;height:13px;vertical-align:middle;margin-right:3px;">link</mat-icon>
-            {{ r.config_repo }}
-          </span>
-          <span *ngIf="!r.config_repo" style="color:rgba(0,0,0,0.25);font-size:13px;">—</span>
+          <select class="config-select"
+            [value]="r.config_repo ?? ''"
+            (change)="quickSetConfigRepo(r, $any($event.target).value || null)">
+            <option value="">— None —</option>
+            <option *ngFor="let other of otherRepos(r.name)" [value]="other.name">
+              {{ toTitleCase(other.name) }}
+            </option>
+          </select>
         </span>
         <span class="col-actions">
           <button mat-icon-button (click)="startEdit(r)" matTooltip="Edit"><mat-icon>edit</mat-icon></button>
