@@ -2,11 +2,13 @@
   {
     "id": "pioneer",
     "display_name": "Pioneer",
-    "jira_project_key": "TSSA"
+    "jira_project_key": "TSSA",
+    "gitlab_group_path": "truata/products/pioneer"
   },
   {
     "id": "calibrate",
     "display_name": "Calibrate",
-    "jira_project_key": "TRAN"
+    "jira_project_key": "TRAN",
+    "gitlab_group_path": "truata/products/calibrate"
   }
 ]

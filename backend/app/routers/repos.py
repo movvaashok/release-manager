@@ -3,7 +3,7 @@ from typing import List
 from fastapi import APIRouter, Header, HTTPException, Query
 
 from app.models import AddReferenceRepoRequest, GitLabProjectInfo, RepoReference, UpdateReferenceRepoRequest
-from app.services import repo_service
+from app.services import project_service, repo_service
 from app.services.gitlab_client import get_gitlab_client
 
 router = APIRouter(tags=["repositories"])
@@ -14,10 +14,16 @@ async def list_gitlab_repos(
     x_gitlab_token: str = Header(...),
     project: str = Query("pioneer"),
 ):
-    """Fetch all non-archived direct projects in the GitLab group matching the project id."""
+    """Fetch all non-archived direct projects in the GitLab group for this project.
+
+    Uses gitlab_group_path from the project config (e.g. 'truata/products/pioneer').
+    Falls back to the project id if no gitlab_group_path is configured.
+    """
+    proj = project_service.get_project(project)
+    group_path = (proj.gitlab_group_path if proj and proj.gitlab_group_path else project)
     try:
         client = get_gitlab_client(x_gitlab_token)
-        return await client.list_group_projects(group_path=project)
+        return await client.list_group_projects(group_path=group_path)
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"GitLab API error: {exc}")
 

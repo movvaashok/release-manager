@@ -16,6 +16,7 @@ class ProjectConfig(BaseModel):
     id: str
     display_name: str
     jira_project_key: str
+    gitlab_group_path: Optional[str] = None  # e.g. "truata/products/pioneer"
 
 
 # ---------------------------------------------------------------------------
