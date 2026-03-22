@@ -312,22 +312,18 @@
                 <!-- No config repo linked -->
                 <span *ngIf="!r.config_repo" style="color:rgba(0,0,0,0.25);font-size:12px;">–</span>
 
-                <ng-container *ngIf="r.config_repo">
-                  <!-- Warning: this repo may need config repo changes -->
-                  <div class="config-missing-badge"
-                       matTooltip="This repo has a linked config repo — check if MRs are needed">
+                <div *ngIf="r.config_repo" style="display:inline-flex;align-items:center;gap:6px;flex-wrap:nowrap;">
+                  <span class="config-missing-badge"
+                        matTooltip="This repo has a linked config repo — check if MRs are needed">
                     <mat-icon>warning</mat-icon>
                     {{ r.config_repo }}
-                  </div>
-
-                  <!-- Button to view / track open MRs in the config repo -->
-                  <button mat-stroked-button style="margin-top:4px;font-size:11px;height:26px;line-height:26px;padding:0 8px;"
+                  </span>
+                  <button mat-icon-button style="width:26px;height:26px;line-height:26px;"
                           (click)="openConfigMrDialog(r)"
                           matTooltip="View and track config repo merge requests">
-                    <mat-icon style="font-size:14px;width:14px;height:14px;margin-right:3px;">merge</mat-icon>
-                    View MRs
+                    <mat-icon style="font-size:16px;width:16px;height:16px;">merge</mat-icon>
                   </button>
-                </ng-container>
+                </div>
               </td>
             </ng-container>
 
