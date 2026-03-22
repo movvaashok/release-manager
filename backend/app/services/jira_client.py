@@ -7,6 +7,10 @@ from app.config import settings
 from app.services import token_service
 
 
+def _jira_url() -> str:
+    return (settings.jira_url or "").rstrip("/")
+
+
 def _auth_header() -> str:
     jira_email, jira_api_token = token_service.get_jira_credentials()
     credentials = f"{jira_email}:{jira_api_token}"

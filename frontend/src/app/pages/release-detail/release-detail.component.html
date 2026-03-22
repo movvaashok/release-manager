@@ -65,354 +65,7 @@
 
     <mat-tab-group animationDuration="150ms" mat-stretch-tabs="false"
       [selectedIndex]="activeTabIndex"
-      (selectedIndexChange)="activeTabIndex = $event; activeTabIndex === 3 && onDocTabSelected()">
-
-      <!-- ================================================================
-           Stage 1 – Release Candidates
-           ================================================================ -->
-      <mat-tab>
-        <ng-template mat-tab-label>
-          <mat-icon class="tab-icon">list_alt</mat-icon>
-          Stage 1 – Candidates
-        </ng-template>
-
-        <div class="tab-content">
-          <div class="action-bar" *ngIf="isAdmin">
-            <button mat-raised-button color="primary" (click)="openAddViaJiraDialog()">
-              <mat-icon>confirmation_number</mat-icon> Add via Jira
-            </button>
-            <button mat-stroked-button (click)="openAddReposDialog()">
-              <mat-icon>add</mat-icon> Add Manually
-            </button>
-            <span style="font-size:13px;color:rgba(0,0,0,0.54);">
-              {{ release.stage1.length }} repositories in this release
-            </span>
-          </div>
-
-          <table mat-table [dataSource]="release.stage1" class="full-width">
-
-            <ng-container matColumnDef="name">
-              <th mat-header-cell *matHeaderCellDef>Repository</th>
-              <td mat-cell *matCellDef="let r">
-                <strong>{{ r.name }}</strong>
-              </td>
-            </ng-container>
-
-            <ng-container matColumnDef="path">
-              <th mat-header-cell *matHeaderCellDef>Path</th>
-              <td mat-cell *matCellDef="let r" class="link-cell">
-                <a *ngIf="r.web_url" [href]="r.web_url" target="_blank" rel="noopener" (click)="$event.stopPropagation()">
-                  {{ r.path_with_namespace }}
-                  <mat-icon style="font-size:13px;vertical-align:middle;">open_in_new</mat-icon>
-                </a>
-                <span *ngIf="!r.web_url">{{ r.path_with_namespace }}</span>
-              </td>
-            </ng-container>
-
-            <ng-container matColumnDef="actions">
-              <th mat-header-cell *matHeaderCellDef></th>
-              <td mat-cell *matCellDef="let r" style="text-align:right;">
-                <button *ngIf="isAdmin"
-                  mat-icon-button color="warn"
-                  matTooltip="Remove from release and delete branch"
-                  [disabled]="!!removingRepo"
-                  (click)="removeRepo(r.name)">
-                  <mat-spinner *ngIf="removingRepo === r.name" diameter="18"></mat-spinner>
-                  <mat-icon *ngIf="removingRepo !== r.name">delete</mat-icon>
-                </button>
-              </td>
-            </ng-container>
-
-            <tr mat-header-row *matHeaderRowDef="stage1Columns"></tr>
-            <tr mat-row *matRowDef="let row; columns: stage1Columns;"></tr>
-          </table>
-        </div>
-      </mat-tab>
-
-      <!-- ================================================================
-           Stage 2 – Branch Management (all users)
-           ================================================================ -->
-      <mat-tab>
-        <ng-template mat-tab-label>
-          <mat-icon class="tab-icon">account_tree</mat-icon>
-          Stage 2 – Branches
-        </ng-template>
-
-        <div class="tab-content">
-          <div class="action-bar">
-            <button mat-raised-button color="primary"
-              (click)="runStage2()"
-              [disabled]="runningStage2 || runningDiffCheck || !stage2HasPendingOrFailed">
-              <mat-spinner *ngIf="runningStage2" diameter="18" style="display:inline-block;margin-right:6px;"></mat-spinner>
-              <mat-icon *ngIf="!runningStage2">sync</mat-icon>
-              {{ runningStage2 ? 'Syncing…' : 'Sync All' }}
-            </button>
-            <button mat-stroked-button
-              (click)="runDiffCheck()"
-              [disabled]="runningDiffCheck || runningStage2 || !stage2HasBranches"
-              matTooltip="Compare develop against each release branch">
-              <mat-spinner *ngIf="runningDiffCheck" diameter="18" style="display:inline-block;margin-right:6px;"></mat-spinner>
-              <mat-icon *ngIf="!runningDiffCheck">compare_arrows</mat-icon>
-              {{ runningDiffCheck ? 'Checking…' : 'Diff Check' }}
-            </button>
-            <span style="font-size:13px;color:rgba(0,0,0,0.54);">
-              Merges develop into release/{{ version }} for pending/failed repos
-            </span>
-          </div>
-
-          <table mat-table [dataSource]="release.stage2" class="full-width">
-
-            <ng-container matColumnDef="name">
-              <th mat-header-cell *matHeaderCellDef>Repository</th>
-              <td mat-cell *matCellDef="let r"><strong>{{ r.name }}</strong></td>
-            </ng-container>
-
-            <ng-container matColumnDef="status">
-              <th mat-header-cell *matHeaderCellDef>Status</th>
-              <td mat-cell *matCellDef="let r">
-                <app-status-chip [status]="r.status"></app-status-chip>
-              </td>
-            </ng-container>
-
-            <ng-container matColumnDef="branch_info">
-              <th mat-header-cell *matHeaderCellDef>Branch Info</th>
-              <td mat-cell *matCellDef="let r">{{ branchInfo(r) }}</td>
-            </ng-container>
-
-            <ng-container matColumnDef="diff">
-              <th mat-header-cell *matHeaderCellDef>Develop Diff</th>
-              <td mat-cell *matCellDef="let r">
-                <!-- Not yet checked -->
-                <span *ngIf="r.has_new_commits === null || r.has_new_commits === undefined"
-                      style="color:#bdbdbd;font-size:13px;">–</span>
-
-                <!-- Up to date -->
-                <span *ngIf="r.has_new_commits === false"
-                      style="display:inline-flex;align-items:center;gap:4px;color:#2e7d32;font-size:12px;font-weight:500;">
-                  <mat-icon style="font-size:16px;width:16px;height:16px;">check_circle</mat-icon>
-                  Up to date
-                </span>
-
-                <!-- Has new commits -->
-                <a *ngIf="r.has_new_commits === true"
-                   [href]="r.compare_url" target="_blank" rel="noopener"
-                   style="display:inline-flex;align-items:center;gap:4px;text-decoration:none;"
-                   [matTooltip]="r.commits_ahead + ' commit(s) in develop not in release branch'">
-                  <mat-icon style="font-size:16px;width:16px;height:16px;color:#e65100;">arrow_upward</mat-icon>
-                  <span style="color:#e65100;font-size:12px;font-weight:600;">
-                    {{ r.commits_ahead }} ahead
-                  </span>
-                  <mat-icon style="font-size:12px;width:12px;height:12px;color:#9e9e9e;">open_in_new</mat-icon>
-                </a>
-              </td>
-            </ng-container>
-
-            <ng-container matColumnDef="pipeline">
-              <th mat-header-cell *matHeaderCellDef>Pipeline</th>
-              <td mat-cell *matCellDef="let r">
-                <a *ngIf="r.pipeline_url" [href]="r.pipeline_url" target="_blank" rel="noopener"
-                   style="display:inline-flex;align-items:center;gap:4px;text-decoration:none;">
-                  <mat-icon [style.color]="pipelineColor(r.pipeline_status)" style="font-size:16px;width:16px;height:16px;">
-                    {{ pipelineIcon(r.pipeline_status) }}
-                  </mat-icon>
-                  <span [style.color]="pipelineColor(r.pipeline_status)" style="font-size:12px;font-weight:500;">
-                    {{ r.pipeline_status }}
-                  </span>
-                  <mat-icon style="font-size:12px;width:12px;height:12px;color:#9e9e9e;">open_in_new</mat-icon>
-                </a>
-                <span *ngIf="!r.pipeline_url" style="color:#bdbdbd;font-size:13px;">–</span>
-              </td>
-            </ng-container>
-
-            <ng-container matColumnDef="error">
-              <th mat-header-cell *matHeaderCellDef>Error</th>
-              <td mat-cell *matCellDef="let r" class="error-cell">{{ r.error ?? '–' }}</td>
-            </ng-container>
-
-            <ng-container matColumnDef="actions">
-              <th mat-header-cell *matHeaderCellDef></th>
-              <td mat-cell *matCellDef="let r" style="text-align:right;">
-                <button mat-icon-button color="accent"
-                  matTooltip="Sync this repository"
-                  [disabled]="!!retryingRepo"
-                  (click)="retryStage2Repo(r)">
-                  <mat-spinner *ngIf="isRetrying('stage2', r.name)" diameter="18"></mat-spinner>
-                  <mat-icon *ngIf="!isRetrying('stage2', r.name)">sync</mat-icon>
-                </button>
-              </td>
-            </ng-container>
-
-            <tr mat-header-row *matHeaderRowDef="stage2Columns"></tr>
-            <tr mat-row *matRowDef="let row; columns: stage2Columns;"
-                [class.row-conflict]="row.status === 'conflict'"
-                [class.row-failed]="row.status === 'failed'"
-                [class.row-has-new-commits]="row.has_new_commits === true">
-            </tr>
-          </table>
-        </div>
-      </mat-tab>
-
-      <!-- ================================================================
-           Stage 3 – Merge Requests (admin only)
-           ================================================================ -->
-      <mat-tab *ngIf="isAdmin">
-        <ng-template mat-tab-label>
-          <mat-icon class="tab-icon">merge</mat-icon>
-          Stage 3 – Merge Requests
-        </ng-template>
-
-        <div class="tab-content">
-          <div class="action-bar">
-            <button mat-raised-button color="primary"
-              (click)="runStage3()"
-              [disabled]="runningStage3 || !stage3HasPendingOrFailed">
-              <mat-spinner *ngIf="runningStage3" diameter="18" style="display:inline-block;margin-right:6px;"></mat-spinner>
-              <mat-icon *ngIf="!runningStage3">play_arrow</mat-icon>
-              {{ runningStage3 ? 'Running…' : 'Run Stage 3' }}
-            </button>
-            <button mat-stroked-button
-              *ngIf="mrLinkCount > 0"
-              (click)="copyMRLinks()"
-              matTooltip="Copy all MR URLs to clipboard">
-              <mat-icon>content_copy</mat-icon>
-              Copy {{ mrLinkCount }} MR {{ mrLinkCount === 1 ? 'Link' : 'Links' }}
-            </button>
-            <span style="font-size:13px;color:rgba(0,0,0,0.54);">
-              Creates MRs from release/{{ version }} → master
-            </span>
-            <ng-container *ngIf="isPioneerProject">
-              <button mat-stroked-button *ngIf="release.confluence_url"
-                (click)="refreshRaRequirements()"
-                [disabled]="refreshingRa"
-                matTooltip="Re-read Confluence page and update RA flags">
-                <mat-spinner *ngIf="refreshingRa" diameter="18" style="display:inline-block;margin-right:6px;"></mat-spinner>
-                <mat-icon *ngIf="!refreshingRa">sync</mat-icon>
-                Refresh RA
-              </button>
-              <span *ngIf="raRepoCount > 0" class="ra-summary">
-                <mat-icon class="ra-summary-icon">warning</mat-icon>
-                {{ raRepoCount }} {{ raRepoCount === 1 ? 'repo requires' : 'repos require' }} Risk Assessment
-              </span>
-            </ng-container>
-          </div>
-
-          <table mat-table [dataSource]="release.stage3" class="full-width">
-
-            <ng-container matColumnDef="name">
-              <th mat-header-cell *matHeaderCellDef>Repository</th>
-              <td mat-cell *matCellDef="let r">
-                <strong>{{ r.name }}</strong>
-                <span *ngIf="r.requires_ra && isPioneerProject" class="ra-badge" matTooltip="Risk Assessment required for this component">RA</span>
-              </td>
-            </ng-container>
-
-            <ng-container matColumnDef="config_repo">
-              <th mat-header-cell *matHeaderCellDef>Config Repo</th>
-              <td mat-cell *matCellDef="let r">
-                <!-- No config repo linked -->
-                <span *ngIf="!r.config_repo" style="color:rgba(0,0,0,0.25);font-size:12px;">–</span>
-
-                <div *ngIf="r.config_repo" style="display:inline-flex;align-items:center;gap:6px;flex-wrap:nowrap;">
-                  <span class="config-missing-badge"
-                        matTooltip="This repo has a linked config repo — check if MRs are needed">
-                    <mat-icon>warning</mat-icon>
-                    {{ r.config_repo }}
-                  </span>
-                  <button mat-icon-button style="width:26px;height:26px;line-height:26px;"
-                          (click)="openConfigMrDialog(r)"
-                          matTooltip="View and track config repo merge requests">
-                    <mat-icon style="font-size:16px;width:16px;height:16px;">merge</mat-icon>
-                  </button>
-                </div>
-              </td>
-            </ng-container>
-
-            <ng-container matColumnDef="status">
-              <th mat-header-cell *matHeaderCellDef>Status</th>
-              <td mat-cell *matCellDef="let r">
-                <app-status-chip [status]="r.status"></app-status-chip>
-              </td>
-            </ng-container>
-
-            <ng-container matColumnDef="mr">
-              <th mat-header-cell *matHeaderCellDef>Merge Request</th>
-              <td mat-cell *matCellDef="let r" class="link-cell">
-                <a *ngIf="r.mr_url" [href]="r.mr_url" target="_blank" rel="noopener">
-                  !{{ r.mr_iid }}
-                  <mat-icon style="font-size:14px;vertical-align:middle;">open_in_new</mat-icon>
-                </a>
-                <span *ngIf="!r.mr_url">–</span>
-              </td>
-            </ng-container>
-
-            <ng-container matColumnDef="pipeline3">
-              <th mat-header-cell *matHeaderCellDef>Pipeline</th>
-              <td mat-cell *matCellDef="let r">
-                <a *ngIf="r.pipeline_url" [href]="r.pipeline_url" target="_blank" rel="noopener"
-                   style="display:inline-flex;align-items:center;gap:4px;text-decoration:none;">
-                  <mat-icon [style.color]="pipelineColor(r.pipeline_status)" style="font-size:16px;width:16px;height:16px;">
-                    {{ pipelineIcon(r.pipeline_status) }}
-                  </mat-icon>
-                  <span [style.color]="pipelineColor(r.pipeline_status)" style="font-size:12px;font-weight:500;">
-                    {{ r.pipeline_status }}
-                  </span>
-                  <mat-icon style="font-size:12px;width:12px;height:12px;color:#9e9e9e;">open_in_new</mat-icon>
-                </a>
-                <span *ngIf="!r.pipeline_url" style="color:#bdbdbd;font-size:13px;">–</span>
-              </td>
-            </ng-container>
-
-            <ng-container matColumnDef="ra_subtask">
-              <th mat-header-cell *matHeaderCellDef>RA Subtask</th>
-              <td mat-cell *matCellDef="let r">
-                <a *ngIf="r.ra_subtask_url" [href]="r.ra_subtask_url" target="_blank" rel="noopener"
-                   style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:#1565c0;text-decoration:none;">
-                  <mat-icon style="font-size:14px;width:14px;height:14px;">task</mat-icon>
-                  View subtask
-                  <mat-icon style="font-size:11px;width:11px;height:11px;color:#9e9e9e;">open_in_new</mat-icon>
-                </a>
-                <!-- RA required, no subtask yet — show create button -->
-                <button *ngIf="!r.ra_subtask_url && r.requires_ra && isPioneerProject"
-                        mat-stroked-button
-                        style="font-size:11px;height:26px;line-height:26px;padding:0 8px;"
-                        [disabled]="creatingRaSubtask.has(r.name)"
-                        (click)="createRaSubtask(r)"
-                        matTooltip="Create a Jira subtask under the RA ticket">
-                  <mat-spinner *ngIf="creatingRaSubtask.has(r.name)" diameter="12" style="display:inline-block;margin-right:4px;"></mat-spinner>
-                  <mat-icon *ngIf="!creatingRaSubtask.has(r.name)" style="font-size:13px;width:13px;height:13px;margin-right:3px;">add_task</mat-icon>
-                  Create subtask
-                </button>
-                <!-- Not RA required -->
-                <span *ngIf="!r.requires_ra" style="color:rgba(0,0,0,0.2);font-size:12px;">–</span>
-              </td>
-            </ng-container>
-
-            <ng-container matColumnDef="error">
-              <th mat-header-cell *matHeaderCellDef>Error</th>
-              <td mat-cell *matCellDef="let r" class="error-cell">{{ r.error ?? '–' }}</td>
-            </ng-container>
-
-            <ng-container matColumnDef="actions">
-              <th mat-header-cell *matHeaderCellDef></th>
-              <td mat-cell *matCellDef="let r" style="text-align:right;">
-                <button mat-icon-button color="accent"
-                  matTooltip="Retry this repository"
-                  [disabled]="!!retryingRepo || r.status === 'success' || r.status === 'already_exists'"
-                  (click)="retryStage3Repo(r)">
-                  <mat-spinner *ngIf="isRetrying('stage3', r.name)" diameter="18"></mat-spinner>
-                  <mat-icon *ngIf="!isRetrying('stage3', r.name)">replay</mat-icon>
-                </button>
-              </td>
-            </ng-container>
-
-            <tr mat-header-row *matHeaderRowDef="stage3Columns"></tr>
-            <tr mat-row *matRowDef="let row; columns: stage3Columns;"
-                [class.row-failed]="row.status === 'failed'"
-                [class.row-requires-ra]="row.requires_ra && isPioneerProject">
-            </tr>
-          </table>
-        </div>
-      </mat-tab>
+      (selectedIndexChange)="activeTabIndex = $event; onTabChanged($event)">
 
       <!-- ─────────────────────────────────────────────────────────────────
            Jira Status tab
@@ -569,6 +222,369 @@
             </div>
 
           </ng-container>
+        </div>
+      </mat-tab>
+
+      <!-- ================================================================
+           Stage 1 – Release Candidates
+           ================================================================ -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-icon">list_alt</mat-icon>
+          Stage 1 – Candidates
+        </ng-template>
+
+        <div class="tab-content">
+          <div class="action-bar" *ngIf="isAdmin">
+            <button mat-raised-button color="primary" (click)="openAddViaJiraDialog()">
+              <mat-icon>confirmation_number</mat-icon> Add via Jira
+            </button>
+            <button mat-stroked-button (click)="openAddReposDialog()">
+              <mat-icon>add</mat-icon> Add Manually
+            </button>
+            <span style="font-size:13px;color:rgba(0,0,0,0.54);">
+              {{ release.stage1.length }} repositories in this release
+            </span>
+          </div>
+
+          <table mat-table [dataSource]="release.stage1" class="full-width">
+
+            <ng-container matColumnDef="name">
+              <th mat-header-cell *matHeaderCellDef>Repository</th>
+              <td mat-cell *matCellDef="let r">
+                <strong>{{ r.name }}</strong>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="path">
+              <th mat-header-cell *matHeaderCellDef>Path</th>
+              <td mat-cell *matCellDef="let r" class="link-cell">
+                <a *ngIf="r.web_url" [href]="r.web_url" target="_blank" rel="noopener" (click)="$event.stopPropagation()">
+                  {{ r.path_with_namespace }}
+                  <mat-icon style="font-size:13px;vertical-align:middle;">open_in_new</mat-icon>
+                </a>
+                <span *ngIf="!r.web_url">{{ r.path_with_namespace }}</span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="actions">
+              <th mat-header-cell *matHeaderCellDef></th>
+              <td mat-cell *matCellDef="let r" style="text-align:right;">
+                <button *ngIf="isAdmin"
+                  mat-icon-button color="warn"
+                  matTooltip="Remove from release and delete branch"
+                  [disabled]="!!removingRepo"
+                  (click)="removeRepo(r.name)">
+                  <mat-spinner *ngIf="removingRepo === r.name" diameter="18"></mat-spinner>
+                  <mat-icon *ngIf="removingRepo !== r.name">delete</mat-icon>
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="stage1Columns"></tr>
+            <tr mat-row *matRowDef="let row; columns: stage1Columns;"></tr>
+          </table>
+        </div>
+      </mat-tab>
+
+      <!-- ================================================================
+           Stage 2 – Branch Management (all users)
+           ================================================================ -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-icon">account_tree</mat-icon>
+          Stage 2 – Branches
+        </ng-template>
+
+        <div class="tab-content">
+          <div class="action-bar">
+            <button mat-raised-button color="primary"
+              (click)="runStage2()"
+              [disabled]="runningStage2 || runningDiffCheck || !stage2HasPendingOrFailed">
+              <mat-spinner *ngIf="runningStage2" diameter="18" style="display:inline-block;margin-right:6px;"></mat-spinner>
+              <mat-icon *ngIf="!runningStage2">sync</mat-icon>
+              {{ runningStage2 ? 'Syncing…' : 'Sync All' }}
+            </button>
+            <button mat-stroked-button
+              (click)="runDiffCheck()"
+              [disabled]="runningDiffCheck || runningStage2 || !stage2HasBranches"
+              matTooltip="Compare develop against each release branch">
+              <mat-spinner *ngIf="runningDiffCheck" diameter="18" style="display:inline-block;margin-right:6px;"></mat-spinner>
+              <mat-icon *ngIf="!runningDiffCheck">compare_arrows</mat-icon>
+              {{ runningDiffCheck ? 'Checking…' : 'Diff Check' }}
+            </button>
+            <span style="font-size:13px;color:rgba(0,0,0,0.54);">
+              Merges develop into release/{{ version }} for pending/failed repos
+            </span>
+          </div>
+
+          <table mat-table [dataSource]="release.stage2" class="full-width">
+
+            <ng-container matColumnDef="name">
+              <th mat-header-cell *matHeaderCellDef>Repository</th>
+              <td mat-cell *matCellDef="let r"><strong>{{ r.name }}</strong></td>
+            </ng-container>
+
+            <ng-container matColumnDef="status">
+              <th mat-header-cell *matHeaderCellDef>Status</th>
+              <td mat-cell *matCellDef="let r">
+                <app-status-chip [status]="r.status"></app-status-chip>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="branch_info">
+              <th mat-header-cell *matHeaderCellDef>Branch Info</th>
+              <td mat-cell *matCellDef="let r">{{ branchInfo(r) }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="diff">
+              <th mat-header-cell *matHeaderCellDef>Develop Diff</th>
+              <td mat-cell *matCellDef="let r">
+                <!-- Not yet checked -->
+                <span *ngIf="r.has_new_commits === null || r.has_new_commits === undefined"
+                      style="color:#bdbdbd;font-size:13px;">–</span>
+
+                <!-- Up to date -->
+                <span *ngIf="r.has_new_commits === false"
+                      style="display:inline-flex;align-items:center;gap:4px;color:#2e7d32;font-size:12px;font-weight:500;">
+                  <mat-icon style="font-size:16px;width:16px;height:16px;">check_circle</mat-icon>
+                  Up to date
+                </span>
+
+                <!-- Has new commits -->
+                <a *ngIf="r.has_new_commits === true"
+                   [href]="r.compare_url" target="_blank" rel="noopener"
+                   style="display:inline-flex;align-items:center;gap:4px;text-decoration:none;"
+                   [matTooltip]="r.commits_ahead + ' commit(s) in develop not in release branch'">
+                  <mat-icon style="font-size:16px;width:16px;height:16px;color:#e65100;">arrow_upward</mat-icon>
+                  <span style="color:#e65100;font-size:12px;font-weight:600;">
+                    {{ r.commits_ahead }} ahead
+                  </span>
+                  <mat-icon style="font-size:12px;width:12px;height:12px;color:#9e9e9e;">open_in_new</mat-icon>
+                </a>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="pipeline">
+              <th mat-header-cell *matHeaderCellDef>Pipeline</th>
+              <td mat-cell *matCellDef="let r">
+                <div style="display:flex;flex-direction:column;gap:3px;">
+                  <a *ngIf="r.pipeline_url" [href]="r.pipeline_url" target="_blank" rel="noopener"
+                     style="display:inline-flex;align-items:center;gap:4px;text-decoration:none;">
+                    <mat-icon [style.color]="pipelineColor(r.pipeline_status)" style="font-size:16px;width:16px;height:16px;">
+                      {{ pipelineIcon(r.pipeline_status) }}
+                    </mat-icon>
+                    <span [style.color]="pipelineColor(r.pipeline_status)" style="font-size:12px;font-weight:500;">
+                      {{ r.pipeline_status }}
+                    </span>
+                    <mat-icon style="font-size:12px;width:12px;height:12px;color:#9e9e9e;">open_in_new</mat-icon>
+                  </a>
+                  <a *ngIf="r.pipeline_url" [href]="r.pipeline_url + '/security'" target="_blank" rel="noopener"
+                     style="display:inline-flex;align-items:center;gap:3px;text-decoration:none;font-size:11px;color:#6a1b9a;">
+                    <mat-icon style="font-size:13px;width:13px;height:13px;">security</mat-icon>
+                    Security findings
+                    <mat-icon style="font-size:10px;width:10px;height:10px;color:#9e9e9e;">open_in_new</mat-icon>
+                  </a>
+                </div>
+                <span *ngIf="!r.pipeline_url" style="color:#bdbdbd;font-size:13px;">–</span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="error">
+              <th mat-header-cell *matHeaderCellDef>Error</th>
+              <td mat-cell *matCellDef="let r" class="error-cell">{{ r.error ?? '–' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="actions">
+              <th mat-header-cell *matHeaderCellDef></th>
+              <td mat-cell *matCellDef="let r" style="text-align:right;">
+                <button mat-icon-button color="accent"
+                  matTooltip="Sync this repository"
+                  [disabled]="!!retryingRepo"
+                  (click)="retryStage2Repo(r)">
+                  <mat-spinner *ngIf="isRetrying('stage2', r.name)" diameter="18"></mat-spinner>
+                  <mat-icon *ngIf="!isRetrying('stage2', r.name)">sync</mat-icon>
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="stage2Columns"></tr>
+            <tr mat-row *matRowDef="let row; columns: stage2Columns;"
+                [class.row-conflict]="row.status === 'conflict'"
+                [class.row-failed]="row.status === 'failed'"
+                [class.row-has-new-commits]="row.has_new_commits === true">
+            </tr>
+          </table>
+        </div>
+      </mat-tab>
+
+      <!-- ================================================================
+           Stage 3 – Merge Requests (admin only)
+           ================================================================ -->
+      <mat-tab *ngIf="isAdmin">
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-icon">merge</mat-icon>
+          Stage 3 – Merge Requests
+        </ng-template>
+
+        <div class="tab-content">
+          <div class="action-bar">
+            <button mat-raised-button color="primary"
+              (click)="runStage3()"
+              [disabled]="runningStage3 || !stage3HasPendingOrFailed">
+              <mat-spinner *ngIf="runningStage3" diameter="18" style="display:inline-block;margin-right:6px;"></mat-spinner>
+              <mat-icon *ngIf="!runningStage3">play_arrow</mat-icon>
+              {{ runningStage3 ? 'Running…' : 'Run Stage 3' }}
+            </button>
+            <button mat-stroked-button
+              *ngIf="mrLinkCount > 0"
+              (click)="copyMRLinks()"
+              matTooltip="Copy all MR URLs to clipboard">
+              <mat-icon>content_copy</mat-icon>
+              Copy {{ mrLinkCount }} MR {{ mrLinkCount === 1 ? 'Link' : 'Links' }}
+            </button>
+            <span style="font-size:13px;color:rgba(0,0,0,0.54);">
+              Creates MRs from release/{{ version }} → master
+            </span>
+            <ng-container *ngIf="isPioneerProject">
+              <button mat-stroked-button *ngIf="release.confluence_url"
+                (click)="refreshRaRequirements()"
+                [disabled]="refreshingRa"
+                matTooltip="Re-read Confluence page and update RA flags">
+                <mat-spinner *ngIf="refreshingRa" diameter="18" style="display:inline-block;margin-right:6px;"></mat-spinner>
+                <mat-icon *ngIf="!refreshingRa">sync</mat-icon>
+                Refresh RA
+              </button>
+              <span *ngIf="raRepoCount > 0" class="ra-summary">
+                <mat-icon class="ra-summary-icon">warning</mat-icon>
+                {{ raRepoCount }} {{ raRepoCount === 1 ? 'repo requires' : 'repos require' }} Risk Assessment
+              </span>
+            </ng-container>
+          </div>
+
+          <table mat-table [dataSource]="release.stage3" class="full-width">
+
+            <ng-container matColumnDef="name">
+              <th mat-header-cell *matHeaderCellDef>Repository</th>
+              <td mat-cell *matCellDef="let r">
+                <strong>{{ r.name }}</strong>
+                <span *ngIf="r.requires_ra && isPioneerProject" class="ra-badge" matTooltip="Risk Assessment required for this component">RA</span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="config_repo">
+              <th mat-header-cell *matHeaderCellDef>Config Repo</th>
+              <td mat-cell *matCellDef="let r">
+                <!-- No config repo linked -->
+                <span *ngIf="!r.config_repo" style="color:rgba(0,0,0,0.25);font-size:12px;">–</span>
+
+                <div *ngIf="r.config_repo" style="display:inline-flex;align-items:center;gap:6px;flex-wrap:nowrap;">
+                  <span class="config-missing-badge"
+                        matTooltip="This repo has a linked config repo — check if MRs are needed">
+                    <mat-icon>warning</mat-icon>
+                    {{ r.config_repo }}
+                  </span>
+                  <button mat-icon-button style="width:26px;height:26px;line-height:26px;"
+                          (click)="openConfigMrDialog(r)"
+                          matTooltip="View and track config repo merge requests">
+                    <mat-icon style="font-size:16px;width:16px;height:16px;">merge</mat-icon>
+                  </button>
+                </div>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="status">
+              <th mat-header-cell *matHeaderCellDef>Status</th>
+              <td mat-cell *matCellDef="let r">
+                <app-status-chip [status]="r.status"></app-status-chip>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="mr">
+              <th mat-header-cell *matHeaderCellDef>Merge Request</th>
+              <td mat-cell *matCellDef="let r" class="link-cell">
+                <a *ngIf="r.mr_url" [href]="r.mr_url" target="_blank" rel="noopener">
+                  !{{ r.mr_iid }}
+                  <mat-icon style="font-size:14px;vertical-align:middle;">open_in_new</mat-icon>
+                </a>
+                <span *ngIf="!r.mr_url">–</span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="pipeline3">
+              <th mat-header-cell *matHeaderCellDef>Pipeline</th>
+              <td mat-cell *matCellDef="let r">
+                <div style="display:flex;flex-direction:column;gap:3px;">
+                  <a *ngIf="r.pipeline_url" [href]="r.pipeline_url" target="_blank" rel="noopener"
+                     style="display:inline-flex;align-items:center;gap:4px;text-decoration:none;">
+                    <mat-icon [style.color]="pipelineColor(r.pipeline_status)" style="font-size:16px;width:16px;height:16px;">
+                      {{ pipelineIcon(r.pipeline_status) }}
+                    </mat-icon>
+                    <span [style.color]="pipelineColor(r.pipeline_status)" style="font-size:12px;font-weight:500;">
+                      {{ r.pipeline_status }}
+                    </span>
+                    <mat-icon style="font-size:12px;width:12px;height:12px;color:#9e9e9e;">open_in_new</mat-icon>
+                  </a>
+                  <a *ngIf="r.pipeline_url" [href]="r.pipeline_url + '/security'" target="_blank" rel="noopener"
+                     style="display:inline-flex;align-items:center;gap:3px;text-decoration:none;font-size:11px;color:#6a1b9a;">
+                    <mat-icon style="font-size:13px;width:13px;height:13px;">security</mat-icon>
+                    Security findings
+                    <mat-icon style="font-size:10px;width:10px;height:10px;color:#9e9e9e;">open_in_new</mat-icon>
+                  </a>
+                </div>
+                <span *ngIf="!r.pipeline_url" style="color:#bdbdbd;font-size:13px;">–</span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="ra_subtask">
+              <th mat-header-cell *matHeaderCellDef>RA Subtask</th>
+              <td mat-cell *matCellDef="let r">
+                <a *ngIf="r.ra_subtask_url" [href]="r.ra_subtask_url" target="_blank" rel="noopener"
+                   style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:#1565c0;text-decoration:none;">
+                  <mat-icon style="font-size:14px;width:14px;height:14px;">task</mat-icon>
+                  View subtask
+                  <mat-icon style="font-size:11px;width:11px;height:11px;color:#9e9e9e;">open_in_new</mat-icon>
+                </a>
+                <!-- RA required, no subtask yet — show create button -->
+                <button *ngIf="!r.ra_subtask_url && r.requires_ra && isPioneerProject"
+                        mat-stroked-button
+                        style="font-size:11px;height:26px;line-height:26px;padding:0 8px;"
+                        [disabled]="creatingRaSubtask.has(r.name)"
+                        (click)="createRaSubtask(r)"
+                        matTooltip="Create a Jira subtask under the RA ticket">
+                  <mat-spinner *ngIf="creatingRaSubtask.has(r.name)" diameter="12" style="display:inline-block;margin-right:4px;"></mat-spinner>
+                  <mat-icon *ngIf="!creatingRaSubtask.has(r.name)" style="font-size:13px;width:13px;height:13px;margin-right:3px;">add_task</mat-icon>
+                  Create subtask
+                </button>
+                <!-- Not RA required -->
+                <span *ngIf="!r.requires_ra" style="color:rgba(0,0,0,0.2);font-size:12px;">–</span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="error">
+              <th mat-header-cell *matHeaderCellDef>Error</th>
+              <td mat-cell *matCellDef="let r" class="error-cell">{{ r.error ?? '–' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="actions">
+              <th mat-header-cell *matHeaderCellDef></th>
+              <td mat-cell *matCellDef="let r" style="text-align:right;">
+                <button mat-icon-button color="accent"
+                  matTooltip="Retry this repository"
+                  [disabled]="!!retryingRepo || r.status === 'success' || r.status === 'already_exists'"
+                  (click)="retryStage3Repo(r)">
+                  <mat-spinner *ngIf="isRetrying('stage3', r.name)" diameter="18"></mat-spinner>
+                  <mat-icon *ngIf="!isRetrying('stage3', r.name)">replay</mat-icon>
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="stage3Columns"></tr>
+            <tr mat-row *matRowDef="let row; columns: stage3Columns;"
+                [class.row-failed]="row.status === 'failed'"
+                [class.row-requires-ra]="row.requires_ra && isPioneerProject">
+            </tr>
+          </table>
         </div>
       </mat-tab>
 

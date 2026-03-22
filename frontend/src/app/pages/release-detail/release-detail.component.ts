@@ -312,6 +312,16 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
     });
   }
 
+  onTabChanged(index: number): void {
+    // Tab order: 0=Jira Status, 1=Stage1, 2=Stage2, 3=Stage3(admin), 4=Documentation
+    // (when not admin, Stage3 is hidden so Documentation shifts to index 3)
+    if (index === 0) {
+      if (!this.jiraStatus && !this.loadingJiraStatus) this.loadJiraStatus();
+    }
+    const docIndex = this.isAdmin ? 4 : 3;
+    if (index === docIndex) this.onDocTabSelected();
+  }
+
   onDocTabSelected(): void {
     this.tryPopulateConfluence();
     this.tryPopulateCabTicket();

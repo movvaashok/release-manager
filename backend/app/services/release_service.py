@@ -35,7 +35,7 @@ from app.models import (
     Stage3Repo,
 )
 from app.services.gitlab_client import get_gitlab_client
-from app.services import jira_client
+from app.services import jira_client, project_service
 
 # Resolve data_dir to absolute so it works regardless of the server's cwd.
 _BACKEND_ROOT = Path(__file__).resolve().parent.parent.parent  # …/backend/
@@ -681,51 +681,52 @@ async def get_jira_status_summary(project_id: str, version: str) -> JiraStatusSu
     if state is None:
         raise ValueError(f"Release {version} not found")
 
-    # ── Collect all unique ticket keys from stage1 repos, keyed by repo name ──
+    # ── Build repo association map from stored keys (key → [repo_name, ...]) ──
     ticket_to_repos: dict[str, list[str]] = {}
     for repo in state.stage1:
         for key in repo.jira_tickets:
             ticket_to_repos.setdefault(key, []).append(repo.name)
 
-    # ── Collect RA subtask keys from stage3 ──
+    # ── Collect RA subtask entries from stage3 ──
     subtask_entries: list[tuple[str, str]] = []  # (url, repo_name)
     for repo in state.stage3:
         if repo.ra_subtask_url:
             subtask_entries.append((repo.ra_subtask_url, repo.name))
 
-    # ── Build full key set for batch fetch ──
-    all_keys: list[str] = list(ticket_to_repos.keys())
+    # ── Batch-fetch RA/CAB/subtask keys ──
+    extra_keys: list[str] = []
     for url, _ in subtask_entries:
         k = _jira_key_from_url(url)
         if k:
-            all_keys.append(k)
+            extra_keys.append(k)
     ra_key = _jira_key_from_url(state.risk_assessment_url)
     if ra_key:
-        all_keys.append(ra_key)
+        extra_keys.append(ra_key)
     cab_key = _jira_key_from_url(state.cab_ticket_url)
     if cab_key:
-        all_keys.append(cab_key)
+        extra_keys.append(cab_key)
 
-    # ── Batch fetch ──
-    unique_keys = list(dict.fromkeys(all_keys))  # deduplicate, preserve order
-    fetched = {i["key"]: i for i in await jira_client.get_issues_by_keys(unique_keys)}
+    unique_extra = list(dict.fromkeys(extra_keys))
+    fetched = {i["key"]: i for i in await jira_client.get_issues_by_keys(unique_extra)}
 
-    # ── Build release_tickets ──
+    # ── Fetch ALL release tickets by fix version (always reliable) ──
+    proj = project_service.get_project(project_id)
+    jira_project_key = proj.jira_project_key if proj else project_id.upper()
+    raw_tickets = await jira_client.get_tickets_by_fix_version(version, jira_project_key)
+
     release_tickets: list[JiraTicketStatus] = []
-    for key, repos in ticket_to_repos.items():
-        info = fetched.get(key)
-        if info:
-            release_tickets.append(JiraTicketStatus(
-                key=info["key"], summary=info["summary"],
-                status=info["status"], url=info["url"],
-                issue_type=info.get("issue_type", ""), repos=repos,
-            ))
-        else:
-            # Ticket not in Jira (or Jira not configured) — show placeholder
-            release_tickets.append(JiraTicketStatus(
-                key=key, summary="", status="Unknown",
-                url=f"{state.cab_ticket_url or ''}", repos=repos,
-            ))
+    for issue in raw_tickets:
+        fields = issue.get("fields", {})
+        key = issue["key"]
+        repos = ticket_to_repos.get(key, [])
+        release_tickets.append(JiraTicketStatus(
+            key=key,
+            summary=fields.get("summary", ""),
+            status=fields.get("status", {}).get("name", ""),
+            url=f"{jira_client._jira_url()}/browse/{key}",
+            issue_type=fields.get("issuetype", {}).get("name", ""),
+            repos=repos,
+        ))
 
     # ── RA ticket ──
     ra_ticket: Optional[JiraTicketStatus] = None
