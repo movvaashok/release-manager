@@ -128,6 +128,15 @@ export interface JiraTicket {
   url?: string;
 }
 
+export interface GitLabProjectInfo {
+  id: number;
+  name: string;
+  path_with_namespace: string;
+  web_url: string;
+  default_branch: string;
+  namespace_name: string;
+}
+
 export interface RepoWithTickets {
   name: string;
   jira_tickets: string[];

@@ -1,11 +1,22 @@
 from typing import List
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Header, HTTPException, Query
 
-from app.models import AddReferenceRepoRequest, RepoReference, UpdateReferenceRepoRequest
+from app.models import AddReferenceRepoRequest, GitLabProjectInfo, RepoReference, UpdateReferenceRepoRequest
 from app.services import repo_service
+from app.services.gitlab_client import get_gitlab_client
 
 router = APIRouter(tags=["repositories"])
+
+
+@router.get("/repos/gitlab", response_model=List[GitLabProjectInfo])
+async def list_gitlab_repos(x_gitlab_token: str = Header(...)):
+    """Fetch all non-archived, top-level-group GitLab projects accessible to the token."""
+    try:
+        client = get_gitlab_client(x_gitlab_token)
+        return await client.list_group_projects()
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"GitLab API error: {exc}")
 
 
 @router.get("/repos/reference", response_model=List[RepoReference])

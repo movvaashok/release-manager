@@ -213,5 +213,54 @@ class GitLabClient:
             return pipelines[0] if pipelines else None
 
 
+    async def list_group_projects(self) -> List[Dict[str, Any]]:
+        """Return all accessible, non-archived projects that are NOT in a subgroup.
+
+        Filters:
+        - membership=true  → only repos the token has access to
+        - archived=false   → skip archived repos
+        - namespace.full_path has no '/' → top-level group projects only (no subgroups)
+        """
+        url = f"{self._base}/projects"
+        params = {
+            "membership": "true",
+            "archived": "false",
+            "order_by": "name",
+            "sort": "asc",
+            "per_page": "100",
+        }
+        results: List[Dict[str, Any]] = []
+        page = 1
+        async with httpx.AsyncClient() as client:
+            while True:
+                resp = await client.get(
+                    url,
+                    headers=self._headers,
+                    params={**params, "page": str(page)},
+                    timeout=30,
+                )
+                resp.raise_for_status()
+                batch = resp.json()
+                if not batch:
+                    break
+                for proj in batch:
+                    ns = proj.get("namespace") or {}
+                    # Exclude subgroups: namespace full_path must not contain '/'
+                    if "/" in (ns.get("full_path") or ""):
+                        continue
+                    results.append({
+                        "id": proj["id"],
+                        "name": proj["name"],
+                        "path_with_namespace": proj["path_with_namespace"],
+                        "web_url": proj["web_url"],
+                        "default_branch": proj.get("default_branch") or "master",
+                        "namespace_name": ns.get("name") or "",
+                    })
+                if len(batch) < 100:
+                    break
+                page += 1
+        return results
+
+
 def get_gitlab_client(token: str) -> GitLabClient:
     return GitLabClient(token)

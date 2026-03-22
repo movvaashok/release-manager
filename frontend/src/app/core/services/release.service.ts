@@ -7,6 +7,7 @@ import {
   ConfigMR,
   ConfigMrsResponse,
   CreateReleaseRequest,
+  GitLabProjectInfo,
   ReleaseSummary,
   ReleaseState,
   RepoReference,
@@ -27,6 +28,10 @@ export class ReleaseService {
 
   getReferences(): Observable<RepoReference[]> {
     return this.http.get<RepoReference[]>(`${this.base}/repos/reference`, { params: this.p });
+  }
+
+  listGitLabRepos(): Observable<GitLabProjectInfo[]> {
+    return this.http.get<GitLabProjectInfo[]>(`${this.base}/repos/gitlab`);
   }
 
   listReleases(): Observable<ReleaseSummary[]> {

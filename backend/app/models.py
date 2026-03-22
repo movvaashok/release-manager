@@ -211,6 +211,15 @@ class UpdateUserProjectsRequest(BaseModel):
     projects: List[str]
 
 
+class GitLabProjectInfo(BaseModel):
+    id: int
+    name: str
+    path_with_namespace: str
+    web_url: str
+    default_branch: str = "master"
+    namespace_name: str = ""
+
+
 class AddReferenceRepoRequest(BaseModel):
     name: str
     project_id: int
