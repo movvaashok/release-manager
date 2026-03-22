@@ -83,7 +83,7 @@ export class DashboardComponent implements OnInit {
   }
 
   openManageRepos(): void {
-    this.dialog.open(ManageReposDialogComponent, { width: '1100px', maxWidth: '95vw', disableClose: false });
+    this.dialog.open(ManageReposDialogComponent, { width: '900px', disableClose: false });
   }
 
   openManageUsers(): void {
