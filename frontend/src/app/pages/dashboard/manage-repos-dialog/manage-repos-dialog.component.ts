@@ -73,14 +73,6 @@ import { GitLabProjectInfo, RepoReference } from '../../../core/models/release.m
     .repo-list-row .col-actions { padding: 0; display: flex; align-items: center; justify-content: flex-end; padding-right: 4px; }
     .repo-name-link { color: #1565c0; text-decoration: none; font-weight: 600; font-size: 13px; }
     .repo-name-link:hover { text-decoration: underline; }
-    .config-select {
-      width: 100%; border: 1px solid #e0e0e0; border-radius: 5px;
-      padding: 4px 6px; font-size: 12px; color: rgba(0,0,0,0.7);
-      background: #fff; cursor: pointer; outline: none;
-    }
-    .config-select:focus { border-color: #1565c0; }
-    .config-select:hover { border-color: #bbb; }
-
     /* GitLab browser */
     .gitlab-browser { margin-top: 20px; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; }
     .gitlab-browser-header {
@@ -287,21 +279,6 @@ export class ManageReposDialogComponent implements OnInit {
 
   toTitleCase(name: string): string {
     return name.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-  }
-
-  quickSetConfigRepo(repo: RepoReference, configRepo: string | null): void {
-    const payload = {
-      project_id: repo.project_id,
-      path_with_namespace: repo.path_with_namespace,
-      web_url: repo.web_url,
-      default_branch: repo.default_branch,
-      develop_branch: repo.develop_branch,
-      config_repo: configRepo || null,
-    };
-    this.releaseService.updateReferenceRepo(repo.name, payload).subscribe({
-      next: (repos) => { this.repos = repos; },
-      error: (err: any) => { this.errorMessage = err?.error?.detail ?? 'Update failed.'; },
-    });
   }
 
   close(): void { this.dialogRef.close(); }

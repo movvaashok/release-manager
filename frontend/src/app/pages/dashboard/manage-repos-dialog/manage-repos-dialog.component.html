@@ -81,14 +81,10 @@
         <span class="col" style="color:rgba(0,0,0,0.65);" [title]="r.default_branch">{{ r.default_branch }}</span>
         <span class="col" style="color:rgba(0,0,0,0.65);" [title]="r.develop_branch">{{ r.develop_branch }}</span>
         <span class="col">
-          <select class="config-select"
-            [value]="r.config_repo ?? ''"
-            (change)="quickSetConfigRepo(r, $any($event.target).value || null)">
-            <option value="">— None —</option>
-            <option *ngFor="let other of otherRepos(r.name)" [value]="other.name">
-              {{ toTitleCase(other.name) }}
-            </option>
-          </select>
+          <span *ngIf="r.config_repo" class="config-repo-badge" [title]="r.config_repo">
+            <mat-icon style="font-size:13px;width:13px;height:13px;vertical-align:middle;margin-right:3px;">link</mat-icon>
+            {{ toTitleCase(r.config_repo) }}
+          </span>
         </span>
         <span class="col-actions">
           <button mat-icon-button (click)="startEdit(r)" matTooltip="Edit"><mat-icon>edit</mat-icon></button>
