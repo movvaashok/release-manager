@@ -42,7 +42,7 @@ import { GitLabProjectInfo, RepoReference } from '../../../core/models/release.m
     /* columns: Name | Default | Develop | Config Repo | Actions */
     .repo-grid-row {
       display: grid;
-      grid-template-columns: 200px 110px 110px minmax(0,1fr) 80px;
+      grid-template-columns: 240px 130px 130px minmax(0,1fr) 80px;
       align-items: center;
       gap: 0;
     }
