@@ -46,6 +46,7 @@ export interface Stage3Repo {
   pipeline_status: string | null;
   pipeline_url: string | null;
   requires_ra: boolean;
+  ra_subtask_url: string | null;       // Jira subtask under RA ticket, created after MR
   config_repo: string | null;          // linked config repo name (from repo registry)
   config_repo_in_release: boolean;     // true when config repo is already in this release
 }

@@ -77,7 +77,7 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
 
   stage1Columns = ['name', 'path', 'actions'];
   stage2Columns = ['name', 'status', 'branch_info', 'diff', 'pipeline', 'error', 'actions'];
-  stage3Columns = ['name', 'config_repo', 'status', 'mr', 'pipeline3', 'error', 'actions'];
+  stage3Columns = ['name', 'config_repo', 'status', 'mr', 'pipeline3', 'ra_subtask', 'error', 'actions'];
   removingRepo: string | null = null;
 
   // Documentation tab

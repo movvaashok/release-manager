@@ -90,6 +90,7 @@ class Stage3Repo(BaseModel):
     pipeline_status: Optional[str] = None
     pipeline_url: Optional[str] = None
     requires_ra: bool = False           # Populated from Confluence release plan table
+    ra_subtask_url: Optional[str] = None  # Jira subtask created under RA ticket after MR creation
     config_repo: Optional[str] = None  # Linked config repo name (from repo registry) — ephemeral
     config_repo_in_release: bool = False  # True if the config repo is already in this release — ephemeral
 

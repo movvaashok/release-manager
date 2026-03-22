@@ -133,6 +133,61 @@ async def find_cab_ticket(project: str, version: str) -> Optional[dict]:
         return {"key": key, "summary": summary, "url": url, "status": status, "ra_url": ra_url}
 
 
+async def create_subtask(parent_key: str, summary: str, description: str) -> Optional[str]:
+    """
+    Create a Jira subtask under *parent_key* (e.g. 'RA-42').
+
+    Returns the browser URL of the newly created subtask, or None if Jira is
+    not configured or the request fails.
+    """
+    if not _jira_configured():
+        return None
+
+    # The project key is the alpha prefix of the parent key (e.g. "RA" from "RA-42")
+    project_key = parent_key.split("-")[0]
+
+    headers = {
+        "Authorization": _auth_header(),
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+    }
+
+    payload = {
+        "fields": {
+            "project": {"key": project_key},
+            "parent": {"key": parent_key},
+            "summary": summary,
+            "issuetype": {"name": "Subtask"},
+            "description": {
+                "type": "doc",
+                "version": 1,
+                "content": [
+                    {
+                        "type": "paragraph",
+                        "content": [{"type": "text", "text": description}],
+                    }
+                ],
+            },
+        }
+    }
+
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.post(
+                f"{settings.jira_url.rstrip('/')}/rest/api/3/issue",
+                headers=headers,
+                json=payload,
+                timeout=15.0,
+            )
+            resp.raise_for_status()
+            key = resp.json().get("key", "")
+            if key:
+                return f"{settings.jira_url.rstrip('/')}/browse/{key}"
+        except httpx.HTTPError:
+            pass
+    return None
+
+
 def _extract_ra_from_links(issue_links: list) -> Optional[str]:
     """
     Scan Jira issue links on a CAB ticket for an RA blocker.
