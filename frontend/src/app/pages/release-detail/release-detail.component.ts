@@ -25,6 +25,7 @@ import { ReleaseState, Stage2Repo, Stage3Repo } from '../../core/models/release.
 import { StatusChipComponent } from '../../shared/components/status-chip/status-chip.component';
 import { AddReposDialogComponent } from './add-repos-dialog/add-repos-dialog.component';
 import { AddViaJiraDialogComponent } from './add-via-jira-dialog/add-via-jira-dialog.component';
+import { RaAbandonConfirmDialogComponent } from './ra-abandon-confirm-dialog/ra-abandon-confirm-dialog.component';
 import { AuthService } from '../../core/services/auth.service';
 import { ProjectService } from '../../core/services/project.service';
 
@@ -59,6 +60,7 @@ const POLL_INTERVAL_MS = 30_000;
     StatusChipComponent,
     AddReposDialogComponent,
     AddViaJiraDialogComponent,
+    RaAbandonConfirmDialogComponent,
   ],
   templateUrl: './release-detail.component.html',
   styleUrls: ['./release-detail.component.scss'],
@@ -495,7 +497,27 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
   // -----------------------------------------------------------------------
 
   removeRepo(repoName: string): void {
-    if (!confirm(`Remove "${repoName}" from this release? This will also delete the release branch in GitLab.`)) return;
+    const stage3Entry = this.release?.stage3.find(r => r.name === repoName);
+    const subtaskUrl = stage3Entry?.ra_subtask_url ?? null;
+
+    if (subtaskUrl) {
+      // Has an RA subtask — require it to be ABANDONED before deleting
+      const ref = this.dialog.open(RaAbandonConfirmDialogComponent, {
+        width: '520px',
+        disableClose: true,
+        data: { repoName, subtaskUrl },
+      });
+      ref.afterClosed().subscribe((confirmed: boolean) => {
+        if (!confirmed) return;
+        this._doRemoveRepo(repoName, subtaskUrl);
+      });
+    } else {
+      if (!confirm(`Remove "${repoName}" from this release? This will also delete the release branch in GitLab.`)) return;
+      this._doRemoveRepo(repoName, null);
+    }
+  }
+
+  private _doRemoveRepo(repoName: string, subtaskUrl: string | null): void {
     this.removingRepo = repoName;
     this.releaseService.removeRepo(this.version, repoName).subscribe({
       next: (r) => {
@@ -503,9 +525,17 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
         this.removingRepo = null;
         this.snackBar.open(`${repoName} removed from release.`, 'Close', { duration: 3000 });
       },
-      error: () => {
+      error: (err: any) => {
         this.removingRepo = null;
-        this.snackBar.open(`Failed to remove ${repoName}.`, 'Close', { duration: 4000 });
+        const detail: string = err?.error?.detail ?? '';
+        // Backend sends RA_SUBTASK_NOT_ABANDONED:<url>|<message>
+        if (detail.startsWith('RA_SUBTASK_NOT_ABANDONED:') && subtaskUrl) {
+          const message = detail.includes('|') ? detail.split('|')[1] : detail;
+          this.snackBar.open(message, 'Open Jira', { duration: 10000 })
+            .onAction().subscribe(() => window.open(subtaskUrl, '_blank'));
+        } else {
+          this.snackBar.open(`Failed to remove ${repoName}.`, 'Close', { duration: 4000 });
+        }
       },
     });
   }

@@ -267,6 +267,20 @@ async def remove_repo_from_release(project_id: str, version: str, repo_name: str
     if repo is None:
         raise ValueError(f"Repository {repo_name!r} not in release {version}")
 
+    # Block deletion if the repo has an RA subtask that is not yet ABANDONED
+    stage3_entry = next((r for r in state.stage3 if r.name == repo_name), None)
+    if stage3_entry and stage3_entry.ra_subtask_url:
+        ra_key = _jira_key_from_url(stage3_entry.ra_subtask_url)
+        if ra_key:
+            status = await jira_client.get_issue_status(ra_key)
+            if status is None or status.lower() != "abandoned":
+                current = f" (current status: {status})" if status else ""
+                raise ValueError(
+                    f"RA_SUBTASK_NOT_ABANDONED:{stage3_entry.ra_subtask_url}"
+                    f"|The RA subtask for {repo_name!r} must be set to Abandoned in Jira before "
+                    f"this repository can be removed from the release{current}."
+                )
+
     gitlab = get_gitlab_client(gitlab_token)
     release_branch = f"release/{version}"
     branch = await gitlab.get_branch(repo.project_id, release_branch)
@@ -613,8 +627,6 @@ async def run_stage3_repo(project_id: str, version: str, repo_name: str, gitlab_
     repo.error = None
     repo.pipeline_status = None
     repo.pipeline_url = None
-    repo.ra_subtask_url = None  # Reset so a fresh subtask can be created after retry
-
     state.stage3[idx] = await _run_stage3_repo(version, repo, gitlab_token)
     _save_release(project_id, state)
     return state

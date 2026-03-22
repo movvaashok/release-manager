@@ -188,6 +188,28 @@ async def create_subtask(parent_key: str, summary: str, description: str) -> Opt
     return None
 
 
+async def get_issue_status(issue_key: str) -> Optional[str]:
+    """Return the status name of a Jira issue (e.g. 'Abandoned'), or None on failure."""
+    if not _jira_configured():
+        return None
+    headers = {
+        "Authorization": _auth_header(),
+        "Accept": "application/json",
+    }
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.get(
+                f"{settings.jira_url.rstrip('/')}/rest/api/3/issue/{issue_key}",
+                headers=headers,
+                params={"fields": "status"},
+                timeout=15.0,
+            )
+            resp.raise_for_status()
+            return resp.json().get("fields", {}).get("status", {}).get("name")
+        except httpx.HTTPError:
+            return None
+
+
 def _extract_ra_from_links(issue_links: list) -> Optional[str]:
     """
     Scan Jira issue links on a CAB ticket for an RA blocker.
