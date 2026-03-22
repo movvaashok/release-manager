@@ -21,7 +21,7 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 
 import { ReleaseService } from '../../core/services/release.service';
-import { ReleaseState, Stage2Repo, Stage3Repo } from '../../core/models/release.model';
+import { JiraStatusSummary, ReleaseState, Stage2Repo, Stage3Repo } from '../../core/models/release.model';
 import { StatusChipComponent } from '../../shared/components/status-chip/status-chip.component';
 import { AddReposDialogComponent } from './add-repos-dialog/add-repos-dialog.component';
 import { AddViaJiraDialogComponent } from './add-via-jira-dialog/add-via-jira-dialog.component';
@@ -76,6 +76,11 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
   retryingRepo: string | null = null;
   creatingRaSubtask: Set<string> = new Set();
   activeTabIndex = 0;
+
+  // Jira Status tab
+  jiraStatus: JiraStatusSummary | null = null;
+  loadingJiraStatus = false;
+  jiraStatusError = '';
   private pollTimer: ReturnType<typeof setInterval> | null = null;
 
   stage1Columns = ['name', 'path', 'actions'];
@@ -639,6 +644,38 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
       case 'manual':    return 'play_circle_outline';
       default:          return 'help_outline';
     }
+  }
+
+  // ── Jira Status tab ──────────────────────────────────────────────────────
+
+  loadJiraStatus(): void {
+    this.loadingJiraStatus = true;
+    this.jiraStatusError = '';
+    this.releaseService.getJiraStatus(this.version).subscribe({
+      next: (s) => { this.jiraStatus = s; this.loadingJiraStatus = false; },
+      error: (err: any) => {
+        this.loadingJiraStatus = false;
+        this.jiraStatusError = err?.error?.detail ?? 'Failed to load Jira status.';
+      },
+    });
+  }
+
+  jiraStatusColor(status: string): string {
+    const s = status.toLowerCase();
+    if (['done', 'resolved', 'closed', 'abandoned', 'complete', 'completed'].some(v => s.includes(v))) return '#2e7d32';
+    if (['in progress', 'in review', 'review', 'in development'].some(v => s.includes(v))) return '#1565c0';
+    if (['blocked', 'rejected', 'cancelled', 'canceled'].some(v => s.includes(v))) return '#c62828';
+    if (['testing', 'qa', 'verification'].some(v => s.includes(v))) return '#e65100';
+    return '#757575';
+  }
+
+  jiraStatusBg(status: string): string {
+    const s = status.toLowerCase();
+    if (['done', 'resolved', 'closed', 'abandoned', 'complete', 'completed'].some(v => s.includes(v))) return '#e8f5e9';
+    if (['in progress', 'in review', 'review', 'in development'].some(v => s.includes(v))) return '#e3f2fd';
+    if (['blocked', 'rejected', 'cancelled', 'canceled'].some(v => s.includes(v))) return '#ffebee';
+    if (['testing', 'qa', 'verification'].some(v => s.includes(v))) return '#fff3e0';
+    return '#f5f5f5';
   }
 
   pipelineColor(status: string | null): string {

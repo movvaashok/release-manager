@@ -22,6 +22,9 @@ from app.config import settings
 from app.models import (
     AddReposRequest,
     CreateReleaseRequest,
+    JiraStatusSummary,
+    JiraTicketStatus,
+    RaSubtaskInfo,
     ReleaseState,
     ReleaseSummary,
     RepoReference,
@@ -670,6 +673,99 @@ async def create_ra_subtask(project_id: str, version: str, repo_name: str) -> Re
     state.stage3[idx] = repo
     _save_release(project_id, state)
     return state
+
+
+async def get_jira_status_summary(project_id: str, version: str) -> JiraStatusSummary:
+    """Return live Jira statuses for all tickets, RA ticket, RA subtasks, and CAB ticket."""
+    state = _load_release(project_id, version)
+    if state is None:
+        raise ValueError(f"Release {version} not found")
+
+    # ── Collect all unique ticket keys from stage1 repos, keyed by repo name ──
+    ticket_to_repos: dict[str, list[str]] = {}
+    for repo in state.stage1:
+        for key in repo.jira_tickets:
+            ticket_to_repos.setdefault(key, []).append(repo.name)
+
+    # ── Collect RA subtask keys from stage3 ──
+    subtask_entries: list[tuple[str, str]] = []  # (url, repo_name)
+    for repo in state.stage3:
+        if repo.ra_subtask_url:
+            subtask_entries.append((repo.ra_subtask_url, repo.name))
+
+    # ── Build full key set for batch fetch ──
+    all_keys: list[str] = list(ticket_to_repos.keys())
+    for url, _ in subtask_entries:
+        k = _jira_key_from_url(url)
+        if k:
+            all_keys.append(k)
+    ra_key = _jira_key_from_url(state.risk_assessment_url)
+    if ra_key:
+        all_keys.append(ra_key)
+    cab_key = _jira_key_from_url(state.cab_ticket_url)
+    if cab_key:
+        all_keys.append(cab_key)
+
+    # ── Batch fetch ──
+    unique_keys = list(dict.fromkeys(all_keys))  # deduplicate, preserve order
+    fetched = {i["key"]: i for i in await jira_client.get_issues_by_keys(unique_keys)}
+
+    # ── Build release_tickets ──
+    release_tickets: list[JiraTicketStatus] = []
+    for key, repos in ticket_to_repos.items():
+        info = fetched.get(key)
+        if info:
+            release_tickets.append(JiraTicketStatus(
+                key=info["key"], summary=info["summary"],
+                status=info["status"], url=info["url"],
+                issue_type=info.get("issue_type", ""), repos=repos,
+            ))
+        else:
+            # Ticket not in Jira (or Jira not configured) — show placeholder
+            release_tickets.append(JiraTicketStatus(
+                key=key, summary="", status="Unknown",
+                url=f"{state.cab_ticket_url or ''}", repos=repos,
+            ))
+
+    # ── RA ticket ──
+    ra_ticket: Optional[JiraTicketStatus] = None
+    if ra_key and ra_key in fetched:
+        i = fetched[ra_key]
+        ra_ticket = JiraTicketStatus(
+            key=i["key"], summary=i["summary"], status=i["status"],
+            url=i["url"], issue_type=i.get("issue_type", ""), repos=[],
+        )
+
+    # ── RA subtasks ──
+    ra_subtasks: list[RaSubtaskInfo] = []
+    for url, repo_name in subtask_entries:
+        k = _jira_key_from_url(url)
+        if k and k in fetched:
+            i = fetched[k]
+            ra_subtasks.append(RaSubtaskInfo(
+                key=i["key"], summary=i["summary"], status=i["status"],
+                url=i["url"], repo_name=repo_name,
+            ))
+        elif k:
+            ra_subtasks.append(RaSubtaskInfo(
+                key=k, summary="", status="Unknown", url=url, repo_name=repo_name,
+            ))
+
+    # ── CAB ticket ──
+    cab_ticket: Optional[JiraTicketStatus] = None
+    if cab_key and cab_key in fetched:
+        i = fetched[cab_key]
+        cab_ticket = JiraTicketStatus(
+            key=i["key"], summary=i["summary"], status=i["status"],
+            url=i["url"], issue_type=i.get("issue_type", ""), repos=[],
+        )
+
+    return JiraStatusSummary(
+        release_tickets=release_tickets,
+        ra_ticket=ra_ticket,
+        ra_subtasks=ra_subtasks,
+        cab_ticket=cab_ticket,
+    )
 
 
 def update_docs(project_id: str, version: str, req) -> ReleaseState:

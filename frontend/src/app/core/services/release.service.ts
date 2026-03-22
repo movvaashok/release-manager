@@ -8,6 +8,7 @@ import {
   ConfigMrsResponse,
   CreateReleaseRequest,
   GitLabProjectInfo,
+  JiraStatusSummary,
   ReleaseSummary,
   ReleaseState,
   RepoReference,
@@ -84,6 +85,10 @@ export class ReleaseService {
       {},
       { params: this.p },
     );
+  }
+
+  getJiraStatus(version: string): Observable<JiraStatusSummary> {
+    return this.http.get<JiraStatusSummary>(`${this.base}/releases/${version}/jira-status`, { params: this.p });
   }
 
   createRaSubtask(version: string, repoName: string): Observable<ReleaseState> {

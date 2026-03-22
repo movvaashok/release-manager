@@ -188,6 +188,49 @@ async def create_subtask(parent_key: str, summary: str, description: str) -> Opt
     return None
 
 
+async def get_issues_by_keys(keys: List[str]) -> List[dict]:
+    """
+    Batch-fetch key, summary, status, and issuetype for a list of Jira issue keys.
+    Returns a list of dicts: {key, summary, status, issue_type, url}.
+    Missing or inaccessible issues are silently skipped.
+    """
+    if not _jira_configured() or not keys:
+        return []
+
+    # JQL: key in (KEY-1, KEY-2, ...)
+    joined = ", ".join(f'"{k}"' for k in keys)
+    jql = f"key in ({joined}) ORDER BY key ASC"
+
+    headers = {
+        "Authorization": _auth_header(),
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+    }
+
+    results = []
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.post(
+                f"{settings.jira_url.rstrip('/')}/rest/api/3/search/jql",
+                headers=headers,
+                json={"jql": jql, "fields": ["summary", "status", "issuetype"], "maxResults": 200},
+                timeout=20.0,
+            )
+            resp.raise_for_status()
+            for issue in resp.json().get("issues", []):
+                fields = issue.get("fields", {})
+                results.append({
+                    "key": issue["key"],
+                    "summary": fields.get("summary", ""),
+                    "status": fields.get("status", {}).get("name", ""),
+                    "issue_type": fields.get("issuetype", {}).get("name", ""),
+                    "url": f"{settings.jira_url.rstrip('/')}/browse/{issue['key']}",
+                })
+        except httpx.HTTPError:
+            pass
+    return results
+
+
 async def get_issue_status(issue_key: str) -> Optional[str]:
     """Return the status name of a Jira issue (e.g. 'Abandoned'), or None on failure."""
     if not _jira_configured():

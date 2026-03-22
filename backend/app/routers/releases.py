@@ -6,6 +6,7 @@ from app.models import (
     AddReposRequest,
     ConfigMrsResponse,
     CreateReleaseRequest,
+    JiraStatusSummary,
     ReleaseState,
     ReleaseSummary,
     TrackConfigMrRequest,
@@ -262,6 +263,17 @@ async def create_ra_subtask(
         raise HTTPException(status_code=400, detail=str(exc))
     except RuntimeError as exc:
         raise HTTPException(status_code=502, detail=str(exc))
+
+
+@router.get("/{version}/jira-status", response_model=JiraStatusSummary)
+async def get_jira_status(
+    version: str,
+    project: str = Query("pioneer"),
+):
+    try:
+        return await release_service.get_jira_status_summary(project, version)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
 
 
 # NOTE: declared after all stage2/stage3 sub-routes to avoid wildcard shadowing

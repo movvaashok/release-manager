@@ -415,6 +415,164 @@
       </mat-tab>
 
       <!-- ─────────────────────────────────────────────────────────────────
+           Jira Status tab
+      ──────────────────────────────────────────────────────────────────── -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-icon">task_alt</mat-icon>
+          Jira Status
+        </ng-template>
+
+        <div class="tab-content" style="padding:20px;">
+
+          <!-- Toolbar -->
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+            <span style="font-size:15px;font-weight:600;color:rgba(0,0,0,0.75);">Live Jira ticket statuses for this release</span>
+            <button mat-raised-button color="primary" (click)="loadJiraStatus()" [disabled]="loadingJiraStatus">
+              <mat-spinner *ngIf="loadingJiraStatus" diameter="16" style="display:inline-block;margin-right:6px;"></mat-spinner>
+              <mat-icon *ngIf="!loadingJiraStatus">refresh</mat-icon>
+              {{ loadingJiraStatus ? 'Loading…' : 'Load / Refresh' }}
+            </button>
+          </div>
+
+          <!-- Error -->
+          <div *ngIf="jiraStatusError" style="padding:12px;background:#ffebee;border-radius:6px;color:#c62828;font-size:13px;margin-bottom:16px;">
+            {{ jiraStatusError }}
+          </div>
+
+          <!-- Empty state -->
+          <div *ngIf="!jiraStatus && !loadingJiraStatus && !jiraStatusError"
+               style="text-align:center;padding:40px;color:rgba(0,0,0,0.35);font-size:14px;">
+            <mat-icon style="font-size:40px;width:40px;height:40px;display:block;margin:0 auto 12px;">task_alt</mat-icon>
+            Click "Load / Refresh" to fetch live statuses from Jira
+          </div>
+
+          <ng-container *ngIf="jiraStatus">
+
+            <!-- ── CAB Ticket ── -->
+            <div *ngIf="jiraStatus.cab_ticket" style="margin-bottom:24px;">
+              <div class="jira-section-title">
+                <mat-icon style="font-size:16px;width:16px;height:16px;">event</mat-icon> CAB Ticket
+              </div>
+              <div class="jira-card">
+                <div style="display:flex;align-items:center;gap:12px;">
+                  <a [href]="jiraStatus.cab_ticket.url" target="_blank" rel="noopener" class="jira-key-link">
+                    {{ jiraStatus.cab_ticket.key }}
+                    <mat-icon style="font-size:12px;width:12px;height:12px;">open_in_new</mat-icon>
+                  </a>
+                  <span class="jira-status-chip"
+                        [style.color]="jiraStatusColor(jiraStatus.cab_ticket.status)"
+                        [style.background]="jiraStatusBg(jiraStatus.cab_ticket.status)">
+                    {{ jiraStatus.cab_ticket.status }}
+                  </span>
+                  <span style="flex:1;font-size:13px;color:rgba(0,0,0,0.7);">{{ jiraStatus.cab_ticket.summary }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- ── Risk Assessment ── -->
+            <div style="margin-bottom:24px;">
+              <div class="jira-section-title">
+                <mat-icon style="font-size:16px;width:16px;height:16px;">security</mat-icon> Risk Assessment
+              </div>
+
+              <!-- RA ticket -->
+              <div *ngIf="jiraStatus.ra_ticket" class="jira-card" style="margin-bottom:10px;">
+                <div style="display:flex;align-items:center;gap:12px;">
+                  <a [href]="jiraStatus.ra_ticket.url" target="_blank" rel="noopener" class="jira-key-link">
+                    {{ jiraStatus.ra_ticket.key }}
+                    <mat-icon style="font-size:12px;width:12px;height:12px;">open_in_new</mat-icon>
+                  </a>
+                  <span class="jira-status-chip"
+                        [style.color]="jiraStatusColor(jiraStatus.ra_ticket.status)"
+                        [style.background]="jiraStatusBg(jiraStatus.ra_ticket.status)">
+                    {{ jiraStatus.ra_ticket.status }}
+                  </span>
+                  <span style="flex:1;font-size:13px;color:rgba(0,0,0,0.7);">{{ jiraStatus.ra_ticket.summary }}</span>
+                  <span style="font-size:11px;color:rgba(0,0,0,0.4);font-style:italic;">Parent RA ticket</span>
+                </div>
+              </div>
+              <div *ngIf="!jiraStatus.ra_ticket" class="jira-empty-row">No RA ticket linked to this release.</div>
+
+              <!-- RA subtasks -->
+              <div *ngIf="jiraStatus.ra_subtasks.length > 0" style="margin-left:16px;border-left:2px solid #e0e0e0;padding-left:12px;">
+                <div *ngFor="let sub of jiraStatus.ra_subtasks" class="jira-card jira-subtask-row">
+                  <div style="display:flex;align-items:center;gap:12px;">
+                    <mat-icon style="font-size:14px;width:14px;height:14px;color:#9e9e9e;">subdirectory_arrow_right</mat-icon>
+                    <a [href]="sub.url" target="_blank" rel="noopener" class="jira-key-link">
+                      {{ sub.key }}
+                      <mat-icon style="font-size:12px;width:12px;height:12px;">open_in_new</mat-icon>
+                    </a>
+                    <span class="jira-status-chip"
+                          [style.color]="jiraStatusColor(sub.status)"
+                          [style.background]="jiraStatusBg(sub.status)">
+                      {{ sub.status }}
+                    </span>
+                    <span style="flex:1;font-size:13px;color:rgba(0,0,0,0.7);">{{ sub.summary }}</span>
+                    <span class="jira-repo-tag">{{ sub.repo_name }}</span>
+                  </div>
+                </div>
+              </div>
+              <div *ngIf="jiraStatus.ra_ticket && jiraStatus.ra_subtasks.length === 0"
+                   style="margin-left:28px;font-size:12px;color:rgba(0,0,0,0.38);padding:4px 0;">
+                No subtasks created yet.
+              </div>
+            </div>
+
+            <!-- ── Release Tickets ── -->
+            <div>
+              <div class="jira-section-title">
+                <mat-icon style="font-size:16px;width:16px;height:16px;">list_alt</mat-icon>
+                Release Tickets
+                <span style="font-size:12px;font-weight:400;color:rgba(0,0,0,0.4);margin-left:6px;">
+                  {{ jiraStatus.release_tickets.length }} ticket{{ jiraStatus.release_tickets.length !== 1 ? 's' : '' }}
+                </span>
+              </div>
+
+              <div *ngIf="jiraStatus.release_tickets.length === 0" class="jira-empty-row">
+                No Jira tickets linked to this release.
+              </div>
+
+              <div class="jira-ticket-table" *ngIf="jiraStatus.release_tickets.length > 0">
+                <!-- Header -->
+                <div class="jira-ticket-header">
+                  <span style="width:100px;">Key</span>
+                  <span style="width:90px;">Status</span>
+                  <span style="width:80px;">Type</span>
+                  <span style="flex:1;">Summary</span>
+                  <span style="width:180px;">Repos</span>
+                </div>
+                <!-- Rows -->
+                <div *ngFor="let t of jiraStatus.release_tickets" class="jira-ticket-row">
+                  <span style="width:100px;">
+                    <a [href]="t.url" target="_blank" rel="noopener" class="jira-key-link">
+                      {{ t.key }}
+                      <mat-icon style="font-size:11px;width:11px;height:11px;">open_in_new</mat-icon>
+                    </a>
+                  </span>
+                  <span style="width:90px;">
+                    <span class="jira-status-chip"
+                          [style.color]="jiraStatusColor(t.status)"
+                          [style.background]="jiraStatusBg(t.status)">
+                      {{ t.status }}
+                    </span>
+                  </span>
+                  <span style="width:80px;font-size:12px;color:rgba(0,0,0,0.5);">{{ t.issue_type || '–' }}</span>
+                  <span style="flex:1;font-size:13px;color:rgba(0,0,0,0.75);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" [title]="t.summary">
+                    {{ t.summary || '–' }}
+                  </span>
+                  <span style="width:180px;display:flex;flex-wrap:wrap;gap:3px;">
+                    <span *ngFor="let r of t.repos" class="jira-repo-tag">{{ r }}</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+          </ng-container>
+        </div>
+      </mat-tab>
+
+      <!-- ─────────────────────────────────────────────────────────────────
            Documentation tab (visible to all, editable by admin)
       ──────────────────────────────────────────────────────────────────── -->
       <mat-tab>

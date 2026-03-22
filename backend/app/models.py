@@ -109,6 +109,34 @@ class ReleaseState(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Jira status dashboard models
+# ---------------------------------------------------------------------------
+
+class JiraTicketStatus(BaseModel):
+    key: str
+    summary: str
+    status: str
+    url: str
+    issue_type: str = ""
+    repos: List[str] = []       # repo names that reference this ticket in the release
+
+
+class RaSubtaskInfo(BaseModel):
+    key: str
+    summary: str
+    status: str
+    url: str
+    repo_name: str              # which stage3 repo owns this subtask
+
+
+class JiraStatusSummary(BaseModel):
+    release_tickets: List[JiraTicketStatus] = []
+    ra_ticket: Optional[JiraTicketStatus] = None
+    ra_subtasks: List[RaSubtaskInfo] = []
+    cab_ticket: Optional[JiraTicketStatus] = None
+
+
+# ---------------------------------------------------------------------------
 # Request / Response models
 # ---------------------------------------------------------------------------
 

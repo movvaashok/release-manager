@@ -129,6 +129,30 @@ export interface JiraTicket {
   url?: string;
 }
 
+export interface JiraTicketStatus {
+  key: string;
+  summary: string;
+  status: string;
+  url: string;
+  issue_type: string;
+  repos: string[];
+}
+
+export interface RaSubtaskInfo {
+  key: string;
+  summary: string;
+  status: string;
+  url: string;
+  repo_name: string;
+}
+
+export interface JiraStatusSummary {
+  release_tickets: JiraTicketStatus[];
+  ra_ticket: JiraTicketStatus | null;
+  ra_subtasks: RaSubtaskInfo[];
+  cab_ticket: JiraTicketStatus | null;
+}
+
 export interface GitLabProjectInfo {
   id: number;
   name: string;

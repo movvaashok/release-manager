@@ -266,3 +266,97 @@
   border: 1px solid #ffcc80 !important;
   background: #fff !important;
 }
+
+// ── Jira Status tab ──────────────────────────────────────────────────────────
+
+.jira-section-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(0,0,0,0.55);
+  margin-bottom: 10px;
+}
+
+.jira-card {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin-bottom: 6px;
+}
+
+.jira-subtask-row {
+  padding: 8px 12px;
+}
+
+.jira-key-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #1565c0;
+  text-decoration: none;
+  white-space: nowrap;
+  &:hover { text-decoration: underline; }
+}
+
+.jira-status-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.jira-repo-tag {
+  display: inline-block;
+  background: #f0f4ff;
+  color: #3949ab;
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.jira-empty-row {
+  font-size: 13px;
+  color: rgba(0,0,0,0.38);
+  padding: 10px 4px;
+  font-style: italic;
+}
+
+.jira-ticket-table {
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.jira-ticket-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 14px;
+  background: #f5f5f5;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: rgba(0,0,0,0.5);
+}
+
+.jira-ticket-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 14px;
+  border-top: 1px solid #f0f0f0;
+  background: #fff;
+  &:hover { background: #fafafa; }
+}
