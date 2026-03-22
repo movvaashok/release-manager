@@ -96,64 +96,64 @@
         </td>
       </ng-container>
 
+      <!-- Expandable edit row column -->
+      <ng-container matColumnDef="expandedEdit">
+        <td mat-cell *matCellDef="let r" [attr.colspan]="displayedColumns.length" style="padding:0; border-bottom:none;">
+          <div *ngIf="editingName === r.name" class="edit-form">
+            <div class="section-title">Edit: {{ r.name }}</div>
+            <form [formGroup]="editForm">
+              <div class="form-row">
+                <mat-form-field appearance="outline">
+                  <mat-label>Project ID</mat-label>
+                  <input matInput type="number" formControlName="project_id" />
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Path with namespace</mat-label>
+                  <input matInput formControlName="path_with_namespace" />
+                </mat-form-field>
+              </div>
+              <div class="form-row">
+                <mat-form-field appearance="outline">
+                  <mat-label>Web URL</mat-label>
+                  <input matInput formControlName="web_url" />
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Default Branch</mat-label>
+                  <input matInput formControlName="default_branch" />
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Develop Branch</mat-label>
+                  <input matInput formControlName="develop_branch" />
+                </mat-form-field>
+              </div>
+              <div class="form-row">
+                <mat-form-field appearance="outline" style="min-width:260px;">
+                  <mat-label>Config Repo (optional)</mat-label>
+                  <mat-select formControlName="config_repo">
+                    <mat-option [value]="null">— None —</mat-option>
+                    <mat-option *ngFor="let other of otherRepos(r.name)" [value]="other.name">
+                      {{ other.name }}
+                    </mat-option>
+                  </mat-select>
+                  <mat-hint>Link a config repository that should be updated alongside this repo</mat-hint>
+                </mat-form-field>
+              </div>
+              <div class="form-actions">
+                <button mat-button (click)="cancelEdit()">Cancel</button>
+                <button mat-raised-button color="primary" [disabled]="editForm.invalid || saving" (click)="saveEdit(r.name)">
+                  <mat-spinner *ngIf="saving" diameter="16" style="display:inline-block;margin-right:6px;"></mat-spinner>
+                  Save
+                </button>
+              </div>
+            </form>
+          </div>
+        </td>
+      </ng-container>
+
       <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
       <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-
-      <!-- Inline edit row -->
-      <ng-container *ngFor="let r of repos">
-        <tr *ngIf="editingName === r.name">
-          <td [attr.colspan]="displayedColumns.length" style="padding:0;">
-            <div class="edit-form">
-              <div class="section-title">Edit: {{ r.name }}</div>
-              <form [formGroup]="editForm">
-                <div class="form-row">
-                  <mat-form-field appearance="outline">
-                    <mat-label>Project ID</mat-label>
-                    <input matInput type="number" formControlName="project_id" />
-                  </mat-form-field>
-                  <mat-form-field appearance="outline">
-                    <mat-label>Path with namespace</mat-label>
-                    <input matInput formControlName="path_with_namespace" />
-                  </mat-form-field>
-                </div>
-                <div class="form-row">
-                  <mat-form-field appearance="outline">
-                    <mat-label>Web URL</mat-label>
-                    <input matInput formControlName="web_url" />
-                  </mat-form-field>
-                  <mat-form-field appearance="outline">
-                    <mat-label>Default Branch</mat-label>
-                    <input matInput formControlName="default_branch" />
-                  </mat-form-field>
-                  <mat-form-field appearance="outline">
-                    <mat-label>Develop Branch</mat-label>
-                    <input matInput formControlName="develop_branch" />
-                  </mat-form-field>
-                </div>
-                <div class="form-row">
-                  <mat-form-field appearance="outline" style="min-width:260px;">
-                    <mat-label>Config Repo (optional)</mat-label>
-                    <mat-select formControlName="config_repo">
-                      <mat-option [value]="null">— None —</mat-option>
-                      <mat-option *ngFor="let other of otherRepos(r.name)" [value]="other.name">
-                        {{ other.name }}
-                      </mat-option>
-                    </mat-select>
-                    <mat-hint>Link a config repository that should be updated alongside this repo</mat-hint>
-                  </mat-form-field>
-                </div>
-                <div class="form-actions">
-                  <button mat-button (click)="cancelEdit()">Cancel</button>
-                  <button mat-raised-button color="primary" [disabled]="editForm.invalid || saving" (click)="saveEdit(r.name)">
-                    <mat-spinner *ngIf="saving" diameter="16" style="display:inline-block;margin-right:6px;"></mat-spinner>
-                    Save
-                  </button>
-                </div>
-              </form>
-            </div>
-          </td>
-        </tr>
-      </ng-container>
+      <!-- Detail row: always present in DOM, content only visible when editing -->
+      <tr mat-row *matRowDef="let row; columns: ['expandedEdit'];" class="edit-detail-row"></tr>
 
     </table>
 

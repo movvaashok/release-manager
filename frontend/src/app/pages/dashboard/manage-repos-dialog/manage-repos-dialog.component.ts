@@ -38,6 +38,8 @@ import { RepoReference } from '../../../core/models/release.model';
       background: #e8f0fe; color: #1565c0;
       border-radius: 4px; padding: 2px 8px; font-size: 12px; font-weight: 500;
     }
+    .edit-detail-row td { padding: 0 !important; border-bottom: none !important; height: auto; }
+    .edit-detail-row { border-bottom: none !important; }
   `],
 })
 export class ManageReposDialogComponent implements OnInit {
