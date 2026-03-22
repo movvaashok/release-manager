@@ -147,7 +147,12 @@ export class NewReleaseComponent {
   get uniqueComponents(): string[] {
     const selected = this.tickets.filter(t => this.selectedTicketKeys.has(t.key));
     const set = new Set<string>(selected.flatMap(t => t.components));
-    return Array.from(set).sort((a, b) => a.localeCompare(b));
+    set.delete('NO_CODE_CHANGE');
+    return Array.from(set).filter(c => c.toUpperCase() !== 'NO_CODE_CHANGE').sort((a, b) => a.localeCompare(b));
+  }
+
+  filteredComponents(components: string[]): string[] {
+    return components.filter(c => c.toUpperCase() !== 'NO_CODE_CHANGE');
   }
 
   isGroupCollapsed(group: string): boolean {

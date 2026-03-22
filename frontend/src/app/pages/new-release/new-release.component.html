@@ -118,12 +118,12 @@
                 </div>
                 <div class="ticket-summary">{{ ticket.summary }}</div>
               </div>
-              <button *ngIf="ticket.components.length > 0" mat-icon-button class="expand-btn" (click)="toggleExpand(ticket.key, $event)" matTooltip="View components">
+              <button *ngIf="filteredComponents(ticket.components).length > 0" mat-icon-button class="expand-btn" (click)="toggleExpand(ticket.key, $event)" matTooltip="View components">
                 <mat-icon>{{ expandedTickets.has(ticket.key) ? 'expand_less' : 'expand_more' }}</mat-icon>
               </button>
             </div>
             <div *ngIf="expandedTickets.has(ticket.key)" class="component-row">
-              <mat-chip-set><mat-chip *ngFor="let c of ticket.components" style="font-size:12px;">{{ c }}</mat-chip></mat-chip-set>
+              <mat-chip-set><mat-chip *ngFor="let c of filteredComponents(ticket.components)" style="font-size:12px;">{{ c }}</mat-chip></mat-chip-set>
             </div>
           </ng-container>
           </ng-container>
@@ -151,12 +151,12 @@
                 </div>
                 <div class="ticket-summary">{{ ticket.summary }}</div>
               </div>
-              <button *ngIf="ticket.components.length > 0" mat-icon-button class="expand-btn" (click)="toggleExpand(ticket.key, $event)" matTooltip="View components">
+              <button *ngIf="filteredComponents(ticket.components).length > 0" mat-icon-button class="expand-btn" (click)="toggleExpand(ticket.key, $event)" matTooltip="View components">
                 <mat-icon>{{ expandedTickets.has(ticket.key) ? 'expand_less' : 'expand_more' }}</mat-icon>
               </button>
             </div>
             <div *ngIf="expandedTickets.has(ticket.key)" class="component-row">
-              <mat-chip-set><mat-chip *ngFor="let c of ticket.components" style="font-size:12px;">{{ c }}</mat-chip></mat-chip-set>
+              <mat-chip-set><mat-chip *ngFor="let c of filteredComponents(ticket.components)" style="font-size:12px;">{{ c }}</mat-chip></mat-chip-set>
             </div>
           </ng-container>
           </ng-container>
@@ -184,12 +184,12 @@
                 </div>
                 <div class="ticket-summary">{{ ticket.summary }}</div>
               </div>
-              <button *ngIf="ticket.components.length > 0" mat-icon-button class="expand-btn" (click)="toggleExpand(ticket.key, $event)" matTooltip="View components">
+              <button *ngIf="filteredComponents(ticket.components).length > 0" mat-icon-button class="expand-btn" (click)="toggleExpand(ticket.key, $event)" matTooltip="View components">
                 <mat-icon>{{ expandedTickets.has(ticket.key) ? 'expand_less' : 'expand_more' }}</mat-icon>
               </button>
             </div>
             <div *ngIf="expandedTickets.has(ticket.key)" class="component-row">
-              <mat-chip-set><mat-chip *ngFor="let c of ticket.components" style="font-size:12px;">{{ c }}</mat-chip></mat-chip-set>
+              <mat-chip-set><mat-chip *ngFor="let c of filteredComponents(ticket.components)" style="font-size:12px;">{{ c }}</mat-chip></mat-chip-set>
             </div>
           </ng-container>
           </ng-container>
