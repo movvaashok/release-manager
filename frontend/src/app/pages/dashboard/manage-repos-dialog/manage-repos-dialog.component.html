@@ -70,13 +70,17 @@
     </div>
 
     <!-- Repos list -->
-    <div *ngFor="let r of repos" class="repo-list-item-wrapper">
+    <div *ngFor="let r of sortedRepos" class="repo-list-item-wrapper" [class.is-config-repo]="isConfigRepo(r.name)">
       <!-- Main row -->
       <div class="repo-list-row repo-grid-row">
-        <span class="col">
-          <a class="repo-name-link" [href]="r.web_url" target="_blank" rel="noopener" [title]="r.path_with_namespace">
+        <span class="col" style="display:flex;align-items:center;gap:6px;overflow:hidden;">
+          <a class="repo-name-link" [href]="r.web_url" target="_blank" rel="noopener" [title]="r.path_with_namespace"
+             style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
             {{ toTitleCase(r.name) }}
           </a>
+          <span *ngIf="isConfigRepo(r.name)" class="config-repo-self-badge">
+            <mat-icon style="font-size:11px;width:11px;height:11px;">settings</mat-icon> Config
+          </span>
         </span>
         <span class="col" style="color:rgba(0,0,0,0.65);" [title]="r.default_branch">{{ r.default_branch }}</span>
         <span class="col" style="color:rgba(0,0,0,0.65);" [title]="r.develop_branch">{{ r.develop_branch }}</span>

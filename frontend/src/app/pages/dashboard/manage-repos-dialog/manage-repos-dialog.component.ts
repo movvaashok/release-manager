@@ -73,6 +73,14 @@ import { GitLabProjectInfo, RepoReference } from '../../../core/models/release.m
     .repo-list-row .col-actions { padding: 0; display: flex; align-items: center; justify-content: flex-end; padding-right: 4px; }
     .repo-name-link { color: #1565c0; text-decoration: none; font-weight: 600; font-size: 13px; }
     .repo-name-link:hover { text-decoration: underline; }
+    .repo-list-item-wrapper.is-config-repo { border-left: 3px solid #7c4dff; }
+    .repo-list-item-wrapper.is-config-repo .repo-list-row { background: #f5f0ff; }
+    .repo-list-item-wrapper.is-config-repo .repo-list-row:hover { background: #ede7f6; }
+    .config-repo-self-badge {
+      display: inline-flex; align-items: center; gap: 3px;
+      background: #ede7f6; color: #5e35b1;
+      border-radius: 4px; padding: 1px 6px; font-size: 11px; font-weight: 600; margin-left: 6px;
+    }
     /* GitLab browser */
     .gitlab-browser { margin-top: 20px; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; }
     .gitlab-browser-header {
@@ -274,6 +282,18 @@ export class ManageReposDialogComponent implements OnInit {
     this.releaseService.deleteReferenceRepo(name).subscribe({
       next: (repos) => { this.repos = repos; },
       error: (err: any) => { this.errorMessage = err?.error?.detail ?? 'Delete failed.'; },
+    });
+  }
+
+  isConfigRepo(name: string): boolean {
+    return /[-_]?config$/i.test(name);
+  }
+
+  get sortedRepos(): RepoReference[] {
+    return [...this.repos].sort((a, b) => {
+      const ac = this.isConfigRepo(a.name) ? 1 : 0;
+      const bc = this.isConfigRepo(b.name) ? 1 : 0;
+      return ac - bc || a.name.localeCompare(b.name);
     });
   }
 
