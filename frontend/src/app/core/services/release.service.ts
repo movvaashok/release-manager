@@ -31,7 +31,7 @@ export class ReleaseService {
   }
 
   listGitLabRepos(): Observable<GitLabProjectInfo[]> {
-    return this.http.get<GitLabProjectInfo[]>(`${this.base}/repos/gitlab`);
+    return this.http.get<GitLabProjectInfo[]>(`${this.base}/repos/gitlab`, { params: this.p });
   }
 
   listReleases(): Observable<ReleaseSummary[]> {

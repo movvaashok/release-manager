@@ -10,11 +10,14 @@ router = APIRouter(tags=["repositories"])
 
 
 @router.get("/repos/gitlab", response_model=List[GitLabProjectInfo])
-async def list_gitlab_repos(x_gitlab_token: str = Header(...)):
-    """Fetch all non-archived, top-level-group GitLab projects accessible to the token."""
+async def list_gitlab_repos(
+    x_gitlab_token: str = Header(...),
+    project: str = Query("pioneer"),
+):
+    """Fetch all non-archived direct projects in the GitLab group matching the project id."""
     try:
         client = get_gitlab_client(x_gitlab_token)
-        return await client.list_group_projects()
+        return await client.list_group_projects(group_path=project)
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"GitLab API error: {exc}")
 

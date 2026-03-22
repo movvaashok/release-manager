@@ -172,7 +172,7 @@
         <mat-icon style="color:#fc6d26; font-size:18px; width:18px; height:18px;">cloud</mat-icon>
         <span class="title">GitLab Repositories</span>
         <span *ngIf="!loadingGitlab && !gitlabError" style="font-size:12px; color:rgba(0,0,0,0.45);">
-          {{ gitlabRepos.length }} repos (excluding subgroups &amp; archived)
+          {{ gitlabRepos.length }} repos · direct members only, archived excluded
         </span>
         <button mat-icon-button (click)="closeGitlabBrowser()" matTooltip="Close">
           <mat-icon>close</mat-icon>

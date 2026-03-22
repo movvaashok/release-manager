@@ -213,18 +213,19 @@ class GitLabClient:
             return pipelines[0] if pipelines else None
 
 
-    async def list_group_projects(self) -> List[Dict[str, Any]]:
-        """Return all accessible, non-archived GitLab projects for the token.
+    async def list_group_projects(self, group_path: str) -> List[Dict[str, Any]]:
+        """Return all non-archived direct projects in the given GitLab group.
 
-        Filters applied:
-        - membership=true  → only repos the token's user is a member of
-        - archived=false   → skip archived repos (passed to GitLab API)
+        Uses /groups/{group_path}/projects which returns only direct members
+        of the group — subgroups (e.g. pioneer/archive) are excluded via
+        include_subgroups=false. Archived projects are excluded via archived=false.
         Results are sorted by name and paginated automatically.
         """
-        url = f"{self._base}/projects"
+        encoded_group = quote(group_path, safe="")
+        url = f"{self._base}/groups/{encoded_group}/projects"
         params = {
-            "membership": "true",
             "archived": "false",
+            "include_subgroups": "false",
             "order_by": "name",
             "sort": "asc",
             "per_page": "100",
