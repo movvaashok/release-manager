@@ -214,12 +214,12 @@ class GitLabClient:
 
 
     async def list_group_projects(self) -> List[Dict[str, Any]]:
-        """Return all accessible, non-archived projects that are NOT in a subgroup.
+        """Return all accessible, non-archived GitLab projects for the token.
 
-        Filters:
-        - membership=true  → only repos the token has access to
-        - archived=false   → skip archived repos
-        - namespace.full_path has no '/' → top-level group projects only (no subgroups)
+        Filters applied:
+        - membership=true  → only repos the token's user is a member of
+        - archived=false   → skip archived repos (passed to GitLab API)
+        Results are sorted by name and paginated automatically.
         """
         url = f"{self._base}/projects"
         params = {
@@ -245,9 +245,6 @@ class GitLabClient:
                     break
                 for proj in batch:
                     ns = proj.get("namespace") or {}
-                    # Exclude subgroups: namespace full_path must not contain '/'
-                    if "/" in (ns.get("full_path") or ""):
-                        continue
                     results.append({
                         "id": proj["id"],
                         "name": proj["name"],
