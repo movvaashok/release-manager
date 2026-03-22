@@ -43,6 +43,7 @@ export class AddViaJiraDialogComponent implements OnInit {
   tickets: JiraTicket[] = [];
   selectedTicketKeys = new Set<string>();
   expandedTickets = new Set<string>();
+  collapsedGroups = new Set<string>();
   loadingTickets = true;
   ticketError = '';
 
@@ -118,6 +119,15 @@ export class AddViaJiraDialogComponent implements OnInit {
 
   get otherTickets(): JiraTicket[] {
     return this.tickets.filter(t => this.statusGroup(t.status) === 2);
+  }
+
+  isGroupCollapsed(group: string): boolean {
+    return this.collapsedGroups.has(group);
+  }
+
+  toggleGroup(group: string): void {
+    if (this.collapsedGroups.has(group)) this.collapsedGroups.delete(group);
+    else this.collapsedGroups.add(group);
   }
 
   allInGroupSelected(group: JiraTicket[]): boolean {

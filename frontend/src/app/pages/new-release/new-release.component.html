@@ -98,13 +98,15 @@
 
         <!-- ── Done ── -->
         <ng-container *ngIf="doneTickets.length > 0">
-          <div class="group-header group-done">
+          <div class="group-header group-done" (click)="toggleGroup('done')">
             <mat-icon>check_circle</mat-icon>
             <span>Done <span class="group-count">({{ doneTickets.length }})</span></span>
-            <button mat-button class="group-select-btn" (click)="toggleGroupSelection(doneTickets)">
+            <button mat-button class="group-select-btn" (click)="$event.stopPropagation(); toggleGroupSelection(doneTickets)">
               {{ allInGroupSelected(doneTickets) ? 'Deselect all' : 'Select all' }}
             </button>
+            <mat-icon class="collapse-icon">{{ isGroupCollapsed('done') ? 'expand_more' : 'expand_less' }}</mat-icon>
           </div>
+          <ng-container *ngIf="!isGroupCollapsed('done')">
           <ng-container *ngFor="let ticket of doneTickets">
             <div class="ticket-row" [class.ticket-selected]="selectedTicketKeys.has(ticket.key)" (click)="toggleTicket(ticket.key)">
               <mat-checkbox [checked]="selectedTicketKeys.has(ticket.key)" (click)="$event.stopPropagation()" (change)="toggleTicket(ticket.key)" style="flex-shrink:0;"></mat-checkbox>
@@ -124,17 +126,20 @@
               <mat-chip-set><mat-chip *ngFor="let c of ticket.components" style="font-size:12px;">{{ c }}</mat-chip></mat-chip-set>
             </div>
           </ng-container>
+          </ng-container>
         </ng-container>
 
         <!-- ── Testing / QA ── -->
         <ng-container *ngIf="testingTickets.length > 0">
-          <div class="group-header group-testing">
+          <div class="group-header group-testing" (click)="toggleGroup('testing')">
             <mat-icon>science</mat-icon>
             <span>Testing / QA <span class="group-count">({{ testingTickets.length }})</span></span>
-            <button mat-button class="group-select-btn" (click)="toggleGroupSelection(testingTickets)">
+            <button mat-button class="group-select-btn" (click)="$event.stopPropagation(); toggleGroupSelection(testingTickets)">
               {{ allInGroupSelected(testingTickets) ? 'Deselect all' : 'Select all' }}
             </button>
+            <mat-icon class="collapse-icon">{{ isGroupCollapsed('testing') ? 'expand_more' : 'expand_less' }}</mat-icon>
           </div>
+          <ng-container *ngIf="!isGroupCollapsed('testing')">
           <ng-container *ngFor="let ticket of testingTickets">
             <div class="ticket-row" [class.ticket-selected]="selectedTicketKeys.has(ticket.key)" (click)="toggleTicket(ticket.key)">
               <mat-checkbox [checked]="selectedTicketKeys.has(ticket.key)" (click)="$event.stopPropagation()" (change)="toggleTicket(ticket.key)" style="flex-shrink:0;"></mat-checkbox>
@@ -154,17 +159,20 @@
               <mat-chip-set><mat-chip *ngFor="let c of ticket.components" style="font-size:12px;">{{ c }}</mat-chip></mat-chip-set>
             </div>
           </ng-container>
+          </ng-container>
         </ng-container>
 
         <!-- ── In Progress & Other ── -->
         <ng-container *ngIf="otherTickets.length > 0">
-          <div class="group-header group-other">
+          <div class="group-header group-other" (click)="toggleGroup('other')">
             <mat-icon>pending</mat-icon>
             <span>In Progress &amp; Other <span class="group-count">({{ otherTickets.length }})</span></span>
-            <button mat-button class="group-select-btn" (click)="toggleGroupSelection(otherTickets)">
+            <button mat-button class="group-select-btn" (click)="$event.stopPropagation(); toggleGroupSelection(otherTickets)">
               {{ allInGroupSelected(otherTickets) ? 'Deselect all' : 'Select all' }}
             </button>
+            <mat-icon class="collapse-icon">{{ isGroupCollapsed('other') ? 'expand_more' : 'expand_less' }}</mat-icon>
           </div>
+          <ng-container *ngIf="!isGroupCollapsed('other')">
           <ng-container *ngFor="let ticket of otherTickets">
             <div class="ticket-row" [class.ticket-selected]="selectedTicketKeys.has(ticket.key)" (click)="toggleTicket(ticket.key)">
               <mat-checkbox [checked]="selectedTicketKeys.has(ticket.key)" (click)="$event.stopPropagation()" (change)="toggleTicket(ticket.key)" style="flex-shrink:0;"></mat-checkbox>
@@ -183,6 +191,7 @@
             <div *ngIf="expandedTickets.has(ticket.key)" class="component-row">
               <mat-chip-set><mat-chip *ngFor="let c of ticket.components" style="font-size:12px;">{{ c }}</mat-chip></mat-chip-set>
             </div>
+          </ng-container>
           </ng-container>
         </ng-container>
 

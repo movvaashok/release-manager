@@ -52,6 +52,7 @@ export class NewReleaseComponent {
   tickets: JiraTicket[] = [];
   selectedTicketKeys = new Set<string>();
   expandedTickets = new Set<string>();
+  collapsedGroups = new Set<string>();
   loadingTickets = false;
 
   // Step 3 — Repos
@@ -147,6 +148,15 @@ export class NewReleaseComponent {
     const selected = this.tickets.filter(t => this.selectedTicketKeys.has(t.key));
     const set = new Set<string>(selected.flatMap(t => t.components));
     return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }
+
+  isGroupCollapsed(group: string): boolean {
+    return this.collapsedGroups.has(group);
+  }
+
+  toggleGroup(group: string): void {
+    if (this.collapsedGroups.has(group)) this.collapsedGroups.delete(group);
+    else this.collapsedGroups.add(group);
   }
 
   allInGroupSelected(group: JiraTicket[]): boolean {

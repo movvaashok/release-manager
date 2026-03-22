@@ -192,8 +192,11 @@
   z-index: 1;
 
   mat-icon { font-size: 16px; width: 16px; height: 16px; flex-shrink: 0; }
+  cursor: pointer;
+  user-select: none;
 }
 .group-count { font-weight: 400; opacity: 0.75; }
+.collapse-icon { margin-left: 4px; font-size: 18px; width: 18px; height: 18px; opacity: 0.7; }
 .group-select-btn {
   margin-left: auto;
   font-size: 11px;
