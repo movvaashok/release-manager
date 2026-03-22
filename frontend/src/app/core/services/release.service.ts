@@ -86,6 +86,14 @@ export class ReleaseService {
     );
   }
 
+  createRaSubtask(version: string, repoName: string): Observable<ReleaseState> {
+    return this.http.post<ReleaseState>(
+      `${this.base}/releases/${version}/stage3/${encodeURIComponent(repoName)}/ra-subtask`,
+      {},
+      { params: this.p },
+    );
+  }
+
   addRepos(version: string, repoNames: string[]): Observable<ReleaseState> {
     return this.http.post<ReleaseState>(
       `${this.base}/releases/${version}/repos`,

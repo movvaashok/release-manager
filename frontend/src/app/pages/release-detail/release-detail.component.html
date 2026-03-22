@@ -371,10 +371,19 @@
                   View subtask
                   <mat-icon style="font-size:11px;width:11px;height:11px;color:#9e9e9e;">open_in_new</mat-icon>
                 </a>
-                <span *ngIf="!r.ra_subtask_url && r.requires_ra && isPioneerProject"
-                      style="color:rgba(0,0,0,0.3);font-size:12px;"
-                      matTooltip="Subtask will be created when MR is raised">–</span>
-                <span *ngIf="!r.ra_subtask_url && !r.requires_ra" style="color:rgba(0,0,0,0.2);font-size:12px;">–</span>
+                <!-- RA required, no subtask yet — show create button -->
+                <button *ngIf="!r.ra_subtask_url && r.requires_ra && isPioneerProject"
+                        mat-stroked-button
+                        style="font-size:11px;height:26px;line-height:26px;padding:0 8px;"
+                        [disabled]="creatingRaSubtask.has(r.name)"
+                        (click)="createRaSubtask(r)"
+                        matTooltip="Create a Jira subtask under the RA ticket">
+                  <mat-spinner *ngIf="creatingRaSubtask.has(r.name)" diameter="12" style="display:inline-block;margin-right:4px;"></mat-spinner>
+                  <mat-icon *ngIf="!creatingRaSubtask.has(r.name)" style="font-size:13px;width:13px;height:13px;margin-right:3px;">add_task</mat-icon>
+                  Create subtask
+                </button>
+                <!-- Not RA required -->
+                <span *ngIf="!r.requires_ra" style="color:rgba(0,0,0,0.2);font-size:12px;">–</span>
               </td>
             </ng-container>
 

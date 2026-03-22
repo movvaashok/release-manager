@@ -72,6 +72,7 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
   runningStage3 = false;
   runningDiffCheck = false;
   retryingRepo: string | null = null;
+  creatingRaSubtask: Set<string> = new Set();
   activeTabIndex = 0;
   private pollTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -465,6 +466,22 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
       error: () => {
         this.retryingRepo = null;
         this.snackBar.open(`Retry failed for ${repo.name}.`, 'Close', { duration: 4000 });
+      },
+    });
+  }
+
+  createRaSubtask(repo: Stage3Repo): void {
+    this.creatingRaSubtask.add(repo.name);
+    this.releaseService.createRaSubtask(this.version, repo.name).subscribe({
+      next: (r) => {
+        this.release = r;
+        this.creatingRaSubtask.delete(repo.name);
+        this.snackBar.open(`RA subtask created for ${repo.name}.`, 'Close', { duration: 3000 });
+      },
+      error: (err: any) => {
+        this.creatingRaSubtask.delete(repo.name);
+        const msg = err?.error?.detail ?? 'Failed to create RA subtask.';
+        this.snackBar.open(msg, 'Close', { duration: 5000 });
       },
     });
   }

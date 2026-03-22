@@ -241,6 +241,29 @@ async def retry_stage3_repo(
         raise HTTPException(status_code=404, detail=str(exc))
 
 
+@router.post("/{version}/stage3/{repo_name}/ra-subtask", response_model=ReleaseState)
+async def create_ra_subtask(
+    version: str,
+    repo_name: str,
+    project: str = Query("pioneer"),
+    x_username: str | None = Header(default=None),
+):
+    try:
+        state = await release_service.create_ra_subtask(project, version, repo_name)
+        audit_service.record(
+            username=_u(x_username),
+            action="ra_subtask_created",
+            project=project,
+            release_version=version,
+            repo_name=repo_name,
+        )
+        return state
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except RuntimeError as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
+
+
 # NOTE: declared after all stage2/stage3 sub-routes to avoid wildcard shadowing
 @router.post("/{version}/pipelines/refresh", response_model=ReleaseState)
 async def refresh_pipelines(

@@ -538,7 +538,6 @@ async def _run_stage3_repo(
     version: str,
     repo: Stage3Repo,
     gitlab_token: str,
-    ra_ticket_key: Optional[str] = None,
 ) -> Stage3Repo:
     """Execute stage-3 logic for a single repository and return updated model."""
     gitlab = get_gitlab_client(gitlab_token)
@@ -566,23 +565,6 @@ async def _run_stage3_repo(
             repo.mr_iid = mr["iid"]
             repo.status = RepoStage3Status.SUCCESS
 
-            # Create a Jira subtask under the RA ticket for repos that require RA
-            if repo.requires_ra and ra_ticket_key and not repo.ra_subtask_url:
-                try:
-                    subtask_summary = f"MR created: {repo.name} — Release {version}"
-                    subtask_desc = (
-                        f"A merge request has been created for {repo.name} as part of "
-                        f"Release {version} and requires Risk Assessment sign-off.\n\n"
-                        f"Merge Request: {repo.mr_url}"
-                    )
-                    repo.ra_subtask_url = await jira_client.create_subtask(
-                        parent_key=ra_ticket_key,
-                        summary=subtask_summary,
-                        description=subtask_desc,
-                    )
-                except Exception:
-                    pass  # Subtask failure must not block the MR creation result
-
         # Fetch latest pipeline for this MR
         if repo.mr_iid is not None:
             try:
@@ -605,12 +587,10 @@ async def run_stage3(project_id: str, version: str, gitlab_token: str) -> Releas
     if state is None:
         raise ValueError(f"Release {version} not found")
 
-    ra_ticket_key = _jira_key_from_url(state.risk_assessment_url)
-
     for i, repo in enumerate(state.stage3):
         if repo.status in (RepoStage3Status.SUCCESS, RepoStage3Status.ALREADY_EXISTS):
             continue
-        state.stage3[i] = await _run_stage3_repo(version, repo, gitlab_token, ra_ticket_key)
+        state.stage3[i] = await _run_stage3_repo(version, repo, gitlab_token)
 
     _save_release(project_id, state)
     return state
@@ -633,10 +613,49 @@ async def run_stage3_repo(project_id: str, version: str, repo_name: str, gitlab_
     repo.error = None
     repo.pipeline_status = None
     repo.pipeline_url = None
-    repo.ra_subtask_url = None  # Reset so a fresh subtask can be created on retry
+    repo.ra_subtask_url = None  # Reset so a fresh subtask can be created after retry
+
+    state.stage3[idx] = await _run_stage3_repo(version, repo, gitlab_token)
+    _save_release(project_id, state)
+    return state
+
+
+async def create_ra_subtask(project_id: str, version: str, repo_name: str) -> ReleaseState:
+    """Manually create a Jira subtask under the RA ticket for a specific repo."""
+    state = _load_release(project_id, version)
+    if state is None:
+        raise ValueError(f"Release {version} not found")
+
+    idx = next((i for i, r in enumerate(state.stage3) if r.name == repo_name), None)
+    if idx is None:
+        raise ValueError(f"Repository {repo_name!r} not in release {version}")
+
+    repo = state.stage3[idx]
+    if not repo.requires_ra:
+        raise ValueError(f"Repository {repo_name!r} does not require RA")
 
     ra_ticket_key = _jira_key_from_url(state.risk_assessment_url)
-    state.stage3[idx] = await _run_stage3_repo(version, repo, gitlab_token, ra_ticket_key)
+    if not ra_ticket_key:
+        raise ValueError("No Risk Assessment ticket linked to this release")
+
+    mr_url = repo.mr_url or ""
+    subtask_summary = f"MR created: {repo_name} — Release {version}"
+    subtask_desc = (
+        f"A merge request has been created for {repo_name} as part of "
+        f"Release {version} and requires Risk Assessment sign-off.\n\n"
+        f"Merge Request: {mr_url}"
+    )
+
+    url = await jira_client.create_subtask(
+        parent_key=ra_ticket_key,
+        summary=subtask_summary,
+        description=subtask_desc,
+    )
+    if not url:
+        raise RuntimeError("Failed to create Jira subtask — check Jira configuration")
+
+    repo.ra_subtask_url = url
+    state.stage3[idx] = repo
     _save_release(project_id, state)
     return state
 
