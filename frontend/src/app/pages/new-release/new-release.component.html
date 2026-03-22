@@ -95,40 +95,112 @@
       </div>
 
       <div class="ticket-list">
-        <ng-container *ngFor="let ticket of tickets">
-          <div
-            class="ticket-row"
-            [class.ticket-selected]="selectedTicketKeys.has(ticket.key)"
-            (click)="toggleTicket(ticket.key)"
-          >
-            <mat-checkbox
-              [checked]="selectedTicketKeys.has(ticket.key)"
-              (click)="$event.stopPropagation()"
-              (change)="toggleTicket(ticket.key)"
-              style="flex-shrink:0;"
-            ></mat-checkbox>
-            <div class="ticket-body">
-              <div class="ticket-top">
-                <span class="ticket-key">{{ ticket.key }}</span>
-                <span class="ticket-status-badge" [ngClass]="statusClass(ticket.status)">{{ ticket.status }}</span>
-              </div>
-              <div class="ticket-summary">{{ ticket.summary }}</div>
-            </div>
-            <button
-              *ngIf="ticket.components.length > 0"
-              mat-icon-button class="expand-btn"
-              (click)="toggleExpand(ticket.key, $event)"
-              matTooltip="View components"
-            >
-              <mat-icon>{{ expandedTickets.has(ticket.key) ? 'expand_less' : 'expand_more' }}</mat-icon>
+
+        <!-- ── Done ── -->
+        <ng-container *ngIf="doneTickets.length > 0">
+          <div class="group-header group-done">
+            <mat-icon>check_circle</mat-icon>
+            <span>Done <span class="group-count">({{ doneTickets.length }})</span></span>
+            <button mat-button class="group-select-btn" (click)="toggleGroupSelection(doneTickets)">
+              {{ allInGroupSelected(doneTickets) ? 'Deselect all' : 'Select all' }}
             </button>
           </div>
-          <div *ngIf="expandedTickets.has(ticket.key)" class="component-row">
-            <mat-chip-set>
-              <mat-chip *ngFor="let c of ticket.components" style="font-size:12px;">{{ c }}</mat-chip>
-            </mat-chip-set>
-          </div>
+          <ng-container *ngFor="let ticket of doneTickets">
+            <div class="ticket-row" [class.ticket-selected]="selectedTicketKeys.has(ticket.key)" (click)="toggleTicket(ticket.key)">
+              <mat-checkbox [checked]="selectedTicketKeys.has(ticket.key)" (click)="$event.stopPropagation()" (change)="toggleTicket(ticket.key)" style="flex-shrink:0;"></mat-checkbox>
+              <div class="ticket-body">
+                <div class="ticket-top">
+                  <a *ngIf="ticket.url" class="ticket-key" [href]="ticket.url" target="_blank" rel="noopener" (click)="$event.stopPropagation()">{{ ticket.key }}</a>
+                  <span *ngIf="!ticket.url" class="ticket-key">{{ ticket.key }}</span>
+                  <span class="ticket-status-badge" [ngClass]="statusClass(ticket.status)">{{ ticket.status }}</span>
+                </div>
+                <div class="ticket-summary">{{ ticket.summary }}</div>
+              </div>
+              <button *ngIf="ticket.components.length > 0" mat-icon-button class="expand-btn" (click)="toggleExpand(ticket.key, $event)" matTooltip="View components">
+                <mat-icon>{{ expandedTickets.has(ticket.key) ? 'expand_less' : 'expand_more' }}</mat-icon>
+              </button>
+            </div>
+            <div *ngIf="expandedTickets.has(ticket.key)" class="component-row">
+              <mat-chip-set><mat-chip *ngFor="let c of ticket.components" style="font-size:12px;">{{ c }}</mat-chip></mat-chip-set>
+            </div>
+          </ng-container>
         </ng-container>
+
+        <!-- ── Testing / QA ── -->
+        <ng-container *ngIf="testingTickets.length > 0">
+          <div class="group-header group-testing">
+            <mat-icon>science</mat-icon>
+            <span>Testing / QA <span class="group-count">({{ testingTickets.length }})</span></span>
+            <button mat-button class="group-select-btn" (click)="toggleGroupSelection(testingTickets)">
+              {{ allInGroupSelected(testingTickets) ? 'Deselect all' : 'Select all' }}
+            </button>
+          </div>
+          <ng-container *ngFor="let ticket of testingTickets">
+            <div class="ticket-row" [class.ticket-selected]="selectedTicketKeys.has(ticket.key)" (click)="toggleTicket(ticket.key)">
+              <mat-checkbox [checked]="selectedTicketKeys.has(ticket.key)" (click)="$event.stopPropagation()" (change)="toggleTicket(ticket.key)" style="flex-shrink:0;"></mat-checkbox>
+              <div class="ticket-body">
+                <div class="ticket-top">
+                  <a *ngIf="ticket.url" class="ticket-key" [href]="ticket.url" target="_blank" rel="noopener" (click)="$event.stopPropagation()">{{ ticket.key }}</a>
+                  <span *ngIf="!ticket.url" class="ticket-key">{{ ticket.key }}</span>
+                  <span class="ticket-status-badge" [ngClass]="statusClass(ticket.status)">{{ ticket.status }}</span>
+                </div>
+                <div class="ticket-summary">{{ ticket.summary }}</div>
+              </div>
+              <button *ngIf="ticket.components.length > 0" mat-icon-button class="expand-btn" (click)="toggleExpand(ticket.key, $event)" matTooltip="View components">
+                <mat-icon>{{ expandedTickets.has(ticket.key) ? 'expand_less' : 'expand_more' }}</mat-icon>
+              </button>
+            </div>
+            <div *ngIf="expandedTickets.has(ticket.key)" class="component-row">
+              <mat-chip-set><mat-chip *ngFor="let c of ticket.components" style="font-size:12px;">{{ c }}</mat-chip></mat-chip-set>
+            </div>
+          </ng-container>
+        </ng-container>
+
+        <!-- ── In Progress & Other ── -->
+        <ng-container *ngIf="otherTickets.length > 0">
+          <div class="group-header group-other">
+            <mat-icon>pending</mat-icon>
+            <span>In Progress &amp; Other <span class="group-count">({{ otherTickets.length }})</span></span>
+            <button mat-button class="group-select-btn" (click)="toggleGroupSelection(otherTickets)">
+              {{ allInGroupSelected(otherTickets) ? 'Deselect all' : 'Select all' }}
+            </button>
+          </div>
+          <ng-container *ngFor="let ticket of otherTickets">
+            <div class="ticket-row" [class.ticket-selected]="selectedTicketKeys.has(ticket.key)" (click)="toggleTicket(ticket.key)">
+              <mat-checkbox [checked]="selectedTicketKeys.has(ticket.key)" (click)="$event.stopPropagation()" (change)="toggleTicket(ticket.key)" style="flex-shrink:0;"></mat-checkbox>
+              <div class="ticket-body">
+                <div class="ticket-top">
+                  <a *ngIf="ticket.url" class="ticket-key" [href]="ticket.url" target="_blank" rel="noopener" (click)="$event.stopPropagation()">{{ ticket.key }}</a>
+                  <span *ngIf="!ticket.url" class="ticket-key">{{ ticket.key }}</span>
+                  <span class="ticket-status-badge" [ngClass]="statusClass(ticket.status)">{{ ticket.status }}</span>
+                </div>
+                <div class="ticket-summary">{{ ticket.summary }}</div>
+              </div>
+              <button *ngIf="ticket.components.length > 0" mat-icon-button class="expand-btn" (click)="toggleExpand(ticket.key, $event)" matTooltip="View components">
+                <mat-icon>{{ expandedTickets.has(ticket.key) ? 'expand_less' : 'expand_more' }}</mat-icon>
+              </button>
+            </div>
+            <div *ngIf="expandedTickets.has(ticket.key)" class="component-row">
+              <mat-chip-set><mat-chip *ngFor="let c of ticket.components" style="font-size:12px;">{{ c }}</mat-chip></mat-chip-set>
+            </div>
+          </ng-container>
+        </ng-container>
+
+      </div>
+
+      <!-- ── Unique Components Summary ── -->
+      <div *ngIf="selectedTicketKeys.size > 0 && uniqueComponents.length > 0" class="components-summary">
+        <div class="components-summary-header">
+          <mat-icon>extension</mat-icon>
+          Unique Components from Selected Tickets ({{ uniqueComponents.length }})
+        </div>
+        <mat-chip-set>
+          <mat-chip *ngFor="let c of uniqueComponents" class="component-chip">{{ c }}</mat-chip>
+        </mat-chip-set>
+      </div>
+      <div *ngIf="selectedTicketKeys.size > 0 && uniqueComponents.length === 0" class="components-summary components-summary--empty">
+        <mat-icon>info_outline</mat-icon>
+        No components tagged on the selected tickets — all repositories will appear unmatched.
       </div>
     </div>
 

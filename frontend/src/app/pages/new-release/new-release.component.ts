@@ -12,6 +12,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { JiraService } from '../../core/services/jira.service';
@@ -36,6 +37,7 @@ type Step = 'version' | 'tickets' | 'repos';
     MatDividerModule,
     MatCheckboxModule,
     MatChipsModule,
+    MatTooltipModule,
     MatDatepickerModule,
     MatNativeDateModule,
   ],
@@ -118,11 +120,52 @@ export class NewReleaseComponent {
     else this.expandedTickets.add(key);
   }
 
+  // ── Status grouping ──────────────────────────────────────────────────────
+  // Known statuses: Done | Ready for QA, IN TESTING | In Progress, Selected for development, Abandoned
+  private statusGroup(status: string): 0 | 1 | 2 {
+    const s = status.toLowerCase().trim();
+    if (s === 'done' || s === 'resolved' || s === 'closed' || s === 'fixed' ||
+        s.includes('done') || s.includes('resolved') || s.includes('closed') || s.includes('fixed')) return 0;
+    if (s.includes('testing') || s.includes('ready for qa') || s.includes('ready to test') ||
+        s.includes('in qa') || /\bqa\b/.test(s)) return 1;
+    return 2;
+  }
+
+  get doneTickets(): JiraTicket[] {
+    return this.tickets.filter(t => this.statusGroup(t.status) === 0);
+  }
+
+  get testingTickets(): JiraTicket[] {
+    return this.tickets.filter(t => this.statusGroup(t.status) === 1);
+  }
+
+  get otherTickets(): JiraTicket[] {
+    return this.tickets.filter(t => this.statusGroup(t.status) === 2);
+  }
+
+  get uniqueComponents(): string[] {
+    const selected = this.tickets.filter(t => this.selectedTicketKeys.has(t.key));
+    const set = new Set<string>(selected.flatMap(t => t.components));
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }
+
+  allInGroupSelected(group: JiraTicket[]): boolean {
+    return group.length > 0 && group.every(t => this.selectedTicketKeys.has(t.key));
+  }
+
+  toggleGroupSelection(group: JiraTicket[]): void {
+    if (this.allInGroupSelected(group)) {
+      group.forEach(t => this.selectedTicketKeys.delete(t.key));
+    } else {
+      group.forEach(t => this.selectedTicketKeys.add(t.key));
+    }
+  }
+
   statusClass(status: string): string {
-    const s = status.toLowerCase();
-    if (s.includes('done') || s.includes('resolved') || s.includes('closed') || s.includes('fixed')) return 'status-done';
-    if (s.includes('progress') || s.includes('review') || s.includes('open')) return 'status-inprogress';
-    return 'status-other';
+    const group = this.statusGroup(status);
+    if (group === 0) return 'status-done';
+    if (group === 1) return 'status-testing';
+    return 'status-inprogress';
   }
 
   get allTicketsSelected(): boolean {
