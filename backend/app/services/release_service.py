@@ -33,6 +33,14 @@ from app.models import (
 )
 from app.services.gitlab_client import get_gitlab_client
 
+# Resolve data_dir to absolute so it works regardless of the server's cwd.
+_BACKEND_ROOT = Path(__file__).resolve().parent.parent.parent  # …/backend/
+_DATA_DIR: Path = (
+    settings.data_dir
+    if settings.data_dir.is_absolute()
+    else _BACKEND_ROOT / settings.data_dir
+)
+
 
 # ---------------------------------------------------------------------------
 # Migrations
@@ -46,15 +54,15 @@ def migrate_legacy_data() -> None:
 
 def _migrate_flat_to_pioneer() -> None:
     """Move legacy top-level data/ files into pioneer/ subdirectory."""
-    pioneer_releases = settings.data_dir / "pioneer" / "releases"
-    legacy_releases = settings.data_dir / "releases"
+    pioneer_releases = _DATA_DIR / "pioneer" / "releases"
+    legacy_releases = _DATA_DIR / "releases"
     if legacy_releases.exists() and not pioneer_releases.exists():
         pioneer_releases.mkdir(parents=True, exist_ok=True)
         for f in legacy_releases.glob("*.json"):
             shutil.copy2(f, pioneer_releases / f.name)
 
-    pioneer_repos = settings.data_dir / "pioneer" / "repositories.json"
-    legacy_repos = settings.data_dir / "repositories.json"
+    pioneer_repos = _DATA_DIR / "pioneer" / "repositories.json"
+    legacy_repos = _DATA_DIR / "repositories.json"
     if legacy_repos.exists() and not pioneer_repos.exists():
         pioneer_repos.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(legacy_repos, pioneer_repos)
@@ -62,7 +70,7 @@ def _migrate_flat_to_pioneer() -> None:
 
 def _migrate_flat_files_to_subfolders() -> None:
     """Move flat {version}.json and {version}_audit.jsonl into {version}/ subfolders."""
-    for project_dir in settings.data_dir.iterdir():
+    for project_dir in _DATA_DIR.iterdir():
         if not project_dir.is_dir():
             continue
         releases_dir = project_dir / "releases"
@@ -96,7 +104,7 @@ def _migrate_flat_files_to_subfolders() -> None:
 # ---------------------------------------------------------------------------
 
 def _releases_dir(project_id: str) -> Path:
-    d = settings.data_dir / project_id / "releases"
+    d = _DATA_DIR / project_id / "releases"
     d.mkdir(parents=True, exist_ok=True)
     return d
 
@@ -133,7 +141,7 @@ def _save_release(project_id: str, state: ReleaseState) -> None:
 
 
 def _load_references(project_id: str) -> List[RepoReference]:
-    path = settings.data_dir / project_id / "repositories.json"
+    path = _DATA_DIR / project_id / "repositories.json"
     if not path.exists():
         return []
     data = json.loads(path.read_text())

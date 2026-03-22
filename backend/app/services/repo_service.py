@@ -1,14 +1,40 @@
 import json
+from pathlib import Path
 from typing import List
 
 from app.config import settings
 from app.models import AddReferenceRepoRequest, RepoReference, UpdateReferenceRepoRequest
 
+# Resolve data_dir to absolute so it works regardless of the server's cwd.
+# settings.data_dir may be relative (e.g. Path("data")); anchor it to the
+# backend package root when it isn't already absolute.
+_BACKEND_ROOT = Path(__file__).resolve().parent.parent.parent  # …/backend/
+_DATA_DIR: Path = (
+    settings.data_dir
+    if settings.data_dir.is_absolute()
+    else _BACKEND_ROOT / settings.data_dir
+)
 
-def _refs_path(project_id: str):
-    path = settings.data_dir / project_id / "repositories.json"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    return path
+
+def _refs_path(project_id: str) -> Path:
+    """Return the absolute path to repositories.json for the given project.
+
+    Checks (in order):
+      1. <data_dir>/<project_id>/repositories.json  (project-scoped, preferred)
+      2. <data_dir>/repositories.json               (legacy root-level fallback)
+
+    The project-scoped file is created (empty list) on first write if it doesn't
+    exist, so reads that find nothing fall back gracefully.
+    """
+    scoped = _DATA_DIR / project_id / "repositories.json"
+    legacy = _DATA_DIR / "repositories.json"
+    if not scoped.exists() and legacy.exists():
+        # Auto-migrate: copy legacy file into the project-scoped location once.
+        scoped.parent.mkdir(parents=True, exist_ok=True)
+        scoped.write_text(legacy.read_text())
+        return scoped
+    scoped.parent.mkdir(parents=True, exist_ok=True)
+    return scoped
 
 
 def _load(project_id: str) -> List[RepoReference]:
