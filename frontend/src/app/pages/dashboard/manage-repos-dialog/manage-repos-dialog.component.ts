@@ -38,22 +38,39 @@ import { GitLabProjectInfo, RepoReference } from '../../../core/models/release.m
       background: #e8f0fe; color: #1565c0;
       border-radius: 4px; padding: 2px 8px; font-size: 12px; font-weight: 500;
     }
-    /* Repos list */
+    /* Repos list — CSS grid keeps header & rows perfectly aligned */
+    :host { --col-name: 160px; --col-path: minmax(0,1fr); --col-branch: 110px; --col-config: 120px; --col-actions: 80px; }
+    .repo-grid-row {
+      display: grid;
+      grid-template-columns: var(--col-name) var(--col-path) var(--col-branch) var(--col-branch) var(--col-config) var(--col-actions);
+      align-items: center;
+      gap: 0;
+    }
     .repo-list-header {
-      display: flex; align-items: center; padding: 6px 12px;
+      padding: 7px 0;
       background: #f5f5f5; border-radius: 6px 6px 0 0;
       border: 1px solid #e0e0e0; border-bottom: none;
-      font-size: 12px; font-weight: 600; color: rgba(0,0,0,0.55);
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.04em; color: rgba(0,0,0,0.5);
     }
+    .repo-list-header .col { padding: 0 10px; }
+    .repo-list-header .col-actions { padding: 0; }
     .repo-list-item-wrapper {
-      border: 1px solid #e0e0e0; border-top: none;
+      border-left: 1px solid #e0e0e0;
+      border-right: 1px solid #e0e0e0;
+      border-bottom: 1px solid #f0f0f0;
     }
-    .repo-list-item-wrapper:last-child { border-radius: 0 0 6px 6px; }
-    .repo-list-row {
-      display: flex; align-items: center; padding: 10px 12px; gap: 8px;
-      background: #fff;
+    .repo-list-item-wrapper:last-child {
+      border-bottom: 1px solid #e0e0e0;
+      border-radius: 0 0 6px 6px;
     }
+    .repo-list-row { padding: 9px 0; background: #fff; }
     .repo-list-row:hover { background: #fafafa; }
+    .repo-list-row .col {
+      padding: 0 10px; font-size: 13px; overflow: hidden;
+      text-overflow: ellipsis; white-space: nowrap;
+    }
+    .repo-list-row .col-actions { padding: 0; display: flex; align-items: center; justify-content: flex-end; padding-right: 4px; }
 
     /* GitLab browser */
     .gitlab-browser { margin-top: 20px; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; }

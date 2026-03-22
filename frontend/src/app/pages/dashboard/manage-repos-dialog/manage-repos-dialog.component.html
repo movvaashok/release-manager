@@ -61,31 +61,31 @@
     </div>
 
     <!-- Repos list header -->
-    <div *ngIf="repos.length > 0" class="repo-list-header">
-      <span style="flex:1.2">Name</span>
-      <span style="flex:2">Path</span>
-      <span style="flex:1.5">Branches</span>
-      <span style="flex:1">Config Repo</span>
-      <span style="width:88px"></span>
+    <div *ngIf="repos.length > 0" class="repo-list-header repo-grid-row">
+      <span class="col">Name</span>
+      <span class="col">Path</span>
+      <span class="col">Default</span>
+      <span class="col">Develop</span>
+      <span class="col">Config Repo</span>
+      <span class="col-actions"></span>
     </div>
 
     <!-- Repos list -->
     <div *ngFor="let r of repos" class="repo-list-item-wrapper">
       <!-- Main row -->
-      <div class="repo-list-row">
-        <span class="repo-col-name" style="flex:1.2"><strong>{{ r.name }}</strong></span>
-        <span class="repo-col-path" style="flex:2;font-size:13px;color:rgba(0,0,0,0.6);">{{ r.path_with_namespace }}</span>
-        <span style="flex:1.5;font-size:12px;color:rgba(0,0,0,0.5);">
-          default: {{ r.default_branch }} / dev: {{ r.develop_branch }}
-        </span>
-        <span style="flex:1;">
-          <span *ngIf="r.config_repo" class="config-repo-badge">
-            <mat-icon style="font-size:14px;width:14px;height:14px;vertical-align:middle;margin-right:3px;">link</mat-icon>
+      <div class="repo-list-row repo-grid-row">
+        <span class="col" style="font-weight:600;color:rgba(0,0,0,0.85);" [title]="r.name">{{ r.name }}</span>
+        <span class="col" style="color:rgba(0,0,0,0.55);" [title]="r.path_with_namespace">{{ r.path_with_namespace }}</span>
+        <span class="col" style="color:rgba(0,0,0,0.65);" [title]="r.default_branch">{{ r.default_branch }}</span>
+        <span class="col" style="color:rgba(0,0,0,0.65);" [title]="r.develop_branch">{{ r.develop_branch }}</span>
+        <span class="col">
+          <span *ngIf="r.config_repo" class="config-repo-badge" [title]="r.config_repo">
+            <mat-icon style="font-size:13px;width:13px;height:13px;vertical-align:middle;margin-right:3px;">link</mat-icon>
             {{ r.config_repo }}
           </span>
-          <span *ngIf="!r.config_repo" style="color:rgba(0,0,0,0.3);font-size:12px;">—</span>
+          <span *ngIf="!r.config_repo" style="color:rgba(0,0,0,0.25);font-size:13px;">—</span>
         </span>
-        <span style="width:88px;white-space:nowrap;text-align:right;">
+        <span class="col-actions">
           <button mat-icon-button (click)="startEdit(r)" matTooltip="Edit"><mat-icon>edit</mat-icon></button>
           <button mat-icon-button color="warn" (click)="deleteRepo(r.name)" matTooltip="Delete"><mat-icon>delete</mat-icon></button>
         </span>
