@@ -119,6 +119,7 @@ class JiraTicketStatus(BaseModel):
     url: str
     issue_type: str = ""
     repos: List[str] = []       # repo names that reference this ticket in the release
+    components: List[str] = []  # Jira components on this ticket
 
 
 class RaSubtaskInfo(BaseModel):

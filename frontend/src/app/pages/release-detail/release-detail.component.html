@@ -132,16 +132,30 @@
                     <mat-icon class="jira-collapse-icon">{{ isJiraGroupCollapsed('done') ? 'expand_more' : 'expand_less' }}</mat-icon>
                   </div>
                   <div *ngIf="!isJiraGroupCollapsed('done')">
-                    <div *ngFor="let t of jiraDoneTickets" class="jira-ticket-row-v2">
-                      <a [href]="t.url" target="_blank" rel="noopener" class="jira-key-link jira-key-sm">
-                        {{ t.key }}<mat-icon style="font-size:10px;width:10px;height:10px;margin-left:2px;">open_in_new</mat-icon>
-                      </a>
-                      <span class="jira-status-chip"
-                            [style.color]="jiraStatusColor(t.status)"
-                            [style.background]="jiraStatusBg(t.status)">{{ t.status }}</span>
-                      <span class="jira-ticket-summary" [title]="t.summary">{{ t.summary || '–' }}</span>
-                      <span *ngFor="let r of t.repos" class="jira-repo-tag">{{ r }}</span>
-                    </div>
+                    <ng-container *ngFor="let t of jiraDoneTickets">
+                      <div class="jira-ticket-row-v2">
+                        <button mat-icon-button class="jira-expand-btn"
+                                *ngIf="t.components.length > 0"
+                                (click)="toggleJiraTicket(t.key)"
+                                [matTooltip]="isJiraTicketExpanded(t.key) ? 'Hide components' : 'Show components'">
+                          <mat-icon>{{ isJiraTicketExpanded(t.key) ? 'expand_less' : 'expand_more' }}</mat-icon>
+                        </button>
+                        <span *ngIf="t.components.length === 0" class="jira-expand-placeholder"></span>
+                        <a [href]="t.url" target="_blank" rel="noopener" class="jira-key-link jira-key-sm">
+                          {{ t.key }}<mat-icon style="font-size:10px;width:10px;height:10px;margin-left:2px;">open_in_new</mat-icon>
+                        </a>
+                        <span class="jira-status-chip"
+                              [style.color]="jiraStatusColor(t.status)"
+                              [style.background]="jiraStatusBg(t.status)">{{ t.status }}</span>
+                        <span class="jira-ticket-summary" [title]="t.summary">{{ t.summary || '–' }}</span>
+                        <span *ngFor="let r of t.repos" class="jira-repo-tag">{{ r }}</span>
+                      </div>
+                      <div *ngIf="isJiraTicketExpanded(t.key) && t.components.length > 0" class="jira-components-panel">
+                        <mat-icon style="font-size:13px;width:13px;height:13px;color:#757575;">category</mat-icon>
+                        <span style="font-size:11px;color:rgba(0,0,0,0.5);font-weight:600;margin-right:4px;">Components:</span>
+                        <span *ngFor="let c of t.components" class="jira-component-tag">{{ c }}</span>
+                      </div>
+                    </ng-container>
                   </div>
                 </div>
 
@@ -153,16 +167,30 @@
                     <mat-icon class="jira-collapse-icon">{{ isJiraGroupCollapsed('testing') ? 'expand_more' : 'expand_less' }}</mat-icon>
                   </div>
                   <div *ngIf="!isJiraGroupCollapsed('testing')">
-                    <div *ngFor="let t of jiraTestingTickets" class="jira-ticket-row-v2">
-                      <a [href]="t.url" target="_blank" rel="noopener" class="jira-key-link jira-key-sm">
-                        {{ t.key }}<mat-icon style="font-size:10px;width:10px;height:10px;margin-left:2px;">open_in_new</mat-icon>
-                      </a>
-                      <span class="jira-status-chip"
-                            [style.color]="jiraStatusColor(t.status)"
-                            [style.background]="jiraStatusBg(t.status)">{{ t.status }}</span>
-                      <span class="jira-ticket-summary" [title]="t.summary">{{ t.summary || '–' }}</span>
-                      <span *ngFor="let r of t.repos" class="jira-repo-tag">{{ r }}</span>
-                    </div>
+                    <ng-container *ngFor="let t of jiraTestingTickets">
+                      <div class="jira-ticket-row-v2">
+                        <button mat-icon-button class="jira-expand-btn"
+                                *ngIf="t.components.length > 0"
+                                (click)="toggleJiraTicket(t.key)"
+                                [matTooltip]="isJiraTicketExpanded(t.key) ? 'Hide components' : 'Show components'">
+                          <mat-icon>{{ isJiraTicketExpanded(t.key) ? 'expand_less' : 'expand_more' }}</mat-icon>
+                        </button>
+                        <span *ngIf="t.components.length === 0" class="jira-expand-placeholder"></span>
+                        <a [href]="t.url" target="_blank" rel="noopener" class="jira-key-link jira-key-sm">
+                          {{ t.key }}<mat-icon style="font-size:10px;width:10px;height:10px;margin-left:2px;">open_in_new</mat-icon>
+                        </a>
+                        <span class="jira-status-chip"
+                              [style.color]="jiraStatusColor(t.status)"
+                              [style.background]="jiraStatusBg(t.status)">{{ t.status }}</span>
+                        <span class="jira-ticket-summary" [title]="t.summary">{{ t.summary || '–' }}</span>
+                        <span *ngFor="let r of t.repos" class="jira-repo-tag">{{ r }}</span>
+                      </div>
+                      <div *ngIf="isJiraTicketExpanded(t.key) && t.components.length > 0" class="jira-components-panel">
+                        <mat-icon style="font-size:13px;width:13px;height:13px;color:#757575;">category</mat-icon>
+                        <span style="font-size:11px;color:rgba(0,0,0,0.5);font-weight:600;margin-right:4px;">Components:</span>
+                        <span *ngFor="let c of t.components" class="jira-component-tag">{{ c }}</span>
+                      </div>
+                    </ng-container>
                   </div>
                 </div>
 
@@ -174,16 +202,30 @@
                     <mat-icon class="jira-collapse-icon">{{ isJiraGroupCollapsed('other') ? 'expand_more' : 'expand_less' }}</mat-icon>
                   </div>
                   <div *ngIf="!isJiraGroupCollapsed('other')">
-                    <div *ngFor="let t of jiraOtherTickets" class="jira-ticket-row-v2">
-                      <a [href]="t.url" target="_blank" rel="noopener" class="jira-key-link jira-key-sm">
-                        {{ t.key }}<mat-icon style="font-size:10px;width:10px;height:10px;margin-left:2px;">open_in_new</mat-icon>
-                      </a>
-                      <span class="jira-status-chip"
-                            [style.color]="jiraStatusColor(t.status)"
-                            [style.background]="jiraStatusBg(t.status)">{{ t.status }}</span>
-                      <span class="jira-ticket-summary" [title]="t.summary">{{ t.summary || '–' }}</span>
-                      <span *ngFor="let r of t.repos" class="jira-repo-tag">{{ r }}</span>
-                    </div>
+                    <ng-container *ngFor="let t of jiraOtherTickets">
+                      <div class="jira-ticket-row-v2">
+                        <button mat-icon-button class="jira-expand-btn"
+                                *ngIf="t.components.length > 0"
+                                (click)="toggleJiraTicket(t.key)"
+                                [matTooltip]="isJiraTicketExpanded(t.key) ? 'Hide components' : 'Show components'">
+                          <mat-icon>{{ isJiraTicketExpanded(t.key) ? 'expand_less' : 'expand_more' }}</mat-icon>
+                        </button>
+                        <span *ngIf="t.components.length === 0" class="jira-expand-placeholder"></span>
+                        <a [href]="t.url" target="_blank" rel="noopener" class="jira-key-link jira-key-sm">
+                          {{ t.key }}<mat-icon style="font-size:10px;width:10px;height:10px;margin-left:2px;">open_in_new</mat-icon>
+                        </a>
+                        <span class="jira-status-chip"
+                              [style.color]="jiraStatusColor(t.status)"
+                              [style.background]="jiraStatusBg(t.status)">{{ t.status }}</span>
+                        <span class="jira-ticket-summary" [title]="t.summary">{{ t.summary || '–' }}</span>
+                        <span *ngFor="let r of t.repos" class="jira-repo-tag">{{ r }}</span>
+                      </div>
+                      <div *ngIf="isJiraTicketExpanded(t.key) && t.components.length > 0" class="jira-components-panel">
+                        <mat-icon style="font-size:13px;width:13px;height:13px;color:#757575;">category</mat-icon>
+                        <span style="font-size:11px;color:rgba(0,0,0,0.5);font-weight:600;margin-right:4px;">Components:</span>
+                        <span *ngFor="let c of t.components" class="jira-component-tag">{{ c }}</span>
+                      </div>
+                    </ng-container>
                   </div>
                 </div>
 
@@ -252,7 +294,9 @@
                   </div>
                   <div *ngIf="jiraStatus.ra_subtasks.length > 0"
                        style="margin-left:12px;border-left:2px solid #e0e0e0;padding-left:10px;">
-                    <div *ngFor="let sub of jiraStatus.ra_subtasks" class="jira-card jira-subtask-card">
+                    <div *ngFor="let sub of jiraStatus.ra_subtasks" class="jira-card jira-subtask-card"
+                         [style.border-left-color]="jiraStatusColor(sub.status)"
+                         style="border-left-width:3px;border-left-style:solid;">
                       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                         <mat-icon style="font-size:13px;width:13px;height:13px;color:#bdbdbd;flex-shrink:0;">subdirectory_arrow_right</mat-icon>
                         <a [href]="sub.url" target="_blank" rel="noopener" class="jira-key-link jira-key-sm">

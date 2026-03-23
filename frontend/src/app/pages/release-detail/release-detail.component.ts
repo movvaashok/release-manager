@@ -81,7 +81,8 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
   jiraStatus: JiraStatusSummary | null = null;
   loadingJiraStatus = false;
   jiraStatusError = '';
-  collapsedJiraGroups = new Set<string>();
+  collapsedJiraGroups = new Set<string>(['done', 'testing', 'other']); // all collapsed by default
+  expandedJiraTickets = new Set<string>();
   private pollTimer: ReturnType<typeof setInterval> | null = null;
 
   stage1Columns = ['name', 'path', 'actions'];
@@ -682,6 +683,12 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
   toggleJiraGroup(group: string): void {
     if (this.collapsedJiraGroups.has(group)) this.collapsedJiraGroups.delete(group);
     else this.collapsedJiraGroups.add(group);
+  }
+
+  isJiraTicketExpanded(key: string): boolean { return this.expandedJiraTickets.has(key); }
+  toggleJiraTicket(key: string): void {
+    if (this.expandedJiraTickets.has(key)) this.expandedJiraTickets.delete(key);
+    else this.expandedJiraTickets.add(key);
   }
 
   loadJiraStatus(): void {

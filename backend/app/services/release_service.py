@@ -719,6 +719,10 @@ async def get_jira_status_summary(project_id: str, version: str) -> JiraStatusSu
         fields = issue.get("fields", {})
         key = issue["key"]
         repos = ticket_to_repos.get(key, [])
+        raw_components = [
+            c.get("name", "") for c in fields.get("components", [])
+            if c.get("name") and c.get("name", "").upper() != "NO_CODE_CHANGE"
+        ]
         release_tickets.append(JiraTicketStatus(
             key=key,
             summary=fields.get("summary", ""),
@@ -726,6 +730,7 @@ async def get_jira_status_summary(project_id: str, version: str) -> JiraStatusSu
             url=f"{jira_client._jira_url()}/browse/{key}",
             issue_type=fields.get("issuetype", {}).get("name", ""),
             repos=repos,
+            components=raw_components,
         ))
 
     # ── RA ticket ──

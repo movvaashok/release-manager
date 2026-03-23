@@ -136,6 +136,7 @@ export interface JiraTicketStatus {
   url: string;
   issue_type: string;
   repos: string[];
+  components: string[];
 }
 
 export interface RaSubtaskInfo {
