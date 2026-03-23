@@ -89,7 +89,7 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
   raCollapsed = false;
   private pollTimer: ReturnType<typeof setInterval> | null = null;
 
-  stage1Columns = ['name', 'path', 'actions'];
+  stage1Columns = ['name', 'actions'];
   stage2Columns = ['name', 'status', 'branch_info', 'diff', 'pipeline', 'error', 'actions'];
   stage3Columns = ['name', 'config_repo', 'status', 'mr', 'pipeline3', 'ra_subtask', 'error', 'actions'];
   removingRepo: string | null = null;

@@ -405,18 +405,13 @@
             <ng-container matColumnDef="name">
               <th mat-header-cell *matHeaderCellDef>Repository</th>
               <td mat-cell *matCellDef="let r">
-                <strong>{{ r.name }}</strong>
-              </td>
-            </ng-container>
-
-            <ng-container matColumnDef="path">
-              <th mat-header-cell *matHeaderCellDef>Path</th>
-              <td mat-cell *matCellDef="let r" class="link-cell">
-                <a *ngIf="r.web_url" [href]="r.web_url" target="_blank" rel="noopener" (click)="$event.stopPropagation()">
-                  {{ r.path_with_namespace }}
-                  <mat-icon style="font-size:13px;vertical-align:middle;">open_in_new</mat-icon>
+                <a *ngIf="r.web_url" [href]="r.web_url" target="_blank" rel="noopener"
+                   style="font-weight:600;color:#1565c0;text-decoration:none;display:inline-flex;align-items:center;gap:4px;"
+                   (click)="$event.stopPropagation()">
+                  {{ r.name }}
+                  <mat-icon style="font-size:13px;width:13px;height:13px;">open_in_new</mat-icon>
                 </a>
-                <span *ngIf="!r.web_url">{{ r.path_with_namespace }}</span>
+                <strong *ngIf="!r.web_url">{{ r.name }}</strong>
               </td>
             </ng-container>
 
