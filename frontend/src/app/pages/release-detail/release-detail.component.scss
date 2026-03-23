@@ -22,6 +22,16 @@
 
 .full-width { width: 100%; }
 
+.compact-table {
+  .mat-mdc-header-cell,
+  .mat-mdc-cell {
+    padding: 4px 12px;
+    font-size: 12px;
+  }
+  .mat-mdc-row { height: 36px; }
+  .mat-mdc-header-row { height: 36px; }
+}
+
 .tab-icon {
   margin-right: 6px;
   font-size: 18px;
