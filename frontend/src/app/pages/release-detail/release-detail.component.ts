@@ -705,7 +705,13 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
 
   jiraStatusColor(status: string): string {
     const s = status.toLowerCase();
-    if (['done', 'resolved', 'closed', 'abandoned', 'complete', 'completed'].some(v => s.includes(v))) return '#2e7d32';
+    // RA-specific statuses
+    if (s.includes('privacy signoff')) return '#2e7d32';          // RA complete
+    if (s.includes('risk assessing')) return '#1565c0';           // RA in progress
+    if (s.includes('ready for risk assessment')) return '#e65100'; // RA pending
+    if (s.includes('abandoned')) return '#757575';                 // abandoned → grey
+    // General statuses
+    if (['done', 'resolved', 'closed', 'complete', 'completed', 'fixed'].some(v => s.includes(v))) return '#2e7d32';
     if (['in progress', 'in review', 'review', 'in development'].some(v => s.includes(v))) return '#1565c0';
     if (['blocked', 'rejected', 'cancelled', 'canceled'].some(v => s.includes(v))) return '#c62828';
     if (['testing', 'qa', 'verification'].some(v => s.includes(v))) return '#e65100';
@@ -714,7 +720,13 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
 
   jiraStatusBg(status: string): string {
     const s = status.toLowerCase();
-    if (['done', 'resolved', 'closed', 'abandoned', 'complete', 'completed'].some(v => s.includes(v))) return '#e8f5e9';
+    // RA-specific statuses
+    if (s.includes('privacy signoff')) return '#e8f5e9';
+    if (s.includes('risk assessing')) return '#e3f2fd';
+    if (s.includes('ready for risk assessment')) return '#fff3e0';
+    if (s.includes('abandoned')) return '#f5f5f5';
+    // General statuses
+    if (['done', 'resolved', 'closed', 'complete', 'completed', 'fixed'].some(v => s.includes(v))) return '#e8f5e9';
     if (['in progress', 'in review', 'review', 'in development'].some(v => s.includes(v))) return '#e3f2fd';
     if (['blocked', 'rejected', 'cancelled', 'canceled'].some(v => s.includes(v))) return '#ffebee';
     if (['testing', 'qa', 'verification'].some(v => s.includes(v))) return '#fff3e0';
