@@ -321,12 +321,6 @@
                      style="cursor:pointer;user-select:none;">
                   <mat-icon style="font-size:16px;width:16px;height:16px;">security</mat-icon>
                   Risk Assessment
-                  <span *ngIf="jiraStatus.ra_ticket" class="jira-status-chip"
-                        style="margin-left:8px;"
-                        [style.color]="jiraStatusColor(jiraStatus.ra_ticket.status)"
-                        [style.background]="jiraStatusBg(jiraStatus.ra_ticket.status)">
-                    {{ jiraStatus.ra_ticket.status }}
-                  </span>
                   <mat-icon style="font-size:18px;width:18px;height:18px;margin-left:auto;">
                     {{ raCollapsed ? 'expand_more' : 'expand_less' }}
                   </mat-icon>
