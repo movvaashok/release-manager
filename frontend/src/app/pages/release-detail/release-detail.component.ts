@@ -17,6 +17,7 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 
@@ -55,6 +56,7 @@ const POLL_INTERVAL_MS = 30_000;
     MatMenuModule,
     MatFormFieldModule,
     MatInputModule,
+    MatAutocompleteModule,
     MatDatepickerModule,
     MatNativeDateModule,
     StatusChipComponent,
@@ -83,6 +85,7 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
   jiraStatusError = '';
   collapsedJiraGroups = new Set<string>(['done', 'testing', 'other']); // all collapsed by default
   expandedJiraTickets = new Set<string>();
+  componentSearch = '';
   private pollTimer: ReturnType<typeof setInterval> | null = null;
 
   stage1Columns = ['name', 'path', 'actions'];
@@ -690,6 +693,42 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
     if (this.expandedJiraTickets.has(key)) this.expandedJiraTickets.delete(key);
     else this.expandedJiraTickets.add(key);
   }
+
+  // ── Component search ──────────────────────────────────────────────────────
+
+  /** All unique component names from Jira tickets + release repo names, sorted. */
+  get allComponentSuggestions(): string[] {
+    const set = new Set<string>();
+    // Jira ticket components (primary source)
+    for (const t of (this.jiraStatus?.release_tickets ?? [])) {
+      for (const c of t.components) set.add(c);
+    }
+    // Repo names from stage1 as secondary suggestions
+    for (const r of (this.release?.stage1 ?? [])) set.add(r.name);
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }
+
+  /** Autocomplete suggestions filtered by current search text. */
+  get componentSuggestions(): string[] {
+    const q = this.componentSearch.trim().toLowerCase();
+    if (!q) return this.allComponentSuggestions;
+    return this.allComponentSuggestions.filter(c => c.toLowerCase().includes(q));
+  }
+
+  /** Tickets matching the current search (component name or key/summary substring). */
+  get jiraTicketsForComponent(): typeof this.jiraStatus.release_tickets {
+    const q = this.componentSearch.trim().toLowerCase();
+    if (!q || !this.jiraStatus) return [];
+    return this.jiraStatus.release_tickets.filter(t =>
+      t.components.some(c => c.toLowerCase().includes(q)) ||
+      t.key.toLowerCase().includes(q) ||
+      t.summary.toLowerCase().includes(q)
+    );
+  }
+
+  get isComponentSearchActive(): boolean { return this.componentSearch.trim().length > 0; }
+
+  clearComponentSearch(): void { this.componentSearch = ''; }
 
   loadJiraStatus(): void {
     this.loadingJiraStatus = true;

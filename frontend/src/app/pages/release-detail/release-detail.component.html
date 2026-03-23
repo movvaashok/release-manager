@@ -118,11 +118,69 @@
                 </span>
               </div>
 
+              <!-- ── Component search bar ── -->
+              <div class="jira-search-bar" *ngIf="jiraStatus.release_tickets.length > 0">
+                <mat-icon class="jira-search-icon">search</mat-icon>
+                <input class="jira-search-input"
+                       [(ngModel)]="componentSearch"
+                       [matAutocomplete]="compAuto"
+                       placeholder="Search by component…"
+                       autocomplete="off">
+                <button *ngIf="isComponentSearchActive" mat-icon-button class="jira-search-clear"
+                        (click)="clearComponentSearch()" matTooltip="Clear search">
+                  <mat-icon>close</mat-icon>
+                </button>
+                <mat-autocomplete #compAuto="matAutocomplete">
+                  <mat-option *ngFor="let c of componentSuggestions" [value]="c">
+                    <mat-icon style="font-size:14px;width:14px;height:14px;vertical-align:middle;color:#7c4dff;margin-right:6px;">category</mat-icon>
+                    {{ c }}
+                  </mat-option>
+                </mat-autocomplete>
+              </div>
+
+              <!-- ── Search results ── -->
+              <ng-container *ngIf="isComponentSearchActive">
+                <div *ngIf="jiraTicketsForComponent.length === 0" class="jira-empty-row" style="margin-top:8px;">
+                  No tickets found for <strong>{{ componentSearch }}</strong>.
+                </div>
+                <div *ngIf="jiraTicketsForComponent.length > 0" class="jira-group" style="margin-top:8px;">
+                  <div class="jira-group-header" style="background:#ede7f6;color:#4527a0;cursor:default;">
+                    <mat-icon class="jira-group-icon">filter_list</mat-icon>
+                    <span>{{ jiraTicketsForComponent.length }} ticket{{ jiraTicketsForComponent.length !== 1 ? 's' : '' }} matching <em>"{{ componentSearch }}"</em></span>
+                  </div>
+                  <ng-container *ngFor="let t of jiraTicketsForComponent">
+                    <div class="jira-ticket-row-v2">
+                      <a [href]="t.url" target="_blank" rel="noopener" class="jira-key-link jira-key-sm">
+                        {{ t.key }}<mat-icon style="font-size:10px;width:10px;height:10px;margin-left:2px;">open_in_new</mat-icon>
+                      </a>
+                      <span class="jira-status-chip"
+                            [style.color]="jiraStatusColor(t.status)"
+                            [style.background]="jiraStatusBg(t.status)">{{ t.status }}</span>
+                      <span class="jira-ticket-summary" [title]="t.summary">{{ t.summary || '–' }}</span>
+                      <span *ngFor="let r of t.repos" class="jira-repo-tag">{{ r }}</span>
+                      <button mat-icon-button class="jira-expand-btn"
+                              *ngIf="t.components.length > 0"
+                              (click)="toggleJiraTicket(t.key)"
+                              [matTooltip]="isJiraTicketExpanded(t.key) ? 'Hide components' : 'Show components'">
+                        <mat-icon>{{ isJiraTicketExpanded(t.key) ? 'expand_less' : 'expand_more' }}</mat-icon>
+                      </button>
+                    </div>
+                    <div *ngIf="isJiraTicketExpanded(t.key) && t.components.length > 0" class="jira-components-panel">
+                      <mat-icon style="font-size:13px;width:13px;height:13px;color:#757575;">category</mat-icon>
+                      <span style="font-size:11px;color:rgba(0,0,0,0.5);font-weight:600;margin-right:4px;">Components:</span>
+                      <span *ngFor="let c of t.components"
+                            class="jira-component-tag"
+                            [class.jira-component-tag-active]="c.toLowerCase().includes(componentSearch.toLowerCase())">{{ c }}</span>
+                    </div>
+                  </ng-container>
+                </div>
+              </ng-container>
+
               <div *ngIf="jiraStatus.release_tickets.length === 0" class="jira-empty-row">
                 No Jira tickets linked to this release.
               </div>
 
-              <ng-container *ngIf="jiraStatus.release_tickets.length > 0">
+              <ng-container *ngIf="jiraStatus.release_tickets.length > 0 && !isComponentSearchActive">
 
                 <!-- ── Done group ── -->
                 <div *ngIf="jiraDoneTickets.length > 0" class="jira-group">
