@@ -86,6 +86,7 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
   collapsedJiraGroups = new Set<string>(['done', 'testing', 'other']); // all collapsed by default
   expandedJiraTickets = new Set<string>();
   componentSearch = '';
+  raCollapsed = false;
   private pollTimer: ReturnType<typeof setInterval> | null = null;
 
   stage1Columns = ['name', 'path', 'actions'];
