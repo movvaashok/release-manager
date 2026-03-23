@@ -327,10 +327,6 @@
                         [style.background]="jiraStatusBg(jiraStatus.ra_ticket.status)">
                     {{ jiraStatus.ra_ticket.status }}
                   </span>
-                  <span *ngIf="jiraStatus.ra_subtasks.length > 0"
-                        style="margin-left:6px;font-size:11px;font-weight:400;color:rgba(0,0,0,0.4);">
-                    {{ jiraStatus.ra_subtasks.length }} subtask{{ jiraStatus.ra_subtasks.length !== 1 ? 's' : '' }}
-                  </span>
                   <mat-icon style="font-size:18px;width:18px;height:18px;margin-left:auto;">
                     {{ raCollapsed ? 'expand_more' : 'expand_less' }}
                   </mat-icon>
