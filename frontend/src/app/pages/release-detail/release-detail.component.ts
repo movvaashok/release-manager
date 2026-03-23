@@ -22,7 +22,7 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 
 import { ReleaseService } from '../../core/services/release.service';
-import { JiraStatusSummary, ReleaseState, Stage2Repo, Stage3Repo } from '../../core/models/release.model';
+import { JiraStatusSummary, JiraTicketStatus, ReleaseState, Stage2Repo, Stage3Repo } from '../../core/models/release.model';
 import { StatusChipComponent } from '../../shared/components/status-chip/status-chip.component';
 import { AddReposDialogComponent } from './add-repos-dialog/add-repos-dialog.component';
 import { AddViaJiraDialogComponent } from './add-via-jira-dialog/add-via-jira-dialog.component';
@@ -716,7 +716,7 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
   }
 
   /** Tickets matching the current search (component name or key/summary substring). */
-  get jiraTicketsForComponent(): typeof this.jiraStatus.release_tickets {
+  get jiraTicketsForComponent(): JiraTicketStatus[] {
     const q = this.componentSearch.trim().toLowerCase();
     if (!q || !this.jiraStatus) return [];
     return this.jiraStatus.release_tickets.filter(t =>
