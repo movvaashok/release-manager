@@ -235,6 +235,43 @@ async def get_issues_by_keys(keys: List[str]) -> List[dict]:
     return results
 
 
+async def get_issue_subtasks(parent_key: str) -> list[dict]:
+    """
+    Return all subtasks of *parent_key* from Jira.
+    Each entry: {key, summary, status, url}.
+    """
+    if not _jira_configured() or not parent_key:
+        return []
+    headers = {
+        "Authorization": _auth_header(),
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+    }
+    jql = f'parent = "{parent_key}" ORDER BY created ASC'
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.post(
+                f"{_jira_url()}/rest/api/3/search/jql",
+                headers=headers,
+                json={"jql": jql, "fields": ["summary", "status", "issuetype"], "maxResults": 100},
+                timeout=20.0,
+            )
+            resp.raise_for_status()
+            results = []
+            for issue in resp.json().get("issues", []):
+                fields = issue.get("fields", {})
+                key = issue["key"]
+                results.append({
+                    "key": key,
+                    "summary": fields.get("summary", ""),
+                    "status": fields.get("status", {}).get("name", ""),
+                    "url": f"{_jira_url()}/browse/{key}",
+                })
+            return results
+        except httpx.HTTPError:
+            return []
+
+
 async def get_issue_status(issue_key: str) -> Optional[str]:
     """Return the status name of a Jira issue (e.g. 'Abandoned'), or None on failure."""
     if not _jira_configured():

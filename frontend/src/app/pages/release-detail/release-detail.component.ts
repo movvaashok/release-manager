@@ -81,6 +81,7 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
   jiraStatus: JiraStatusSummary | null = null;
   loadingJiraStatus = false;
   jiraStatusError = '';
+  collapsedJiraGroups = new Set<string>();
   private pollTimer: ReturnType<typeof setInterval> | null = null;
 
   stage1Columns = ['name', 'path', 'actions'];
@@ -657,6 +658,31 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
   }
 
   // ── Jira Status tab ──────────────────────────────────────────────────────
+
+  private jiraTicketGroup(status: string): 0 | 1 | 2 {
+    const s = status.toLowerCase().trim();
+    if (s === 'done' || s.includes('done') || s.includes('resolved') ||
+        s.includes('closed') || s.includes('fixed')) return 0;
+    if (s.includes('testing') || s.includes('ready for qa') || s.includes('ready to test') ||
+        s.includes('in qa') || /\bqa\b/.test(s)) return 1;
+    return 2;
+  }
+
+  get jiraDoneTickets() {
+    return this.jiraStatus?.release_tickets.filter(t => this.jiraTicketGroup(t.status) === 0) ?? [];
+  }
+  get jiraTestingTickets() {
+    return this.jiraStatus?.release_tickets.filter(t => this.jiraTicketGroup(t.status) === 1) ?? [];
+  }
+  get jiraOtherTickets() {
+    return this.jiraStatus?.release_tickets.filter(t => this.jiraTicketGroup(t.status) === 2) ?? [];
+  }
+
+  isJiraGroupCollapsed(group: string): boolean { return this.collapsedJiraGroups.has(group); }
+  toggleJiraGroup(group: string): void {
+    if (this.collapsedJiraGroups.has(group)) this.collapsedJiraGroups.delete(group);
+    else this.collapsedJiraGroups.add(group);
+  }
 
   loadJiraStatus(): void {
     this.loadingJiraStatus = true;

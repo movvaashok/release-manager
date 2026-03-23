@@ -360,3 +360,90 @@
   background: #fff;
   &:hover { background: #fafafa; }
 }
+
+// ── Two-column Jira Status layout ─────────────────────────────────────────
+
+.jira-two-col {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.jira-left-col {
+  min-width: 0;
+}
+
+.jira-right-col {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+.jira-right-panel {
+  background: #fafafa;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+
+// Collapsible groups (matching new-release style)
+.jira-group {
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.jira-group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+  .jira-group-icon { font-size: 16px; width: 16px; height: 16px; }
+  .jira-collapse-icon { font-size: 18px; width: 18px; height: 18px; margin-left: auto; }
+  .jira-group-count { font-weight: 400; opacity: 0.65; margin-left: 4px; }
+  &:hover { filter: brightness(0.97); }
+}
+
+.jira-group-done    { background: #e8f5e9; color: #2e7d32; }
+.jira-group-testing { background: #fff3e0; color: #e65100; }
+.jira-group-other   { background: #e3f2fd; color: #1565c0; }
+
+// Ticket rows inside groups
+.jira-ticket-row-v2 {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 12px;
+  border-top: 1px solid #f0f0f0;
+  background: #fff;
+  &:hover { background: #fafafa; }
+}
+
+.jira-ticket-summary {
+  flex: 1;
+  font-size: 12px;
+  color: rgba(0,0,0,0.75);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.jira-key-sm {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.jira-subtask-card {
+  padding: 7px 10px;
+  margin-bottom: 5px;
+  &:last-child { margin-bottom: 0; }
+}

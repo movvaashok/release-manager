@@ -737,19 +737,24 @@ async def get_jira_status_summary(project_id: str, version: str) -> JiraStatusSu
             url=i["url"], issue_type=i.get("issue_type", ""), repos=[],
         )
 
-    # ── RA subtasks ──
-    ra_subtasks: list[RaSubtaskInfo] = []
+    # ── RA subtasks — fetch directly from Jira so ALL subtasks appear ──
+    # Build a key→repo_name map from stage3 stored ra_subtask_url entries
+    subtask_key_to_repo: dict[str, str] = {}
     for url, repo_name in subtask_entries:
         k = _jira_key_from_url(url)
-        if k and k in fetched:
-            i = fetched[k]
+        if k:
+            subtask_key_to_repo[k] = repo_name
+
+    ra_subtasks: list[RaSubtaskInfo] = []
+    if ra_key:
+        jira_subtasks = await jira_client.get_issue_subtasks(ra_key)
+        for sub in jira_subtasks:
             ra_subtasks.append(RaSubtaskInfo(
-                key=i["key"], summary=i["summary"], status=i["status"],
-                url=i["url"], repo_name=repo_name,
-            ))
-        elif k:
-            ra_subtasks.append(RaSubtaskInfo(
-                key=k, summary="", status="Unknown", url=url, repo_name=repo_name,
+                key=sub["key"],
+                summary=sub["summary"],
+                status=sub["status"],
+                url=sub["url"],
+                repo_name=subtask_key_to_repo.get(sub["key"], ""),
             ))
 
     # ── CAB ticket ──
