@@ -22,6 +22,7 @@ export interface Stage1Repo {
 export interface Stage2Repo {
   name: string;
   project_id: number;
+  web_url?: string;
   status: Stage2Status;
   branch_created: boolean;
   branch_existed: boolean;

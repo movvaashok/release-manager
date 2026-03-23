@@ -66,6 +66,7 @@ class Stage1Repo(BaseModel):
 class Stage2Repo(BaseModel):
     name: str
     project_id: int
+    web_url: Optional[str] = None
     status: RepoStage2Status = RepoStage2Status.PENDING
     branch_created: bool = False
     branch_existed: bool = False

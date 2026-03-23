@@ -245,7 +245,7 @@ def create_release(project_id: str, req: CreateReleaseRequest) -> ReleaseState:
         )
         for n in req.repo_names
     ]
-    stage2 = [Stage2Repo(name=r.name, project_id=r.project_id) for r in stage1]
+    stage2 = [Stage2Repo(name=r.name, project_id=r.project_id, web_url=r.web_url) for r in stage1]
     stage3 = [Stage3Repo(name=r.name, project_id=r.project_id) for r in stage1]
 
     state = ReleaseState(
@@ -332,7 +332,7 @@ def add_repos_to_release(
             web_url=ref.web_url,
             jira_tickets=tickets,
         ))
-        state.stage2.append(Stage2Repo(name=ref.name, project_id=ref.project_id))
+        state.stage2.append(Stage2Repo(name=ref.name, project_id=ref.project_id, web_url=ref.web_url))
         state.stage3.append(Stage3Repo(name=ref.name, project_id=ref.project_id))
 
     _save_release(project_id, state)
