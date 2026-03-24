@@ -198,6 +198,8 @@ async def retry_stage2_repo(
         return state
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
 
 
 @router.post("/{version}/stage3", response_model=ReleaseState)

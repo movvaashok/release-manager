@@ -87,30 +87,46 @@ class GitLabClient:
         self, project_id: int, from_branch: str, to_branch: str, commit_message: str
     ) -> Dict[str, Any]:
         """
-        Merge *from_branch* into *to_branch*.
+        Merge *from_branch* into *to_branch* via GitLab's MR-accept API.
+        (GitLab v4 has no direct branch-merge endpoint.)
 
         Returns:
-            dict with key ``"conflict"`` set to True when GitLab returns 406,
-            or the raw merge-commit object on success.
+            dict with key ``"conflict"`` set to True when GitLab cannot merge (406),
+            or the raw merge result on success.
 
         Raises:
-            httpx.HTTPStatusError for any non-200/406 error.
+            Exception with GitLab error detail for any other failure.
         """
-        url = f"{self._base}/projects/{project_id}/repository/merges"
+        # Create an MR then immediately accept it
+        mr = await self.create_merge_request(
+            project_id=project_id,
+            source_branch=from_branch,
+            target_branch=to_branch,
+            title=commit_message,
+        )
+        mr_iid = mr["iid"]
+
+        url = f"{self._base}/projects/{project_id}/merge_requests/{mr_iid}/merge"
         async with httpx.AsyncClient() as client:
-            resp = await client.post(
+            resp = await client.put(
                 url,
                 headers=self._headers,
                 json={
-                    "from": from_branch,
-                    "to": to_branch,
-                    "commit_message": commit_message,
+                    "merge_commit_message": commit_message,
+                    "should_remove_source_branch": False,
+                    "squash": False,
                 },
-                timeout=30,
+                timeout=60,
             )
             if resp.status_code == 406:
+                # Conflict — leave MR open so developers can resolve manually
                 return {"conflict": True}
-            resp.raise_for_status()
+            if not resp.is_success:
+                try:
+                    detail = resp.json()
+                except Exception:
+                    detail = resp.text
+                raise Exception(f"GitLab merge failed ({resp.status_code}): {detail}")
             return resp.json()
 
     # ------------------------------------------------------------------

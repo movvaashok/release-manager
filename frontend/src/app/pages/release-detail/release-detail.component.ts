@@ -424,9 +424,10 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
         this.managePollTimer();
         this.snackBar.open(`Retry complete for ${repo.name}.`, 'Close', { duration: 3000 });
       },
-      error: () => {
+      error: (err: any) => {
         this.retryingRepo = null;
-        this.snackBar.open(`Retry failed for ${repo.name}.`, 'Close', { duration: 4000 });
+        const detail = err?.error?.detail ?? `Retry failed for ${repo.name}.`;
+        this.snackBar.open(detail, 'Close', { duration: 8000 });
       },
     });
   }
