@@ -12,11 +12,16 @@ Storage layout:
 """
 from __future__ import annotations
 
+import asyncio
 import json
+import os
 import shutil
+import subprocess
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional
+from urllib.parse import urlparse
 
 from app.config import settings
 from app.models import (
@@ -340,6 +345,120 @@ def add_repos_to_release(
 
 
 # ---------------------------------------------------------------------------
+# Stage 2 – git-based branch sync
+# ---------------------------------------------------------------------------
+
+def _git_sync_develop_to_release(
+    web_url: str,
+    gitlab_token: str,
+    release_branch: str,
+    commit_message: str,
+) -> dict:
+    """
+    Clone the repo locally, ensure *release_branch* exists, merge develop into
+    it, then push.  All network I/O is done via authenticated HTTPS so no SSH
+    keys are required.
+
+    Returns a dict with boolean keys:
+        branch_created, branch_existed, merged, no_updates, conflict
+    """
+    parsed = urlparse(web_url)
+    path = parsed.path.rstrip("/")
+    if not path.endswith(".git"):
+        path += ".git"
+    auth_url = f"{parsed.scheme}://oauth2:{gitlab_token}@{parsed.netloc}{path}"
+
+    env = {
+        **os.environ,
+        "GIT_TERMINAL_PROMPT": "0",
+        "GIT_ASKPASS": "echo",
+    }
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+
+        def git(*args: str) -> subprocess.CompletedProcess:
+            r = subprocess.run(
+                ["git", *args],
+                cwd=tmpdir,
+                capture_output=True,
+                text=True,
+                env=env,
+            )
+            if r.returncode != 0:
+                raise subprocess.CalledProcessError(
+                    r.returncode, ["git", *args],
+                    output=r.stdout, stderr=r.stderr,
+                )
+            return r
+
+        git("init", "-q")
+        git("config", "user.email", "release-bot@local")
+        git("config", "user.name", "Release Bot")
+        git("remote", "add", "origin", auth_url)
+
+        # Check if release branch already exists on remote (no fetch needed)
+        ls = subprocess.run(
+            ["git", "ls-remote", "--heads", "origin", release_branch],
+            cwd=tmpdir, capture_output=True, text=True, env=env,
+        )
+        release_exists = bool(ls.stdout.strip())
+
+        # Fetch develop
+        git("fetch", "-q", "origin", "develop:refs/remotes/origin/develop")
+
+        if not release_exists:
+            # Create release branch from develop tip and push
+            git("checkout", "-q", "-b", release_branch, "refs/remotes/origin/develop")
+            git("push", "-q", "origin", f"HEAD:{release_branch}")
+            return {
+                "branch_created": True, "branch_existed": False,
+                "merged": False, "no_updates": True, "conflict": False,
+            }
+
+        # Fetch existing release branch
+        git("fetch", "-q", "origin", f"{release_branch}:refs/remotes/origin/{release_branch}")
+        git("checkout", "-q", "-b", release_branch, f"refs/remotes/origin/{release_branch}")
+
+        # Check if develop has any commits not already in release branch
+        merge_base = git(
+            "merge-base",
+            f"refs/remotes/origin/{release_branch}",
+            "refs/remotes/origin/develop",
+        ).stdout.strip()
+        develop_sha = git("rev-parse", "refs/remotes/origin/develop").stdout.strip()
+
+        if merge_base == develop_sha:
+            # develop is already fully contained in release branch
+            return {
+                "branch_created": False, "branch_existed": True,
+                "merged": False, "no_updates": True, "conflict": False,
+            }
+
+        # Merge develop into release branch
+        try:
+            git(
+                "merge", "refs/remotes/origin/develop",
+                "--no-ff", "-m", commit_message,
+            )
+        except subprocess.CalledProcessError as exc:
+            output = f"{exc.output or ''}\n{exc.stderr or ''}"
+            if "CONFLICT" in output or "Automatic merge failed" in output:
+                return {
+                    "branch_created": False, "branch_existed": True,
+                    "merged": False, "no_updates": False, "conflict": True,
+                }
+            raise Exception(f"Git merge failed: {exc.stderr or exc.output}")
+
+        # Push merged result
+        git("push", "-q", "origin", f"HEAD:{release_branch}")
+
+        return {
+            "branch_created": False, "branch_existed": True,
+            "merged": True, "no_updates": False, "conflict": False,
+        }
+
+
+# ---------------------------------------------------------------------------
 # Stage 2 – branch management
 # ---------------------------------------------------------------------------
 
@@ -353,38 +472,39 @@ async def _run_stage2_repo(
     release_branch = f"release/{version}"
 
     try:
-        existing = await gitlab.get_branch(repo.project_id, release_branch)
-        if existing is None:
-            await gitlab.create_branch(repo.project_id, release_branch, "develop")
-            repo.branch_created = True
-        else:
-            repo.branch_existed = True
-
-        comparison = await gitlab.compare_branches(
-            repo.project_id, release_branch, "develop"
-        )
-        if not comparison.get("commits"):
-            repo.no_updates = True
-            repo.status = RepoStage2Status.SUCCESS
-        else:
-            result = await gitlab.merge_branches(
-                repo.project_id,
-                "develop",
-                release_branch,
-                f"Merge develop into release/{version}",
+        if not repo.web_url:
+            raise Exception(
+                f"Repository {repo.name!r} has no web_url — cannot perform git operations. "
+                "Re-add the repository to populate the URL."
             )
-            if result.get("conflict"):
-                repo.status = RepoStage2Status.CONFLICT
-            else:
-                repo.merged = True
-                repo.status = RepoStage2Status.SUCCESS
 
-        # Fetch latest pipeline for the release branch
+        # Clone locally, merge develop → release branch, push
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(
+            None,
+            _git_sync_develop_to_release,
+            repo.web_url,
+            gitlab_token,
+            release_branch,
+            f"Merge develop into release/{version}",
+        )
+
+        repo.branch_created = result["branch_created"]
+        repo.branch_existed = result["branch_existed"]
+        repo.merged        = result["merged"]
+        repo.no_updates    = result["no_updates"]
+
+        if result["conflict"]:
+            repo.status = RepoStage2Status.CONFLICT
+        else:
+            repo.status = RepoStage2Status.SUCCESS
+
+        # Fetch latest pipeline for the release branch (via API)
         try:
             pipeline = await gitlab.get_latest_pipeline_for_branch(repo.project_id, release_branch)
             if pipeline:
                 repo.pipeline_status = pipeline.get("status")
-                repo.pipeline_url = pipeline.get("web_url")
+                repo.pipeline_url    = pipeline.get("web_url")
         except Exception:
             pass  # Pipeline fetch failure should not block stage result
 
