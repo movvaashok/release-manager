@@ -587,7 +587,8 @@
           <div class="action-bar">
             <button mat-raised-button color="primary"
               (click)="runStage3()"
-              [disabled]="runningStage3 || !stage3HasPendingOrFailed">
+              [disabled]="runningStage3 || !stage3HasPendingOrFailed"
+              matTooltip="Creates MRs from release/{{ version }} → master">
               <mat-spinner *ngIf="runningStage3" diameter="18" style="display:inline-block;margin-right:6px;"></mat-spinner>
               <mat-icon *ngIf="!runningStage3">play_arrow</mat-icon>
               {{ runningStage3 ? 'Running…' : 'Run Stage 3' }}
@@ -597,7 +598,7 @@
               (click)="copyMRLinks()"
               matTooltip="Copy all MR URLs to clipboard">
               <mat-icon>content_copy</mat-icon>
-              Copy {{ mrLinkCount }} MR {{ mrLinkCount === 1 ? 'Link' : 'Links' }}
+              Copy MR Links
             </button>
             <button mat-stroked-button
               *ngIf="mrLinkCount > 0"
@@ -606,11 +607,8 @@
               matTooltip="Re-fetch merge status and pipeline for all MRs">
               <mat-spinner *ngIf="refreshingMrStatus" diameter="18" style="display:inline-block;margin-right:6px;"></mat-spinner>
               <mat-icon *ngIf="!refreshingMrStatus">refresh</mat-icon>
-              Refresh MR Status
+              MR Status
             </button>
-            <span style="font-size:13px;color:rgba(0,0,0,0.54);">
-              Creates MRs from release/{{ version }} → master
-            </span>
             <ng-container *ngIf="isPioneerProject">
               <button mat-stroked-button *ngIf="release.confluence_url"
                 (click)="refreshRaRequirements()"
