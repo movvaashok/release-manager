@@ -652,12 +652,13 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
   }
 
   copyMRLinks(): void {
-    const lines = this.release?.stage3
+    const mrLines = this.release?.stage3
       .filter(r => r.mr_url)
-      .map(r => `${r.name}: ${r.mr_url!}`)
+      .map(r => `🔗 ${r.name}: ${r.mr_url!}`)
       .join('\n') ?? '';
-    navigator.clipboard.writeText(lines).then(() => {
-      this.snackBar.open('MR links copied to clipboard.', 'Close', { duration: 3000 });
+    const message = `👋 Hi Everyone,\n\n🚀 Pioneer ${this.version}\nPlease review below MRs before CAB meeting.\n\n${mrLines}`;
+    navigator.clipboard.writeText(message).then(() => {
+      this.snackBar.open('MR message copied to clipboard.', 'Close', { duration: 3000 });
     });
   }
 

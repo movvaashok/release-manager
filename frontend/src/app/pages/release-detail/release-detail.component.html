@@ -596,9 +596,9 @@
             <button mat-stroked-button
               *ngIf="mrLinkCount > 0"
               (click)="copyMRLinks()"
-              matTooltip="Copy all MR URLs to clipboard">
+              matTooltip="Copy formatted MR review message to clipboard">
               <mat-icon>content_copy</mat-icon>
-              Copy MR Links
+              Copy MR Links ({{ mrLinkCount }})
             </button>
             <button mat-stroked-button
               *ngIf="mrLinkCount > 0"
