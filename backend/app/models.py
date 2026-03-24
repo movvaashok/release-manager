@@ -94,6 +94,8 @@ class Stage3Repo(BaseModel):
     ra_subtask_url: Optional[str] = None  # Jira subtask created under RA ticket after MR creation
     config_repo: Optional[str] = None  # Linked config repo name (from repo registry) — ephemeral
     config_repo_in_release: bool = False  # True if the config repo is already in this release — ephemeral
+    mr_state: Optional[str] = None        # GitLab MR state: opened / merged / closed
+    mr_merge_status: Optional[str] = None # GitLab merge_status: can_be_merged / cannot_be_merged / checking / unchecked
 
 
 class ReleaseState(BaseModel):

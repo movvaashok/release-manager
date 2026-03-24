@@ -91,7 +91,8 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
 
   stage1Columns = ['name', 'actions'];
   stage2Columns = ['name', 'status', 'branch_info', 'diff', 'pipeline', 'error', 'actions'];
-  stage3Columns = ['name', 'config_repo', 'status', 'mr', 'pipeline3', 'ra_subtask', 'error', 'actions'];
+  stage3Columns = ['name', 'status', 'mr', 'mr_readiness', 'pipeline3', 'error', 'actions'];
+  refreshingMrStatus = false;
   removingRepo: string | null = null;
 
   // Documentation tab
@@ -491,6 +492,40 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
         this.snackBar.open(`Retry failed for ${repo.name}.`, 'Close', { duration: 4000 });
       },
     });
+  }
+
+  refreshMrStatuses(): void {
+    this.refreshingMrStatus = true;
+    this.releaseService.refreshMrStatuses(this.version).subscribe({
+      next: (r) => {
+        this.release = r;
+        this.refreshingMrStatus = false;
+        this.snackBar.open('MR statuses refreshed.', 'Close', { duration: 3000 });
+      },
+      error: () => {
+        this.refreshingMrStatus = false;
+        this.snackBar.open('Failed to refresh MR statuses.', 'Close', { duration: 4000 });
+      },
+    });
+  }
+
+  mrReadiness(r: Stage3Repo): { icon: string; color: string; label: string } {
+    if (!r.mr_iid) return { icon: 'remove', color: '#bdbdbd', label: '–' };
+    if (r.mr_state === 'merged') return { icon: 'check_circle', color: '#2e7d32', label: 'Merged' };
+    if (r.mr_state === 'closed') return { icon: 'cancel', color: '#757575', label: 'Closed' };
+    const ms = r.mr_merge_status;
+    const pipe = r.pipeline_status;
+    if (ms === 'can_be_merged' && (pipe === 'success' || pipe === null))
+      return { icon: 'check_circle', color: '#2e7d32', label: 'Ready to merge' };
+    if (ms === 'can_be_merged' && (pipe === 'running' || pipe === 'pending'))
+      return { icon: 'hourglass_top', color: '#f57c00', label: 'Pipeline running' };
+    if (ms === 'can_be_merged' && pipe === 'failed')
+      return { icon: 'warning', color: '#c62828', label: 'Pipeline failed' };
+    if (ms === 'cannot_be_merged')
+      return { icon: 'error', color: '#c62828', label: 'Has conflicts' };
+    if (ms === 'checking' || ms === 'unchecked' || !ms)
+      return { icon: 'pending', color: '#9e9e9e', label: 'Checking…' };
+    return { icon: 'help_outline', color: '#9e9e9e', label: ms };
   }
 
   createRaSubtask(repo: Stage3Repo): void {

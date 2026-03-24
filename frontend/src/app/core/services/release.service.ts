@@ -87,6 +87,14 @@ export class ReleaseService {
     );
   }
 
+  refreshMrStatuses(version: string): Observable<ReleaseState> {
+    return this.http.post<ReleaseState>(
+      `${this.base}/releases/${version}/stage3/refresh-mr-status`,
+      {},
+      { params: this.p },
+    );
+  }
+
   getJiraStatus(version: string): Observable<JiraStatusSummary> {
     return this.http.get<JiraStatusSummary>(`${this.base}/releases/${version}/jira-status`, { params: this.p });
   }

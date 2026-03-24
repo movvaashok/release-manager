@@ -246,6 +246,26 @@
   }
 }
 
+.config-repo-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 6px;
+  padding: 1px 6px 1px 4px;
+  border-radius: 4px;
+  background: #fff3e0;
+  border: 1px solid #ffcc80;
+  color: #e65100;
+  font-size: 11px;
+  font-weight: 500;
+
+  mat-icon {
+    font-size: 12px;
+    width: 12px;
+    height: 12px;
+  }
+}
+
 .config-missing-badge {
   display: inline-flex;
   align-items: center;

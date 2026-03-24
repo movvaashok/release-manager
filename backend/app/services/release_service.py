@@ -582,8 +582,14 @@ async def _run_stage3_repo(
             repo.mr_iid = mr["iid"]
             repo.status = RepoStage3Status.SUCCESS
 
-        # Fetch latest pipeline for this MR
+        # Fetch MR details (state + merge_status) and latest pipeline
         if repo.mr_iid is not None:
+            try:
+                mr_detail = await gitlab.get_merge_request(repo.project_id, repo.mr_iid)
+                repo.mr_state = mr_detail.get("state")
+                repo.mr_merge_status = mr_detail.get("merge_status")
+            except Exception:
+                pass
             try:
                 pipeline = await gitlab.get_latest_pipeline_for_mr(repo.project_id, repo.mr_iid)
                 if pipeline:
@@ -597,6 +603,35 @@ async def _run_stage3_repo(
         repo.error = str(exc)
 
     return repo
+
+
+async def refresh_mr_statuses(project_id: str, version: str, gitlab_token: str) -> ReleaseState:
+    """Re-fetch MR state, merge_status, and pipeline for every stage-3 repo that has an MR."""
+    state = _load_release(project_id, version)
+    if state is None:
+        raise ValueError(f"Release {version} not found")
+
+    gitlab = get_gitlab_client(gitlab_token)
+
+    for repo in state.stage3:
+        if repo.mr_iid is None:
+            continue
+        try:
+            mr_detail = await gitlab.get_merge_request(repo.project_id, repo.mr_iid)
+            repo.mr_state = mr_detail.get("state")
+            repo.mr_merge_status = mr_detail.get("merge_status")
+        except Exception:
+            pass
+        try:
+            pipeline = await gitlab.get_latest_pipeline_for_mr(repo.project_id, repo.mr_iid)
+            if pipeline:
+                repo.pipeline_status = pipeline.get("status")
+                repo.pipeline_url = pipeline.get("web_url")
+        except Exception:
+            pass
+
+    _save_release(project_id, state)
+    return state
 
 
 async def run_stage3(project_id: str, version: str, gitlab_token: str) -> ReleaseState:

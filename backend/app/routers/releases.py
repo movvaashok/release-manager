@@ -242,6 +242,20 @@ async def retry_stage3_repo(
         raise HTTPException(status_code=404, detail=str(exc))
 
 
+@router.post("/{version}/stage3/refresh-mr-status", response_model=ReleaseState)
+async def refresh_mr_statuses(
+    version: str,
+    x_gitlab_token: str = Header(...),
+    project: str = Query("pioneer"),
+    x_username: str | None = Header(default=None),
+):
+    try:
+        state = await release_service.refresh_mr_statuses(project, version, x_gitlab_token)
+        return state
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+
 @router.post("/{version}/stage3/{repo_name}/ra-subtask", response_model=ReleaseState)
 async def create_ra_subtask(
     version: str,

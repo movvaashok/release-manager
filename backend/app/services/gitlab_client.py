@@ -163,6 +163,14 @@ class GitLabClient:
             resp.raise_for_status()
             return resp.json()
 
+    async def get_merge_request(self, project_id: int, mr_iid: int) -> Dict[str, Any]:
+        """Fetch a single MR by IID — includes state and merge_status fields."""
+        url = f"{self._base}/projects/{project_id}/merge_requests/{mr_iid}"
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(url, headers=self._headers, timeout=30)
+            resp.raise_for_status()
+            return resp.json()
+
     async def get_open_mrs(self, project_id: int) -> List[Dict[str, Any]]:
         """Return all open merge requests for a project (paginated, up to 100)."""
         url = f"{self._base}/projects/{project_id}/merge_requests"

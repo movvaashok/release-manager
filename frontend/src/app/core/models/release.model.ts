@@ -50,6 +50,8 @@ export interface Stage3Repo {
   ra_subtask_url: string | null;       // Jira subtask under RA ticket, created after MR
   config_repo: string | null;          // linked config repo name (from repo registry)
   config_repo_in_release: boolean;     // true when config repo is already in this release
+  mr_state: string | null;             // GitLab MR state: opened / merged / closed
+  mr_merge_status: string | null;      // can_be_merged / cannot_be_merged / checking / unchecked
 }
 
 export interface ReleaseState {
