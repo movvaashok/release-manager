@@ -450,8 +450,8 @@
               (click)="runStage2()"
               [disabled]="runningStage2 || runningDiffCheck || !stage2HasPendingOrFailed">
               <mat-spinner *ngIf="runningStage2" diameter="18" style="display:inline-block;margin-right:6px;"></mat-spinner>
-              <mat-icon *ngIf="!runningStage2">sync</mat-icon>
-              {{ runningStage2 ? 'Syncing…' : 'Sync All' }}
+              <mat-icon *ngIf="!runningStage2">download</mat-icon>
+              {{ runningStage2 ? 'Pulling…' : 'Pull All' }}
             </button>
             <button mat-stroked-button
               (click)="runDiffCheck()"
@@ -555,11 +555,11 @@
               <th mat-header-cell *matHeaderCellDef></th>
               <td mat-cell *matCellDef="let r" style="text-align:right;">
                 <button mat-icon-button color="accent"
-                  matTooltip="Sync this repository"
+                  matTooltip="Pull develop → release branch"
                   [disabled]="!!retryingRepo"
                   (click)="retryStage2Repo(r)">
                   <mat-spinner *ngIf="isRetrying('stage2', r.name)" diameter="18"></mat-spinner>
-                  <mat-icon *ngIf="!isRetrying('stage2', r.name)">sync</mat-icon>
+                  <mat-icon *ngIf="!isRetrying('stage2', r.name)">download</mat-icon>
                 </button>
               </td>
             </ng-container>
