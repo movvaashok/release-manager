@@ -163,29 +163,37 @@ class GitLabClient:
     async def get_latest_pipeline_for_branch(
         self, project_id: int, branch: str
     ) -> Optional[Dict[str, Any]]:
-        """Return the most recent pipeline object for *branch*, or None."""
+        """Return the most recent *branch* pipeline for *branch* (source != merge_request_event).
+
+        Fetches the last 20 pipelines for the ref and returns the first one that
+        was triggered by a push/web/api/schedule — not an MR event — so Stage 2
+        always shows the release-branch pipeline, not an MR pipeline that happened
+        to run on the same ref.
+        """
         url = f"{self._base}/projects/{project_id}/pipelines"
         async with httpx.AsyncClient() as client:
             resp = await client.get(
                 url,
                 headers=self._headers,
-                params={"ref": branch, "per_page": 1, "order_by": "id", "sort": "desc"},
+                params={"ref": branch, "per_page": 20, "order_by": "id", "sort": "desc"},
                 timeout=30,
             )
             resp.raise_for_status()
-            pipelines = resp.json()
-            return pipelines[0] if pipelines else None
+            for pipeline in resp.json():
+                if pipeline.get("source") != "merge_request_event":
+                    return pipeline
+            return None
 
     async def get_latest_pipeline_for_mr(
         self, project_id: int, mr_iid: int
     ) -> Optional[Dict[str, Any]]:
-        """Return the most recent pipeline object for a merge request, or None."""
+        """Return the most recent MR pipeline for a merge request, or None."""
         url = f"{self._base}/projects/{project_id}/merge_requests/{mr_iid}/pipelines"
         async with httpx.AsyncClient() as client:
             resp = await client.get(
                 url,
                 headers=self._headers,
-                params={"per_page": 1},
+                params={"per_page": 1, "order_by": "id", "sort": "desc"},
                 timeout=30,
             )
             resp.raise_for_status()
