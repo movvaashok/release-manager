@@ -18,6 +18,7 @@ from app.services import confluence_client
 from app.services import jira_client
 from app.services import config_mr_service
 from app.services import deployment_status
+from app.services import pod_logs
 
 router = APIRouter(prefix="/releases", tags=["releases"])
 
@@ -609,3 +610,14 @@ async def get_deployment_status(version: str, project: str = Query("pioneer")):
     No release version validation required — just shows current state of all deployments.
     """
     return deployment_status.get_dev_deployments()
+
+
+@router.get("/{version}/deployment-logs/{service_name}")
+async def get_deployment_logs(version: str, service_name: str, project: str = Query("pioneer")):
+    """
+    Get logs from all pods of a specific service in dev namespace.
+
+    Returns logs from all running pods for the given service, with timestamps.
+    Automatically determines pod names from service deployment labels.
+    """
+    return await pod_logs.get_service_logs("dev", service_name)

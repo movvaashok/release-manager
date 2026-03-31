@@ -101,6 +101,9 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
   loadingDeploymentStatus = false;
   deploymentStatusNextRefresh: Date | null = null;
   private deploymentStatusRefreshInterval: any = null;
+  expandedDeployments = new Set<string>();
+  deploymentLogs = new Map<string, any>();
+  loadingDeploymentLogs = new Map<string, boolean>();
 
   // Documentation tab
   editingDocs = false;
@@ -559,6 +562,81 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
         error: () => { /* silent */ },
       });
     }, 3 * 60 * 1000);
+  }
+
+  toggleDeploymentExpansion(deploymentName: string): void {
+    if (this.expandedDeployments.has(deploymentName)) {
+      this.expandedDeployments.delete(deploymentName);
+    } else {
+      this.expandedDeployments.add(deploymentName);
+      // Load logs when expanding
+      this.loadDeploymentLogs(deploymentName);
+    }
+  }
+
+  isDeploymentExpanded(deploymentName: string): boolean {
+    return this.expandedDeployments.has(deploymentName);
+  }
+
+  loadDeploymentLogs(serviceName: string): void {
+    // Don't reload if already loaded
+    if (this.deploymentLogs.has(serviceName)) {
+      return;
+    }
+
+    this.loadingDeploymentLogs.set(serviceName, true);
+    this.releaseService.getPodLogs(this.version, serviceName).subscribe({
+      next: (data) => {
+        this.deploymentLogs.set(serviceName, data);
+        this.loadingDeploymentLogs.set(serviceName, false);
+      },
+      error: () => {
+        this.deploymentLogs.set(serviceName, {
+          success: false,
+          message: 'Failed to load logs',
+          error: 'Unable to retrieve logs for this service'
+        });
+        this.loadingDeploymentLogs.set(serviceName, false);
+      },
+    });
+  }
+
+  downloadDeploymentLogs(serviceName: string): void {
+    const logsData = this.deploymentLogs.get(serviceName);
+    if (!logsData || !logsData.logs) {
+      this.snackBar.open('No logs available for download.', 'Close', { duration: 3000 });
+      return;
+    }
+
+    // Create a formatted log file
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `${serviceName}-logs-${timestamp}.txt`;
+
+    let content = `Service: ${serviceName}\n`;
+    content += `Retrieved: ${new Date().toISOString()}\n`;
+    content += `${'='.repeat(80)}\n\n`;
+
+    // Add logs from each pod
+    for (const [podName, podLogs] of Object.entries(logsData.logs as any)) {
+      content += `\n${'─'.repeat(80)}\n`;
+      content += `Pod: ${podName}\n`;
+      content += `Timestamp: ${(podLogs as any).timestamp}\n`;
+      content += `${'─'.repeat(80)}\n`;
+      content += (podLogs as any).logs + '\n';
+    }
+
+    // Create blob and download
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+
+    this.snackBar.open(`Logs downloaded as ${filename}`, 'Close', { duration: 3000 });
   }
 
   mrReadiness(r: Stage3Repo): { icon: string; color: string; label: string } {

@@ -948,11 +948,63 @@
                 </td>
               </ng-container>
 
-              <tr mat-header-row *matHeaderRowDef="deploymentStatusColumns"></tr>
-              <tr mat-row *matRowDef="let row; columns: deploymentStatusColumns;"
-                  [class.row-restart-warn]="row.total_restarts > 0"
-                  [class.row-unhealthy]="row.ready_replicas < row.desired_replicas">
-              </tr>
+              <ng-container matColumnDef="actions">
+                <th mat-header-cell *matHeaderCellDef style="width:120px;text-align:right;">Actions</th>
+                <td mat-cell *matCellDef="let r" style="text-align:right;">
+                  <button mat-icon-button
+                          (click)="toggleDeploymentExpansion(r.name)"
+                          [matTooltip]="isDeploymentExpanded(r.name) ? 'Hide logs' : 'View logs'">
+                    <mat-icon>{{ isDeploymentExpanded(r.name) ? 'expand_less' : 'expand_more' }}</mat-icon>
+                  </button>
+                  <button mat-icon-button
+                          (click)="downloadDeploymentLogs(r.name)"
+                          [disabled]="!deploymentLogs.has(r.name)"
+                          matTooltip="Download logs as file">
+                    <mat-icon>download</mat-icon>
+                  </button>
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="['name', 'replicas', 'restarts', 'image', 'actions']"></tr>
+              <ng-container *matRowDef="let row; columns: ['name', 'replicas', 'restarts', 'image', 'actions'];">
+                <tr [class.row-restart-warn]="row.total_restarts > 0"
+                    [class.row-unhealthy]="row.ready_replicas < row.desired_replicas"></tr>
+                <!-- Expanded logs row -->
+                <tr *ngIf="isDeploymentExpanded(row.name)" style="display:table-row;">
+                  <td [attr.colspan]="5" style="padding:0;">
+                    <div style="padding:16px;background:#f5f5f5;border-top:1px solid #ddd;">
+                      <div *ngIf="loadingDeploymentLogs.get(row.name)" style="text-align:center;padding:20px;">
+                        <mat-spinner diameter="30"></mat-spinner>
+                        <p style="margin-top:12px;font-size:12px;color:rgba(0,0,0,0.54);">Loading logs...</p>
+                      </div>
+
+                      <div *ngIf="!loadingDeploymentLogs.get(row.name) && deploymentLogs.get(row.name) as logs">
+                        <!-- Error state -->
+                        <div *ngIf="!logs.success" style="color:#c62828;padding:12px;background:#ffebee;border-radius:4px;">
+                          <mat-icon style="vertical-align:middle;margin-right:8px;">error</mat-icon>
+                          {{ logs.message }}
+                          <div style="font-size:11px;margin-top:8px;">{{ logs.error }}</div>
+                        </div>
+
+                        <!-- Success state - show logs per pod -->
+                        <div *ngIf="logs.success">
+                          <div *ngIf="!(logs.logs | keyvalue).length"
+                               style="padding:12px;color:rgba(0,0,0,0.54);font-size:12px;">
+                            No logs available for this service.
+                          </div>
+
+                          <div *ngFor="let item of logs.logs | keyvalue" style="margin-bottom:16px;">
+                            <div style="font-weight:500;font-size:12px;color:#333;margin-bottom:4px;">
+                              {{ item.key }}
+                            </div>
+                            <pre style="background:#fff;padding:12px;border:1px solid #ddd;border-radius:3px;font-size:11px;max-height:300px;overflow-y:auto;margin:0;">{{item.value.logs}}</pre>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </ng-container>
             </table>
 
             <!-- Pod details expandable -->

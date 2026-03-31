@@ -229,4 +229,8 @@ export class ReleaseService {
   getDeploymentStatus(version: string): Observable<any> {
     return this.http.get<any>(`${this.base}/releases/${version}/deployment-status`, { params: this.p });
   }
+
+  getPodLogs(version: string, serviceName: string): Observable<any> {
+    return this.http.get<any>(`${this.base}/releases/${version}/deployment-logs/${serviceName}`, { params: this.p });
+  }
 }
