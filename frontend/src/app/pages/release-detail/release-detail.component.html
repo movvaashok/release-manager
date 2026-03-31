@@ -1004,7 +1004,7 @@
                       <div style="font-weight:500;font-size:12px;color:#333;margin-bottom:4px;">
                         {{ item.key }}
                       </div>
-                      <pre style="background:#fff;padding:12px;border:1px solid #ddd;border-radius:3px;font-size:11px;max-height:300px;overflow-y:auto;margin:0;font-family:monospace;">{{item.value.logs}}</pre>
+                      <pre style="background:#fff;padding:12px;border:1px solid #ddd;border-radius:3px;font-size:11px;max-height:300px;overflow-y:auto;margin:0;font-family:monospace;">{{($any(item.value)).logs}}</pre>
                     </div>
                   </div>
                 </div>
