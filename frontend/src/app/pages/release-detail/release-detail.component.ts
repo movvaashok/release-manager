@@ -578,6 +578,10 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
     return this.expandedDeployments.has(deploymentName);
   }
 
+  hasDeploymentLogs(deploymentName: string): boolean {
+    return this.deploymentLogs.has(deploymentName);
+  }
+
   loadDeploymentLogs(serviceName: string): void {
     // Don't reload if already loaded
     if (this.deploymentLogs.has(serviceName)) {
