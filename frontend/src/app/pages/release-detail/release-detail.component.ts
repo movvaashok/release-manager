@@ -92,8 +92,15 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
   stage1Columns = ['name', 'actions'];
   stage2Columns = ['name', 'status', 'branch_info', 'diff', 'pipeline', 'error', 'actions'];
   stage3Columns = ['name', 'status', 'mr', 'mr_readiness', 'pipeline3', 'error', 'actions'];
+  deploymentStatusColumns = ['name', 'replicas', 'restarts', 'image'];
   refreshingMrStatus = false;
   removingRepo: string | null = null;
+
+  // Deployment Status tab
+  deploymentStatus: any = null;
+  loadingDeploymentStatus = false;
+  deploymentStatusNextRefresh: Date | null = null;
+  private deploymentStatusRefreshInterval: any = null;
 
   // Documentation tab
   editingDocs = false;
@@ -197,6 +204,10 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
     if (this.pollTimer) {
       clearInterval(this.pollTimer);
       this.pollTimer = null;
+    }
+    if (this.deploymentStatusRefreshInterval) {
+      clearInterval(this.deploymentStatusRefreshInterval);
+      this.deploymentStatusRefreshInterval = null;
     }
   }
 
@@ -320,12 +331,17 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
   }
 
   onTabChanged(index: number): void {
-    // Tab order: 0=Jira Status, 1=Stage1, 2=Stage2, 3=Stage3(admin), 4=Documentation
-    // (when not admin, Stage3 is hidden so Documentation shifts to index 3)
+    // Tab order: 0=Jira Status, 1=Stage1, 2=Stage2, 3=Stage3(admin), 4=Deployment Status, 5=Documentation(admin)
+    // (when not admin, Stage3 is hidden so Deployment Status shifts to 3, Documentation to 4)
     if (index === 0) {
       if (!this.jiraStatus && !this.loadingJiraStatus) this.loadJiraStatus();
     }
-    const docIndex = this.isAdmin ? 4 : 3;
+    const deploymentStatusIndex = this.isAdmin ? 4 : 3;
+    if (index === deploymentStatusIndex) {
+      if (!this.deploymentStatus && !this.loadingDeploymentStatus) this.refreshDeploymentStatus();
+      this.setDeploymentStatusRefreshTimer();
+    }
+    const docIndex = this.isAdmin ? 5 : 4;
     if (index === docIndex) this.onDocTabSelected();
   }
 
@@ -508,6 +524,41 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
         this.snackBar.open('Failed to refresh MR statuses.', 'Close', { duration: 4000 });
       },
     });
+  }
+
+  refreshDeploymentStatus(): void {
+    this.loadingDeploymentStatus = true;
+    this.releaseService.getDeploymentStatus(this.version).subscribe({
+      next: (r) => {
+        this.deploymentStatus = r;
+        this.loadingDeploymentStatus = false;
+        this.setDeploymentStatusRefreshTimer();
+      },
+      error: () => {
+        this.loadingDeploymentStatus = false;
+        this.snackBar.open('Failed to load deployment status.', 'Close', { duration: 4000 });
+      },
+    });
+  }
+
+  private setDeploymentStatusRefreshTimer(): void {
+    // Clear existing timer if any
+    if (this.deploymentStatusRefreshInterval) {
+      clearInterval(this.deploymentStatusRefreshInterval);
+      this.deploymentStatusRefreshInterval = null;
+    }
+    // Set next refresh time to 3 minutes from now
+    this.deploymentStatusNextRefresh = new Date(Date.now() + 3 * 60 * 1000);
+    // Start auto-refresh every 3 minutes
+    this.deploymentStatusRefreshInterval = setInterval(() => {
+      this.releaseService.getDeploymentStatus(this.version).subscribe({
+        next: (r) => {
+          this.deploymentStatus = r;
+          this.deploymentStatusNextRefresh = new Date(Date.now() + 3 * 60 * 1000);
+        },
+        error: () => { /* silent */ },
+      });
+    }, 3 * 60 * 1000);
   }
 
   mrReadiness(r: Stage3Repo): { icon: string; color: string; label: string } {

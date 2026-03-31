@@ -17,6 +17,7 @@ from app.services import audit_service
 from app.services import confluence_client
 from app.services import jira_client
 from app.services import config_mr_service
+from app.services import deployment_status
 
 router = APIRouter(prefix="/releases", tags=["releases"])
 
@@ -597,3 +598,14 @@ def get_audit_logs(
     )
     users = audit_service.get_all_usernames(project, version)
     return {"logs": logs, "users": users}
+
+
+@router.get("/{version}/deployment-status")
+async def get_deployment_status(version: str, project: str = Query("pioneer")):
+    """
+    Get Kubernetes deployment status for dev namespace.
+
+    Shows all services in dev environment, pod status, restart counts, and image tags.
+    No release version validation required — just shows current state of all deployments.
+    """
+    return deployment_status.get_dev_deployments()

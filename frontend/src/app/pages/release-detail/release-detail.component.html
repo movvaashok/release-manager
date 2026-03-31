@@ -872,6 +872,109 @@
         </div>
       </mat-tab>
 
+      <!-- ─────────────────────────────────────────────────────────────────
+           Deployment Status tab (dev environment)
+      ──────────────────────────────────────────────────────────────────── -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-icon">cloud_queue</mat-icon>
+          Deployment Status
+        </ng-template>
+
+        <div class="tab-content">
+          <div class="action-bar">
+            <button mat-raised-button
+              (click)="refreshDeploymentStatus()"
+              [disabled]="loadingDeploymentStatus"
+              style="gap:8px;">
+              <mat-spinner *ngIf="loadingDeploymentStatus" diameter="18" style="display:inline-block;"></mat-spinner>
+              <mat-icon *ngIf="!loadingDeploymentStatus">refresh</mat-icon>
+              Refresh
+            </button>
+            <span style="font-size:13px;color:rgba(0,0,0,0.54);">
+              Next auto-refresh: {{ deploymentStatusNextRefresh | date:'short' }}
+            </span>
+          </div>
+
+          <!-- kubectl not available -->
+          <div *ngIf="deploymentStatus && !deploymentStatus.kubectl_available"
+               style="padding:20px;background:#fff3cd;border-left:4px solid #ffc107;margin-bottom:20px;">
+            <mat-icon style="color:#ff9800;vertical-align:middle;margin-right:8px;">warning</mat-icon>
+            <strong style="color:#856404;">kubectl not installed</strong>
+            <p style="margin:8px 0 0 0;color:#856404;font-size:13px;">
+              {{ deploymentStatus.message }}
+            </p>
+          </div>
+
+          <!-- Deployments table -->
+          <ng-container *ngIf="deploymentStatus && deploymentStatus.kubectl_available">
+            <div style="padding:0 16px 16px;">
+              <strong>{{ deploymentStatus.namespace }}</strong> environment
+            </div>
+            <table mat-table [dataSource]="deploymentStatus.deployments || []" class="full-width">
+
+              <ng-container matColumnDef="name">
+                <th mat-header-cell *matHeaderCellDef>Service Name</th>
+                <td mat-cell *matCellDef="let r">{{ r.name }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="replicas">
+                <th mat-header-cell *matHeaderCellDef>Replicas</th>
+                <td mat-cell *matCellDef="let r">
+                  <span [class.replica-warn]="r.ready_replicas < r.desired_replicas">
+                    {{ r.ready_replicas }}/{{ r.desired_replicas }}
+                  </span>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="restarts">
+                <th mat-header-cell *matHeaderCellDef style="width:80px;">Restarts</th>
+                <td mat-cell *matCellDef="let r">
+                  <span *ngIf="r.total_restarts === 0" style="color:#2e7d32;font-weight:500;">
+                    {{ r.total_restarts }}
+                  </span>
+                  <span *ngIf="r.total_restarts > 0"
+                        style="color:#c62828;font-weight:600;background:#ffebee;padding:2px 6px;border-radius:3px;">
+                    <mat-icon style="font-size:14px;width:14px;height:14px;vertical-align:middle;">warning</mat-icon>
+                    {{ r.total_restarts }}
+                  </span>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="image">
+                <th mat-header-cell *matHeaderCellDef>Image Tag</th>
+                <td mat-cell *matCellDef="let r" style="font-size:11px;font-family:monospace;color:#666;max-width:300px;overflow:hidden;text-overflow:ellipsis;">
+                  {{ r.image.split(':')[1] || 'unknown' }}
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="deploymentStatusColumns"></tr>
+              <tr mat-row *matRowDef="let row; columns: deploymentStatusColumns;"
+                  [class.row-restart-warn]="row.total_restarts > 0"
+                  [class.row-unhealthy]="row.ready_replicas < row.desired_replicas">
+              </tr>
+            </table>
+
+            <!-- Pod details expandable -->
+            <div *ngIf="deploymentStatus.deployments && deploymentStatus.deployments.length > 0"
+                 style="padding:16px;font-size:12px;color:rgba(0,0,0,0.6);">
+              <strong style="display:block;margin-bottom:8px;">Pod Details:</strong>
+              <ng-container *ngFor="let dep of deploymentStatus.deployments">
+                <div *ngIf="dep.total_restarts > 0" style="margin-bottom:12px;padding:8px;background:#fafafa;border-left:3px solid #ff9800;">
+                  <strong>{{ dep.name }}</strong> ({{ dep.total_restarts }} restarts)
+                  <div style="margin-top:4px;font-size:11px;">
+                    <div *ngFor="let pod of dep.pod_status">
+                      {{ pod.name }}: {{ pod.restarts }} restart{{ pod.restarts !== 1 ? 's' : '' }}
+                    </div>
+                  </div>
+                </div>
+              </ng-container>
+            </div>
+          </ng-container>
+
+        </div>
+      </mat-tab>
+
     </mat-tab-group>
   </ng-container>
 </div>

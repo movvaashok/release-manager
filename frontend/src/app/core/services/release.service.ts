@@ -225,4 +225,8 @@ export class ReleaseService {
       { params: this.p },
     );
   }
+
+  getDeploymentStatus(version: string): Observable<any> {
+    return this.http.get<any>(`${this.base}/releases/${version}/deployment-status`, { params: this.p });
+  }
 }
