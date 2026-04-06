@@ -807,11 +807,17 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
   }
 
   openAllServiceMrs(): void {
-    if (!this.release) return;
+    console.log('[DEBUG] openAllServiceMrs() called');
+    if (!this.release) {
+      console.log('[DEBUG] No release data');
+      return;
+    }
 
     const mrUrls = this.release.stage3
       .filter(r => r.mr_url)
       .map(r => r.mr_url!);
+
+    console.log('[DEBUG] Found service MR URLs:', mrUrls.length, mrUrls);
 
     if (mrUrls.length === 0) {
       this.snackBar.open('No service MR links available to open.', 'Close', { duration: 3000 });
@@ -844,43 +850,42 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
   }
 
   private openUrlsInTabs(urls: string[], label: string): void {
+    console.log(`[MR Opener] Starting to open ${urls.length} URLs...`);
+
     let openedCount = 0;
     const failedUrls: string[] = [];
 
-    console.log(`[MR Opener] Starting to open ${urls.length} URLs with delays...`);
-
+    // Try opening all without setTimeout first (user gesture intact)
     urls.forEach((url, index) => {
-      // Increase delay for Safari compatibility - use 300ms between tabs
-      setTimeout(() => {
-        console.log(`[MR Opener] Opening URL ${index + 1}/${urls.length}: ${url}`);
-        try {
-          const opened = window.open(url, '_blank');
-          if (opened) {
-            openedCount++;
-            console.log(`[MR Opener] Successfully opened tab ${index + 1}`);
-          } else {
-            failedUrls.push(url);
-            console.warn(`[MR Opener] Tab ${index + 1} blocked (window.open returned null)`);
-          }
-        } catch (error) {
+      console.log(`[MR Opener] Opening URL ${index + 1}/${urls.length}: ${url}`);
+      try {
+        const opened = window.open(url, '_blank');
+        if (opened) {
+          openedCount++;
+          console.log(`[MR Opener] Successfully opened tab ${index + 1}`);
+        } else {
           failedUrls.push(url);
-          console.error(`[MR Opener] Error opening tab ${index + 1}:`, error);
+          console.warn(`[MR Opener] Tab ${index + 1} blocked (window.open returned null)`);
         }
-      }, index * 300); // 300ms delay between each tab (increased from 200ms)
+      } catch (error) {
+        failedUrls.push(url);
+        console.error(`[MR Opener] Error opening tab ${index + 1}:`, error);
+      }
     });
 
-    // Show success message after all tabs are opened
-    setTimeout(() => {
-      console.log(`[MR Opener] Completed. Opened: ${openedCount}/${urls.length}`);
+    // Show success message immediately
+    console.log(`[MR Opener] Completed. Opened: ${openedCount}/${urls.length}`);
 
-      if (openedCount === urls.length) {
-        const message = `✅ Opened ${urls.length} ${label} in new tab${urls.length !== 1 ? 's' : ''}.`;
-        this.snackBar.open(message, 'Close', { duration: 4000 });
-      } else {
-        const message = `⚠️ Opened ${openedCount} of ${urls.length} ${label}. ${failedUrls.length} blocked by pop-up blocker.\n\nCheck Safari Preferences → Security → "Block pop-ups" (should be unchecked).`;
-        this.snackBar.open(message, 'Close', { duration: 6000 });
-      }
-    }, urls.length * 300 + 500);
+    if (openedCount === urls.length) {
+      const message = `✅ Opened ${urls.length} ${label} in new tab${urls.length !== 1 ? 's' : ''}.`;
+      this.snackBar.open(message, 'Close', { duration: 4000 });
+    } else if (openedCount === 0) {
+      const message = `❌ All tabs blocked by pop-up blocker.\n\nSafari Fix:\n1. Safari Menu → Preferences\n2. Security Tab\n3. Uncheck "Block pop-ups"\n4. Try again`;
+      this.snackBar.open(message, 'Close', { duration: 6000 });
+    } else {
+      const message = `⚠️ Opened ${openedCount} of ${urls.length} ${label}. ${failedUrls.length} blocked.`;
+      this.snackBar.open(message, 'Close', { duration: 4000 });
+    }
   }
 
   copyMRLinks(): void {
