@@ -82,6 +82,31 @@ def delete_release(
         raise HTTPException(status_code=404, detail=str(exc))
 
 
+@router.get("/repo-mappings", response_model=dict)
+def get_repo_mappings():
+    """Get all repo-to-component name mappings."""
+    return repo_mapping.get_all_mappings()
+
+
+@router.post("/repo-mappings")
+def set_repo_mapping(repo_name: str = Query(...), component_name: str = Query(...)):
+    """Create or update a repo-to-component name mapping.
+
+    Args:
+        repo_name: GitLab repository name
+        component_name: Confluence component name
+    """
+    repo_mapping.set_mapping(repo_name, component_name)
+    return {"success": True, "repo_name": repo_name, "component_name": component_name}
+
+
+@router.delete("/repo-mappings/{repo_name}")
+def delete_repo_mapping(repo_name: str):
+    """Delete a repo-to-component name mapping."""
+    repo_mapping.delete_mapping(repo_name)
+    return {"success": True, "deleted": repo_name}
+
+
 @router.get("/{version}", response_model=ReleaseState)
 def get_release(version: str, project: str = Query("pioneer")):
     state = release_service.get_release(project, version)
@@ -634,33 +659,6 @@ async def get_deployment_logs(version: str, service_name: str, project: str = Qu
     Automatically determines pod names from service deployment labels.
     """
     return await pod_logs.get_service_logs("dev", service_name)
-
-
-# ── Repo to Component Name Mappings ────────────────────────────────────────────
-
-@router.get("/repo-mappings", response_model=dict)
-def get_repo_mappings():
-    """Get all repo-to-component name mappings."""
-    return repo_mapping.get_all_mappings()
-
-
-@router.post("/repo-mappings")
-def set_repo_mapping(repo_name: str = Query(...), component_name: str = Query(...)):
-    """Create or update a repo-to-component name mapping.
-
-    Args:
-        repo_name: GitLab repository name
-        component_name: Confluence component name
-    """
-    repo_mapping.set_mapping(repo_name, component_name)
-    return {"success": True, "repo_name": repo_name, "component_name": component_name}
-
-
-@router.delete("/repo-mappings/{repo_name}")
-def delete_repo_mapping(repo_name: str):
-    """Delete a repo-to-component name mapping."""
-    repo_mapping.delete_mapping(repo_name)
-    return {"success": True, "deleted": repo_name}
 
 
 @router.post("/{version}/update-confluence-mrs")
