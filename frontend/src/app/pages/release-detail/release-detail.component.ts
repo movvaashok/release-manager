@@ -818,8 +818,7 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
       return;
     }
 
-    mrUrls.forEach(url => window.open(url, '_blank'));
-    this.snackBar.open(`Opened ${mrUrls.length} service MR${mrUrls.length !== 1 ? 's' : ''} in new tab${mrUrls.length !== 1 ? 's' : ''}.`, 'Close', { duration: 3000 });
+    this.openUrlsInTabs(mrUrls, `service MR${mrUrls.length !== 1 ? 's' : ''}`);
   }
 
   openAllMrs(): void {
@@ -841,8 +840,28 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
       return;
     }
 
-    allUrls.forEach(url => window.open(url, '_blank'));
-    this.snackBar.open(`Opened ${allUrls.length} MR${allUrls.length !== 1 ? 's' : ''} in new tab${allUrls.length !== 1 ? 's' : ''}.`, 'Close', { duration: 3000 });
+    this.openUrlsInTabs(allUrls, `MR${allUrls.length !== 1 ? 's' : ''}`);
+  }
+
+  private openUrlsInTabs(urls: string[], label: string): void {
+    let openedCount = 0;
+    urls.forEach((url, index) => {
+      // Add small delay between opening tabs to avoid browser pop-up blocking
+      setTimeout(() => {
+        const opened = window.open(url, '_blank');
+        if (opened) {
+          openedCount++;
+        }
+      }, index * 200); // 200ms delay between each tab
+    });
+
+    // Show success message after all tabs are opened
+    setTimeout(() => {
+      const message = openedCount === urls.length
+        ? `Opened ${urls.length} ${label} in new tab${urls.length !== 1 ? 's' : ''}.`
+        : `Opened ${openedCount} of ${urls.length} ${label}. ${urls.length - openedCount} may have been blocked by pop-up blocker.`;
+      this.snackBar.open(message, 'Close', { duration: 4000 });
+    }, urls.length * 200);
   }
 
   copyMRLinks(): void {
