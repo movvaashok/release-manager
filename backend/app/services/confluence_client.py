@@ -405,7 +405,7 @@ async def update_mr_links(
                 # Clear the cell and add the MR link
                 mr_cell.clear()
                 link_tag = soup.new_tag("a", href=mr_url)
-                link_tag.string = mr_url.split("/")[-1]  # Show MR number
+                link_tag.string = mr_url  # Show full MR URL
                 mr_cell.append(link_tag)
                 updated = True
 
