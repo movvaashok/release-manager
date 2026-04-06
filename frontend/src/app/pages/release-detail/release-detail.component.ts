@@ -924,6 +924,35 @@ ALTERNATIVE (if you prefer not to disable pop-up blocker):
     alert(instructions);
   }
 
+  updateConfluencePage(): void {
+    if (!this.release?.confluence_url) {
+      this.snackBar.open('No Confluence URL configured for this release.', 'Close', { duration: 3000 });
+      return;
+    }
+
+    this.releaseService.updateConfluenceMrs(this.version).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.snackBar.open(
+            `✅ ${response.message}`,
+            'Close',
+            { duration: 4000 }
+          );
+        } else {
+          this.snackBar.open(
+            `❌ ${response.message}`,
+            'Close',
+            { duration: 4000 }
+          );
+        }
+      },
+      error: (error) => {
+        const errorMsg = error?.error?.detail || 'Failed to update Confluence page';
+        this.snackBar.open(errorMsg, 'Close', { duration: 4000 });
+      },
+    });
+  }
+
   copyMRLinks(): void {
     if (!this.release) return;
 

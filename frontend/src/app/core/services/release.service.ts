@@ -237,4 +237,24 @@ export class ReleaseService {
   getTrackedConfigMrs(version: string): Observable<any> {
     return this.http.get<any>(`${this.base}/releases/${version}/config-mrs/tracked`, { params: this.p });
   }
+
+  getRepoMappings(): Observable<any> {
+    return this.http.get<any>(`${this.base}/repo-mappings`, { params: this.p });
+  }
+
+  setRepoMapping(repoName: string, componentName: string): Observable<any> {
+    return this.http.post<any>(
+      `${this.base}/repo-mappings`,
+      null,
+      { params: { ...this.p, repo_name: repoName, component_name: componentName } }
+    );
+  }
+
+  deleteRepoMapping(repoName: string): Observable<any> {
+    return this.http.delete<any>(`${this.base}/repo-mappings/${repoName}`, { params: this.p });
+  }
+
+  updateConfluenceMrs(version: string): Observable<any> {
+    return this.http.post<any>(`${this.base}/releases/${version}/update-confluence-mrs`, {}, { params: this.p });
+  }
 }

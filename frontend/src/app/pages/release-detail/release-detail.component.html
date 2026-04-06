@@ -601,11 +601,11 @@
               Copy MR Links ({{ mrLinkCount }})
             </button>
             <button mat-stroked-button
-              *ngIf="hasServiceMrs()"
-              (click)="openAllServiceMrs()"
-              matTooltip="Open all service MRs in new browser tabs">
-              <mat-icon>open_in_new</mat-icon>
-              Open Service MRs
+              *ngIf="release?.confluence_url"
+              (click)="updateConfluencePage()"
+              matTooltip="Update Confluence release page with MR links">
+              <mat-icon>description</mat-icon>
+              Update Confluence
             </button>
             <button mat-stroked-button
               *ngIf="mrLinkCount > 0"
