@@ -309,12 +309,17 @@ async def update_mr_links(
 
     page_data = resp.json()
     current_version = page_data.get("version", {}).get("number", 0)
+    page_title = page_data.get("title", "")
     html_content = page_data.get("body", {}).get("storage", {}).get("value", "")
 
-    logger.info(f"Page version: {current_version}, HTML content length: {len(html_content)}")
+    logger.info(f"Page title: {page_title}, version: {current_version}, HTML content length: {len(html_content)}")
 
     if not html_content:
         logger.error("No HTML content found in page")
+        return False
+
+    if not page_title:
+        logger.error("No page title found in page data")
         return False
 
     # Step 2: Parse HTML and find the right table (under "Release Packages" section)
@@ -425,8 +430,9 @@ async def update_mr_links(
         logger.debug(f"Generated HTML preview: {new_html[:500]}...")
 
         update_body = {
-            "version": {"number": current_version + 1},
+            "title": page_title,
             "type": "page",
+            "version": {"number": current_version + 1},
             "body": {"storage": {"value": new_html, "representation": "storage"}},
         }
 
