@@ -317,12 +317,37 @@ async def update_mr_links(
         logger.error("No HTML content found in page")
         return False
 
-    # Step 2: Parse HTML and find the right table
+    # Step 2: Parse HTML and find the right table (under "Release Packages" section)
     soup = BeautifulSoup(html_content, "html.parser")
     tables = soup.find_all("table")
     logger.info(f"Found {len(tables)} table(s) in page")
 
-    for table_idx, table in enumerate(tables):
+    # Try to find the table under "Release Packages" section first
+    release_packages_heading = None
+    for heading in soup.find_all(["h1", "h2", "h3", "h4", "h5", "h6"]):
+        if "release package" in heading.get_text(strip=True).lower():
+            release_packages_heading = heading
+            logger.info(f"Found 'Release Packages' section heading")
+            break
+
+    # Start table search from Release Packages section if found, otherwise search all tables
+    tables_to_search = []
+    if release_packages_heading:
+        # Find all tables after the Release Packages heading
+        current = release_packages_heading.find_next()
+        while current:
+            if current.name == "table":
+                tables_to_search.append(current)
+            # Stop searching if we hit another heading at same or higher level
+            if current.name in ["h1", "h2", "h3", "h4", "h5", "h6"]:
+                break
+            current = current.find_next()
+        logger.info(f"Found {len(tables_to_search)} table(s) under Release Packages section")
+    else:
+        logger.warning("'Release Packages' section not found, searching all tables")
+        tables_to_search = tables
+
+    for table_idx, table in enumerate(tables_to_search):
         rows = table.find_all("tr")
         if not rows:
             continue

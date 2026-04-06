@@ -926,8 +926,30 @@ async def extract_components_from_confluence(page_url: str = Query(...)):
                     "error": "Page does not contain any tables",
                 }
 
+            # Try to find the table under "Release Packages" section first
+            release_packages_heading = None
+            for heading in soup.find_all(["h1", "h2", "h3", "h4", "h5", "h6"]):
+                if "release package" in heading.get_text(strip=True).lower():
+                    release_packages_heading = heading
+                    break
+
+            # Start table search from Release Packages section if found
+            tables_to_search = []
+            if release_packages_heading:
+                # Find all tables after the Release Packages heading
+                current = release_packages_heading.find_next()
+                while current:
+                    if current.name == "table":
+                        tables_to_search.append(current)
+                    # Stop searching if we hit another heading at same or higher level
+                    if current.name in ["h1", "h2", "h3", "h4", "h5", "h6"]:
+                        break
+                    current = current.find_next()
+            else:
+                tables_to_search = tables
+
             # Search for table with Component column
-            for table in tables:
+            for table in tables_to_search:
                 rows = table.find_all("tr")
                 if not rows:
                     continue
