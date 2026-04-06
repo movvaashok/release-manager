@@ -77,7 +77,7 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
   runningDiffCheck = false;
   retryingRepo: string | null = null;
   creatingRaSubtask: Set<string> = new Set();
-  activeTabIndex = 0;
+  activeTabIndex: number = 0;
 
   // Jira Status tab
   jiraStatus: JiraStatusSummary | null = null;
