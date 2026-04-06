@@ -786,18 +786,62 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
   }
 
   copyMRLinks(): void {
-    const mrLines = this.release?.stage3
-      .filter(r => r.mr_url)
+    if (!this.release) return;
+
+    // Collect regular repo MRs
+    const regularMrLines = this.release.stage3
+      .filter(r => r.mr_url && !this.isConfigRepo(r))
       .map(r => `🔗 ${r.name}: ${r.mr_url!}`)
-      .join('\n') ?? '';
-    const message = `👋 Hi Everyone,\n\n🚀 Pioneer ${this.version}\nPlease review below MRs before CAB meeting.\n\n${mrLines}`;
+      .join('\n');
+
+    // Collect config repo MRs (repos that are referenced as config_repo by other repos)
+    const configRepoSet = new Set(
+      this.release.stage3
+        .filter(r => r.config_repo && r.config_repo_in_release)
+        .map(r => r.config_repo)
+    );
+
+    const configMrLines = this.release.stage3
+      .filter(r => r.mr_url && configRepoSet.has(r.name))
+      .map(r => `🔗 ${r.name}: ${r.mr_url!}`)
+      .join('\n');
+
+    // Build message with separate sections
+    let message = `👋 Hi Everyone,\n\n🚀 Pioneer ${this.version}\nPlease review below MRs before CAB meeting.\n`;
+
+    if (regularMrLines) {
+      message += `\n📋 Service MRs:\n${regularMrLines}`;
+    }
+
+    if (configMrLines) {
+      message += `\n\n⚙️ Config MRs:\n${configMrLines}`;
+    }
+
+    if (!regularMrLines && !configMrLines) {
+      this.snackBar.open('No MR links available to copy.', 'Close', { duration: 3000 });
+      return;
+    }
+
     navigator.clipboard.writeText(message).then(() => {
       this.snackBar.open('MR message copied to clipboard.', 'Close', { duration: 3000 });
     });
   }
 
+  private isConfigRepo(repo: Stage3Repo): boolean {
+    // Check if this repo is used as a config repo by any other repo
+    return this.release?.stage3.some(r => r.config_repo === repo.name) ?? false;
+  }
+
   get mrLinkCount(): number {
-    return this.release?.stage3.filter(r => r.mr_url).length ?? 0;
+    if (!this.release) return 0;
+    const regularCount = this.release.stage3.filter(r => r.mr_url && !this.isConfigRepo(r)).length;
+    const configRepoSet = new Set(
+      this.release.stage3
+        .filter(r => r.config_repo && r.config_repo_in_release)
+        .map(r => r.config_repo)
+    );
+    const configCount = this.release.stage3.filter(r => r.mr_url && configRepoSet.has(r.name)).length;
+    return regularCount + configCount;
   }
 
   // -----------------------------------------------------------------------
