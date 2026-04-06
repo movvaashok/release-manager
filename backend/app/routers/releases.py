@@ -661,6 +661,155 @@ async def get_deployment_logs(version: str, service_name: str, project: str = Qu
     return await pod_logs.get_service_logs("dev", service_name)
 
 
+@router.get("/confluence/test-connection")
+async def test_confluence_connection(page_url: str = Query(None)):
+    """
+    Test Confluence credentials and permissions.
+
+    Returns detailed diagnostic information about:
+    - Whether Jira credentials are configured
+    - Whether Confluence API is accessible
+    - Whether the user has read permissions
+    - Whether the user has write permissions (if page_url provided)
+    - Table structure validation
+
+    Args:
+        page_url: Optional Confluence page URL to test write permissions
+    """
+    from app.services import token_service
+    from app.config import settings
+    import httpx
+    import base64
+
+    diagnostics = {
+        "credentials_configured": False,
+        "jira_url_configured": False,
+        "confluence_accessible": False,
+        "has_read_permission": False,
+        "has_write_permission": False,
+        "table_structure_valid": False,
+        "errors": [],
+        "warnings": [],
+    }
+
+    # Check credentials
+    jira_email, jira_api_token = token_service.get_jira_credentials()
+
+    if not jira_email or not jira_api_token:
+        diagnostics["errors"].append("Jira/Confluence credentials not configured in tokens.json")
+        return diagnostics
+
+    diagnostics["credentials_configured"] = True
+
+    if not settings.jira_url:
+        diagnostics["errors"].append("JIRA_URL not configured in .env or config")
+        return diagnostics
+
+    diagnostics["jira_url_configured"] = True
+
+    # Test Confluence API access
+    auth_header = "Basic " + base64.b64encode(f"{jira_email}:{jira_api_token}".encode()).decode()
+    wiki_base = settings.jira_url.rstrip("/") + "/wiki"
+
+    async with httpx.AsyncClient() as client:
+        try:
+            # Test read access to Confluence API
+            resp = await client.get(
+                f"{wiki_base}/rest/api/space",
+                headers={"Authorization": auth_header, "Accept": "application/json"},
+                timeout=10.0,
+            )
+
+            if resp.status_code == 401:
+                diagnostics["errors"].append("Authentication failed - invalid credentials or API token")
+                return diagnostics
+            elif resp.status_code == 403:
+                diagnostics["errors"].append("Access forbidden - account may not have Confluence access")
+                return diagnostics
+            elif resp.status_code == 200:
+                diagnostics["confluence_accessible"] = True
+                diagnostics["has_read_permission"] = True
+            else:
+                diagnostics["warnings"].append(f"Unexpected status {resp.status_code} from Confluence API")
+
+        except httpx.ConnectError:
+            diagnostics["errors"].append(f"Cannot connect to Confluence at {wiki_base}")
+            return diagnostics
+        except httpx.TimeoutException:
+            diagnostics["errors"].append(f"Confluence connection timeout at {wiki_base}")
+            return diagnostics
+        except Exception as e:
+            diagnostics["errors"].append(f"Connection error: {str(e)}")
+            return diagnostics
+
+    # If page URL provided, test write access
+    if page_url:
+        import re
+        page_id_match = re.search(r'/pages/(\d+)', page_url)
+
+        if not page_id_match:
+            diagnostics["warnings"].append("Could not extract page ID from URL. Expected format: .../pages/12345...")
+        else:
+            page_id = page_id_match.group(1)
+
+            async with httpx.AsyncClient() as client:
+                try:
+                    # Try to fetch the page
+                    resp = await client.get(
+                        f"{wiki_base}/rest/api/content/{page_id}",
+                        headers={"Authorization": auth_header, "Accept": "application/json"},
+                        params={"expand": "body.storage,version"},
+                        timeout=10.0,
+                    )
+
+                    if resp.status_code == 404:
+                        diagnostics["errors"].append(f"Page not found at {page_url}")
+                    elif resp.status_code == 403:
+                        diagnostics["errors"].append("No permission to edit this page - check account role in Confluence space")
+                    elif resp.status_code == 200:
+                        diagnostics["has_write_permission"] = True
+                        page_data = resp.json()
+                        html_content = page_data.get("body", {}).get("storage", {}).get("value", "")
+
+                        # Validate table structure
+                        from bs4 import BeautifulSoup
+                        soup = BeautifulSoup(html_content, "html.parser")
+                        tables = soup.find_all("table")
+
+                        if not tables:
+                            diagnostics["warnings"].append("No tables found in page")
+                        else:
+                            # Check for required columns
+                            found_component_col = False
+                            found_mr_col = False
+
+                            for table in tables:
+                                rows = table.find_all("tr")
+                                if rows:
+                                    header_cells = rows[0].find_all(["th", "td"])
+                                    headers = [cell.get_text(strip=True).lower() for cell in header_cells]
+
+                                    if any("component" in h for h in headers):
+                                        found_component_col = True
+                                    if any("gitlab" in h and "mr" in h for h in headers):
+                                        found_mr_col = True
+
+                            if found_component_col and found_mr_col:
+                                diagnostics["table_structure_valid"] = True
+                            else:
+                                diagnostics["warnings"].append(
+                                    f"Table columns not found. Expected: 'Component name' and 'Gitlab Merge Request (MR) Link'. "
+                                    f"Found component: {found_component_col}, Found MR: {found_mr_col}"
+                                )
+                    else:
+                        diagnostics["warnings"].append(f"Unexpected status {resp.status_code} when checking page")
+
+                except Exception as e:
+                    diagnostics["errors"].append(f"Error checking page: {str(e)}")
+
+    return diagnostics
+
+
 @router.post("/{version}/update-confluence-mrs")
 async def update_confluence_mrs(version: str, project: str = Query("pioneer")):
     """

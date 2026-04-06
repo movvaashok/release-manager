@@ -257,4 +257,12 @@ export class ReleaseService {
   updateConfluenceMrs(version: string): Observable<any> {
     return this.http.post<any>(`${this.base}/releases/${version}/update-confluence-mrs`, {}, { params: this.p });
   }
+
+  testConfluenceConnection(pageUrl?: string): Observable<any> {
+    const params: any = { ...this.p };
+    if (pageUrl) {
+      params.page_url = pageUrl;
+    }
+    return this.http.get<any>(`${this.base}/releases/confluence/test-connection`, { params });
+  }
 }

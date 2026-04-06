@@ -614,6 +614,13 @@
               Update Confluence
             </button>
             <button mat-stroked-button
+              *ngIf="release?.confluence_url"
+              (click)="testConfluenceConnection()"
+              matTooltip="Test Confluence credentials and permissions">
+              <mat-icon>search</mat-icon>
+              Test Connection
+            </button>
+            <button mat-stroked-button
               *ngIf="mrLinkCount > 0"
               (click)="openAllMrs()"
               matTooltip="Open all service and config MRs in new browser tabs">

@@ -962,6 +962,62 @@ ALTERNATIVE (if you prefer not to disable pop-up blocker):
     });
   }
 
+  testConfluenceConnection(): void {
+    const pageUrl = this.release?.confluence_url;
+    if (!pageUrl) {
+      this.snackBar.open('No Confluence URL configured for this release.', 'Close', { duration: 3000 });
+      return;
+    }
+
+    this.releaseService.testConfluenceConnection(pageUrl).subscribe({
+      next: (diagnostics) => {
+        console.log('Confluence diagnostics:', diagnostics);
+
+        // Build a detailed message
+        let message = '🔍 Confluence Connection Test\n\n';
+
+        if (diagnostics.errors && diagnostics.errors.length > 0) {
+          message += '❌ ERRORS:\n';
+          diagnostics.errors.forEach((error: string) => {
+            message += `  • ${error}\n`;
+          });
+          message += '\n';
+        }
+
+        if (diagnostics.warnings && diagnostics.warnings.length > 0) {
+          message += '⚠️ WARNINGS:\n';
+          diagnostics.warnings.forEach((warning: string) => {
+            message += `  • ${warning}\n`;
+          });
+          message += '\n';
+        }
+
+        message += 'Status:\n';
+        message += `  ${diagnostics.credentials_configured ? '✅' : '❌'} Credentials Configured\n`;
+        message += `  ${diagnostics.jira_url_configured ? '✅' : '❌'} Jira URL Configured\n`;
+        message += `  ${diagnostics.confluence_accessible ? '✅' : '❌'} Confluence API Accessible\n`;
+        message += `  ${diagnostics.has_read_permission ? '✅' : '❌'} Read Permission\n`;
+        message += `  ${diagnostics.has_write_permission ? '✅' : '❌'} Write Permission\n`;
+        message += `  ${diagnostics.table_structure_valid ? '✅' : '❌'} Table Structure Valid\n`;
+
+        // Show result in snackbar and console
+        const allGood = diagnostics.errors.length === 0 && diagnostics.table_structure_valid;
+        if (allGood) {
+          this.snackBar.open('✅ All checks passed! You can update Confluence.', 'Close', { duration: 5000 });
+        } else {
+          this.snackBar.open('⚠️ Check browser console for detailed diagnostics', 'Close', { duration: 5000 });
+        }
+
+        console.log(message);
+        alert(message);
+      },
+      error: (error) => {
+        console.error('Failed to test Confluence connection:', error);
+        this.snackBar.open('Failed to test Confluence connection. Check console.', 'Close', { duration: 4000 });
+      },
+    });
+  }
+
   copyMRLinks(): void {
     if (!this.release) return;
 
