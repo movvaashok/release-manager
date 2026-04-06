@@ -802,6 +802,45 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
     });
   }
 
+  openAllServiceMrs(): void {
+    if (!this.release) return;
+
+    const mrUrls = this.release.stage3
+      .filter(r => r.mr_url)
+      .map(r => r.mr_url!);
+
+    if (mrUrls.length === 0) {
+      this.snackBar.open('No service MR links available to open.', 'Close', { duration: 3000 });
+      return;
+    }
+
+    mrUrls.forEach(url => window.open(url, '_blank'));
+    this.snackBar.open(`Opened ${mrUrls.length} service MR${mrUrls.length !== 1 ? 's' : ''} in new tab${mrUrls.length !== 1 ? 's' : ''}.`, 'Close', { duration: 3000 });
+  }
+
+  openAllMrs(): void {
+    if (!this.release) return;
+
+    // Collect all service MRs
+    const serviceMrUrls = this.release.stage3
+      .filter(r => r.mr_url)
+      .map(r => r.mr_url!);
+
+    // Collect all tracked config MRs
+    const trackedConfigMrs = this.configMrs?.tracked ?? [];
+    const configMrUrls = trackedConfigMrs.map((mr: any) => mr.mr_url);
+
+    const allUrls = [...serviceMrUrls, ...configMrUrls];
+
+    if (allUrls.length === 0) {
+      this.snackBar.open('No MR links available to open.', 'Close', { duration: 3000 });
+      return;
+    }
+
+    allUrls.forEach(url => window.open(url, '_blank'));
+    this.snackBar.open(`Opened ${allUrls.length} MR${allUrls.length !== 1 ? 's' : ''} in new tab${allUrls.length !== 1 ? 's' : ''}.`, 'Close', { duration: 3000 });
+  }
+
   copyMRLinks(): void {
     if (!this.release) return;
 
