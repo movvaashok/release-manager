@@ -19,6 +19,7 @@ from app.services import jira_client
 from app.services import config_mr_service
 from app.services import deployment_status
 from app.services import pod_logs
+from app.services import repo_mapping
 
 router = APIRouter(prefix="/releases", tags=["releases"])
 
@@ -633,3 +634,100 @@ async def get_deployment_logs(version: str, service_name: str, project: str = Qu
     Automatically determines pod names from service deployment labels.
     """
     return await pod_logs.get_service_logs("dev", service_name)
+
+
+# ── Repo to Component Name Mappings ────────────────────────────────────────────
+
+@router.get("/repo-mappings", response_model=dict)
+def get_repo_mappings():
+    """Get all repo-to-component name mappings."""
+    return repo_mapping.get_all_mappings()
+
+
+@router.post("/repo-mappings")
+def set_repo_mapping(repo_name: str = Query(...), component_name: str = Query(...)):
+    """Create or update a repo-to-component name mapping.
+
+    Args:
+        repo_name: GitLab repository name
+        component_name: Confluence component name
+    """
+    repo_mapping.set_mapping(repo_name, component_name)
+    return {"success": True, "repo_name": repo_name, "component_name": component_name}
+
+
+@router.delete("/repo-mappings/{repo_name}")
+def delete_repo_mapping(repo_name: str):
+    """Delete a repo-to-component name mapping."""
+    repo_mapping.delete_mapping(repo_name)
+    return {"success": True, "deleted": repo_name}
+
+
+@router.post("/{version}/update-confluence-mrs")
+async def update_confluence_mrs(version: str, project: str = Query("pioneer")):
+    """
+    Update the Confluence release page with MR links from Stage 3.
+
+    Uses repo-to-component mappings to find the right rows in the Confluence table
+    and updates them with the MR URLs.
+
+    Returns:
+        {
+            "success": bool,
+            "message": str,
+            "updated_count": int (number of rows updated)
+        }
+    """
+    release = release_service.get_release(project, version)
+    if not release:
+        raise HTTPException(status_code=404, detail=f"Release {version} not found")
+
+    if not release.confluence_url:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Release {version} has no Confluence URL configured"
+        )
+
+    # Build mapping of component name -> MR URL
+    mappings = repo_mapping.get_all_mappings()
+    mr_links = {}
+
+    # Add service MRs
+    for repo in release.stage3:
+        component_name = mappings.get(repo.name)
+        if component_name and repo.mr_url:
+            mr_links[component_name] = repo.mr_url
+
+    # Add config repo MRs if tracked
+    from app.services import config_mr_service
+    tracked_config_mrs = config_mr_service.get_tracked_mrs(project, version)
+    for config_mr in tracked_config_mrs:
+        component_name = mappings.get(config_mr.config_repo)
+        if component_name:
+            mr_links[component_name] = config_mr.mr_url
+
+    if not mr_links:
+        return {
+            "success": False,
+            "message": "No MR links found to update. Check repo-to-component mappings.",
+            "updated_count": 0
+        }
+
+    # Update Confluence page
+    success = await confluence_client.update_mr_links(
+        release.confluence_url,
+        mr_links
+    )
+
+    if success:
+        return {
+            "success": True,
+            "message": f"Updated Confluence page with {len(mr_links)} MR link(s)",
+            "updated_count": len(mr_links)
+        }
+    else:
+        return {
+            "success": False,
+            "message": "Failed to update Confluence page. Check URL and permissions.",
+            "updated_count": 0
+        }
