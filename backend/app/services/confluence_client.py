@@ -5,6 +5,7 @@ Uses the same Atlassian credentials as Jira (same base URL, same Basic Auth).
 Confluence API lives under /wiki/rest/api/ on the same host.
 """
 import base64
+import logging
 import re
 from html.parser import HTMLParser
 from typing import Dict, Optional
@@ -14,6 +15,8 @@ from bs4 import BeautifulSoup
 
 from app.config import settings
 from app.services import token_service
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -269,15 +272,20 @@ async def update_mr_links(
     Returns:
         True if successfully updated, False otherwise
     """
-    from bs4 import BeautifulSoup
+    logger.info(f"Starting Confluence MR links update for page: {page_url}")
+    logger.info(f"MR links to update: {mr_links}")
 
     jira_email, jira_api_token = token_service.get_jira_credentials()
     if not (settings.jira_url and jira_email and jira_api_token):
+        logger.error("Missing Jira/Confluence credentials")
         return False
 
     page_id = _extract_page_id(page_url)
     if not page_id:
+        logger.error(f"Failed to extract page ID from URL: {page_url}")
         return False
+
+    logger.info(f"Extracted page ID: {page_id}")
 
     auth_headers = {
         "Authorization": _auth_header(),
@@ -287,6 +295,7 @@ async def update_mr_links(
     # Step 1: Get current page content and version
     async with httpx.AsyncClient() as client:
         try:
+            logger.info(f"Fetching page content from Confluence...")
             resp = await client.get(
                 f"{_wiki_base()}/rest/api/content/{page_id}",
                 headers=auth_headers,
@@ -294,29 +303,38 @@ async def update_mr_links(
                 timeout=20.0,
             )
             resp.raise_for_status()
-        except httpx.HTTPError:
+        except httpx.HTTPError as e:
+            logger.error(f"Failed to fetch page: {e}")
             return False
 
     page_data = resp.json()
     current_version = page_data.get("version", {}).get("number", 0)
     html_content = page_data.get("body", {}).get("storage", {}).get("value", "")
 
+    logger.info(f"Page version: {current_version}, HTML content length: {len(html_content)}")
+
     if not html_content:
+        logger.error("No HTML content found in page")
         return False
 
     # Step 2: Parse HTML and find the right table
     soup = BeautifulSoup(html_content, "html.parser")
     tables = soup.find_all("table")
+    logger.info(f"Found {len(tables)} table(s) in page")
 
-    for table in tables:
+    for table_idx, table in enumerate(tables):
         rows = table.find_all("tr")
         if not rows:
             continue
+
+        logger.debug(f"Table {table_idx}: {len(rows)} rows")
 
         # Parse header row
         header_cells = rows[0].find_all(["th", "td"])
         headers = [cell.get_text(strip=True) for cell in header_cells]
         headers_lower = [_normalise(h) for h in headers]
+
+        logger.debug(f"Table {table_idx} headers: {headers}")
 
         # Find column indices
         comp_idx = next(
@@ -328,20 +346,28 @@ async def update_mr_links(
             None,
         )
 
+        logger.debug(f"Table {table_idx}: component_idx={comp_idx}, mr_idx={mr_idx}")
+
         if comp_idx is None or mr_idx is None:
             continue  # Not the right table
 
         # Step 3: Update MR links in data rows
         updated = False
-        for row in rows[1:]:  # Skip header row
+        logger.info(f"Checking {len(rows) - 1} data rows in table {table_idx}")
+
+        for row_idx, row in enumerate(rows[1:], 1):  # Skip header row
             cells = row.find_all(["td"])
             if len(cells) <= max(comp_idx, mr_idx):
                 continue
 
             component_name = cells[comp_idx].get_text(strip=True)
+            logger.debug(f"Row {row_idx}: component={component_name}")
+
             if component_name in mr_links:
                 mr_url = mr_links[component_name]
                 mr_cell = cells[mr_idx]
+
+                logger.info(f"Updating row {row_idx}: {component_name} -> {mr_url}")
 
                 # Clear the cell and add the MR link
                 mr_cell.clear()
@@ -351,7 +377,9 @@ async def update_mr_links(
                 updated = True
 
         if not updated:
+            logger.debug(f"Table {table_idx}: No rows updated, skipping")
             continue  # Not the right table if no updates made
+
 
         # Step 4: Update the page in Confluence
         new_html = str(soup)
@@ -360,6 +388,8 @@ async def update_mr_links(
             "type": "page",
             "body": {"storage": {"value": new_html, "representation": "storage"}},
         }
+
+        logger.info(f"Sending update to Confluence with new version: {current_version + 1}")
 
         try:
             async with httpx.AsyncClient() as update_client:
@@ -370,8 +400,11 @@ async def update_mr_links(
                     timeout=20.0,
                 )
                 update_resp.raise_for_status()
+                logger.info(f"Successfully updated Confluence page")
                 return True
-        except httpx.HTTPError:
+        except httpx.HTTPError as e:
+            logger.error(f"Failed to update Confluence page: {e}")
             return False
 
+    logger.warning(f"No matching table found with 'Component name' and 'Gitlab Merge Request (MR) Link' columns")
     return False

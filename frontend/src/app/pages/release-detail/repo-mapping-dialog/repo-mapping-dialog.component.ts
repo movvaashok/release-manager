@@ -153,15 +153,22 @@ export class RepoMappingDialogComponent implements OnInit {
     this.loadingMappings = true;
     this.releaseService.getRepoMappings().subscribe({
       next: (mappings) => {
-        this.mappings = Object.entries(mappings).map(([repo, component]) => ({
-          repo,
-          component: component as string,
-        }));
+        console.log('Loaded repo mappings:', mappings);
+        if (mappings && typeof mappings === 'object') {
+          this.mappings = Object.entries(mappings).map(([repo, component]) => ({
+            repo,
+            component: component as string,
+          }));
+        } else {
+          this.mappings = [];
+          console.warn('Unexpected mappings format:', mappings);
+        }
         this.loadingMappings = false;
       },
-      error: () => {
+      error: (error) => {
         this.loadingMappings = false;
-        this.snackBar.open('Failed to load mappings.', 'Close', { duration: 3000 });
+        console.error('Failed to load mappings:', error);
+        this.snackBar.open('Failed to load mappings. Check browser console for details.', 'Close', { duration: 3000 });
       },
     });
   }
@@ -172,17 +179,21 @@ export class RepoMappingDialogComponent implements OnInit {
     }
 
     this.savingMapping = true;
-    this.releaseService.setRepoMapping(this.newRepoName, this.newComponentName).subscribe({
+    const repoName = this.newRepoName;
+    const componentName = this.newComponentName;
+
+    this.releaseService.setRepoMapping(repoName, componentName).subscribe({
       next: () => {
-        this.mappings.push({ repo: this.newRepoName, component: this.newComponentName });
+        this.mappings.push({ repo: repoName, component: componentName });
         this.newRepoName = '';
         this.newComponentName = '';
         this.savingMapping = false;
-        this.snackBar.open(`✅ Mapping created: ${this.newRepoName} → ${this.newComponentName}`, 'Close', { duration: 3000 });
+        this.snackBar.open(`✅ Mapping created: ${repoName} → ${componentName}`, 'Close', { duration: 3000 });
       },
-      error: () => {
+      error: (error) => {
         this.savingMapping = false;
-        this.snackBar.open('Failed to create mapping.', 'Close', { duration: 3000 });
+        console.error('Failed to create mapping:', error);
+        this.snackBar.open('Failed to create mapping. Check browser console for details.', 'Close', { duration: 3000 });
       },
     });
   }
