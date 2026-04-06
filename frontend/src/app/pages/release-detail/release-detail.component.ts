@@ -179,7 +179,7 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
   }
 
   private loadConfigMrs(): void {
-    this.releaseService.getConfigMrs(this.version).subscribe({
+    this.releaseService.getTrackedConfigMrs(this.version).subscribe({
       next: (data) => {
         this.configMrs = data;
       },

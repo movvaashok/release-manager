@@ -489,6 +489,18 @@ async def refresh_ra_requirements(
 
 # ── Config repo MR tracking ──────────────────────────────────────────────────────────
 
+@router.get("/{version}/config-mrs/tracked", response_model=dict)
+async def get_tracked_config_mrs(version: str, project: str = Query("pioneer")):
+    """
+    Return all tracked config MRs for this release (across all main repos).
+    Used for copying all config MR links in the Stage 3 tab.
+    """
+    return {
+        "tracked": config_mr_service.get_tracked_mrs(project, version),
+        "open_mrs": []
+    }
+
+
 @router.get("/{version}/config-mrs", response_model=ConfigMrsResponse)
 async def get_config_mrs(
     version: str,

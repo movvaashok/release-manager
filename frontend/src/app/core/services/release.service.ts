@@ -234,7 +234,7 @@ export class ReleaseService {
     return this.http.get<any>(`${this.base}/releases/${version}/deployment-logs/${serviceName}`, { params: this.p });
   }
 
-  getConfigMrs(version: string): Observable<any> {
-    return this.http.get<any>(`${this.base}/releases/${version}/config-mrs`, { params: this.p });
+  getTrackedConfigMrs(version: string): Observable<any> {
+    return this.http.get<any>(`${this.base}/releases/${version}/config-mrs/tracked`, { params: this.p });
   }
 }
