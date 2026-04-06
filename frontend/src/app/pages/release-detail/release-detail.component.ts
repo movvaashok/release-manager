@@ -599,6 +599,10 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
     return this.deploymentLogs.has(deploymentName);
   }
 
+  hasServiceMrs(): boolean {
+    return (this.release?.stage3 ?? []).some(r => r.mr_url);
+  }
+
   loadDeploymentLogs(serviceName: string): void {
     // Don't reload if already loaded
     if (this.deploymentLogs.has(serviceName)) {
