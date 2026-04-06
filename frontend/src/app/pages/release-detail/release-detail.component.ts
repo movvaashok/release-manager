@@ -879,13 +879,49 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
     if (openedCount === urls.length) {
       const message = `✅ Opened ${urls.length} ${label} in new tab${urls.length !== 1 ? 's' : ''}.`;
       this.snackBar.open(message, 'Close', { duration: 4000 });
+    } else if (openedCount === 1 && failedUrls.length > 0) {
+      // Safari typically only allows 1 window.open per user gesture
+      const ref = this.snackBar.open(
+        `⚠️ Safari only opened 1 tab due to pop-up restrictions. ${failedUrls.length} others blocked.`,
+        'Whitelist Site',
+        { duration: 8000 }
+      );
+      ref.onAction().subscribe(() => {
+        this.showSafariWhitelistInstructions();
+      });
     } else if (openedCount === 0) {
-      const message = `❌ All tabs blocked by pop-up blocker.\n\nSafari Fix:\n1. Safari Menu → Preferences\n2. Security Tab\n3. Uncheck "Block pop-ups"\n4. Try again`;
-      this.snackBar.open(message, 'Close', { duration: 6000 });
+      const ref = this.snackBar.open(
+        `❌ All tabs blocked. Safari restricts pop-ups.`,
+        'Instructions',
+        { duration: 6000 }
+      );
+      ref.onAction().subscribe(() => {
+        this.showSafariWhitelistInstructions();
+      });
     } else {
       const message = `⚠️ Opened ${openedCount} of ${urls.length} ${label}. ${failedUrls.length} blocked.`;
       this.snackBar.open(message, 'Close', { duration: 4000 });
     }
+  }
+
+  private showSafariWhitelistInstructions(): void {
+    const instructions = `
+⚙️ SAFARI POP-UP WHITELIST INSTRUCTIONS:
+
+1. Click Safari menu (top-left) → Preferences
+2. Go to the Security tab
+3. UNCHECK "Block pop-ups" checkbox
+4. Close preferences
+5. Return to this page and click "Open All MRs" again
+
+ALTERNATIVE (if you prefer not to disable pop-up blocker):
+- Use "Copy MR Links" button instead
+- Paste links into your chat/email
+- Manually click each link as needed
+
+⚠️ Note: Safari only allows 1 pop-up per user click for security.
+    `;
+    alert(instructions);
   }
 
   copyMRLinks(): void {
