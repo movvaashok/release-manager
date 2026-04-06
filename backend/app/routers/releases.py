@@ -1,3 +1,4 @@
+import re
 from typing import List
 
 from fastapi import APIRouter, Header, HTTPException, Query
@@ -787,7 +788,8 @@ async def test_confluence_connection(page_url: str = Query(None)):
                                 rows = table.find_all("tr")
                                 if rows:
                                     header_cells = rows[0].find_all(["th", "td"])
-                                    headers = [cell.get_text(strip=True).lower() for cell in header_cells]
+                                    # Normalize whitespace in headers (handle multi-line headers)
+                                    headers = [re.sub(r'\s+', ' ', cell.get_text(strip=True)).lower() for cell in header_cells]
 
                                     if any("component" in h for h in headers):
                                         found_component_col = True

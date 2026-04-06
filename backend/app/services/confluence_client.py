@@ -360,7 +360,10 @@ async def update_mr_links(
             if len(cells) <= max(comp_idx, mr_idx):
                 continue
 
+            # Extract and normalize component name (handle multi-line text in cells)
             component_name = cells[comp_idx].get_text(strip=True)
+            # Normalize whitespace: collapse multiple spaces/newlines into single space
+            component_name = re.sub(r'\s+', ' ', component_name).strip()
             logger.debug(f"Row {row_idx}: component={component_name}")
 
             if component_name in mr_links:
