@@ -411,6 +411,19 @@ async def update_mr_links(
 
         # Step 4: Update the page in Confluence
         new_html = str(soup)
+
+        # Validate HTML - ensure it's not empty and contains the table
+        if not new_html or len(new_html) < 100:
+            logger.error(f"Generated HTML is too short or empty: {len(new_html)} chars")
+            return False
+
+        if "<table" not in new_html:
+            logger.error("Generated HTML does not contain a table")
+            return False
+
+        logger.info(f"Generated HTML length: {len(new_html)} chars")
+        logger.debug(f"Generated HTML preview: {new_html[:500]}...")
+
         update_body = {
             "version": {"number": current_version + 1},
             "type": "page",
@@ -418,6 +431,7 @@ async def update_mr_links(
         }
 
         logger.info(f"Sending update to Confluence with new version: {current_version + 1}")
+        logger.debug(f"Update request body keys: {list(update_body.keys())}")
 
         try:
             async with httpx.AsyncClient() as update_client:
@@ -427,6 +441,14 @@ async def update_mr_links(
                     json=update_body,
                     timeout=20.0,
                 )
+
+                if update_resp.status_code >= 400:
+                    try:
+                        error_detail = update_resp.json()
+                        logger.error(f"Confluence API error {update_resp.status_code}: {error_detail}")
+                    except:
+                        logger.error(f"Confluence API error {update_resp.status_code}: {update_resp.text}")
+
                 update_resp.raise_for_status()
                 logger.info(f"Successfully updated Confluence page")
                 return True
