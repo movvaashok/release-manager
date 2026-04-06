@@ -239,19 +239,19 @@ export class ReleaseService {
   }
 
   getRepoMappings(): Observable<any> {
-    return this.http.get<any>(`${this.base}/repo-mappings`, { params: this.p });
+    return this.http.get<any>(`${this.base}/releases/repo-mappings`, { params: this.p });
   }
 
   setRepoMapping(repoName: string, componentName: string): Observable<any> {
     return this.http.post<any>(
-      `${this.base}/repo-mappings`,
+      `${this.base}/releases/repo-mappings`,
       null,
       { params: { ...this.p, repo_name: repoName, component_name: componentName } }
     );
   }
 
   deleteRepoMapping(repoName: string): Observable<any> {
-    return this.http.delete<any>(`${this.base}/repo-mappings/${repoName}`, { params: this.p });
+    return this.http.delete<any>(`${this.base}/releases/repo-mappings/${repoName}`, { params: this.p });
   }
 
   updateConfluenceMrs(version: string): Observable<any> {
