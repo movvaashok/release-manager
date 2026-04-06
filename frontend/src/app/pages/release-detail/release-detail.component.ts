@@ -845,23 +845,42 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
 
   private openUrlsInTabs(urls: string[], label: string): void {
     let openedCount = 0;
+    const failedUrls: string[] = [];
+
+    console.log(`[MR Opener] Starting to open ${urls.length} URLs with delays...`);
+
     urls.forEach((url, index) => {
-      // Add small delay between opening tabs to avoid browser pop-up blocking
+      // Increase delay for Safari compatibility - use 300ms between tabs
       setTimeout(() => {
-        const opened = window.open(url, '_blank');
-        if (opened) {
-          openedCount++;
+        console.log(`[MR Opener] Opening URL ${index + 1}/${urls.length}: ${url}`);
+        try {
+          const opened = window.open(url, '_blank');
+          if (opened) {
+            openedCount++;
+            console.log(`[MR Opener] Successfully opened tab ${index + 1}`);
+          } else {
+            failedUrls.push(url);
+            console.warn(`[MR Opener] Tab ${index + 1} blocked (window.open returned null)`);
+          }
+        } catch (error) {
+          failedUrls.push(url);
+          console.error(`[MR Opener] Error opening tab ${index + 1}:`, error);
         }
-      }, index * 200); // 200ms delay between each tab
+      }, index * 300); // 300ms delay between each tab (increased from 200ms)
     });
 
     // Show success message after all tabs are opened
     setTimeout(() => {
-      const message = openedCount === urls.length
-        ? `Opened ${urls.length} ${label} in new tab${urls.length !== 1 ? 's' : ''}.`
-        : `Opened ${openedCount} of ${urls.length} ${label}. ${urls.length - openedCount} may have been blocked by pop-up blocker.`;
-      this.snackBar.open(message, 'Close', { duration: 4000 });
-    }, urls.length * 200);
+      console.log(`[MR Opener] Completed. Opened: ${openedCount}/${urls.length}`);
+
+      if (openedCount === urls.length) {
+        const message = `✅ Opened ${urls.length} ${label} in new tab${urls.length !== 1 ? 's' : ''}.`;
+        this.snackBar.open(message, 'Close', { duration: 4000 });
+      } else {
+        const message = `⚠️ Opened ${openedCount} of ${urls.length} ${label}. ${failedUrls.length} blocked by pop-up blocker.\n\nCheck Safari Preferences → Security → "Block pop-ups" (should be unchecked).`;
+        this.snackBar.open(message, 'Close', { duration: 6000 });
+      }
+    }, urls.length * 300 + 500);
   }
 
   copyMRLinks(): void {
