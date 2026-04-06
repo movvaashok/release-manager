@@ -601,7 +601,7 @@
               Copy MR Links ({{ mrLinkCount }})
             </button>
             <button mat-stroked-button
-              *ngIf="(release?.stage3 | slice:0:1).length > 0 && (release?.stage3 | slice:0:1)[0]?.mr_url"
+              *ngIf="release?.stage3?.some(r => r.mr_url)"
               (click)="openAllServiceMrs()"
               matTooltip="Open all service MRs in new browser tabs">
               <mat-icon>open_in_new</mat-icon>
