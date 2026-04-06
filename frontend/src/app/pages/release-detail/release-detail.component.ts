@@ -808,34 +808,62 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
     // Collect regular repo MRs (from stage3)
     const regularMrLines = this.release.stage3
       .filter(r => r.mr_url)
-      .map(r => `🔗 ${r.name}: ${r.mr_url!}`)
-      .join('\n');
+      .map(r => `<a href="${r.mr_url!}">🔗 ${r.name} (!${this.getMrIid(r.mr_url!)})</a>`)
+      .join('<br>');
 
     // Collect tracked config repo MRs
     const trackedConfigMrs = this.configMrs?.tracked ?? [];
     const configMrLines = trackedConfigMrs
-      .map((mr: any) => `🔗 ${mr.config_repo}: ${mr.mr_url}`)
-      .join('\n');
+      .map((mr: any) => `<a href="${mr.mr_url}">🔗 ${mr.config_repo} (!${mr.mr_iid})</a>`)
+      .join('<br>');
 
-    // Build message with separate sections
-    let message = `👋 Hi Everyone,\n\n🚀 Pioneer ${this.version}\nPlease review below MRs before CAB meeting.\n`;
+    // Build HTML message with separate sections
+    let message = `<div style="font-family: Arial, sans-serif;">
+      <p>👋 Hi Everyone,</p>
+      <p><strong>🚀 Pioneer ${this.version}</strong></p>
+      <p>Please review below MRs before CAB meeting.</p>`;
 
     if (regularMrLines) {
-      message += `\n📋 Service MRs:\n${regularMrLines}`;
+      message += `<p><strong>📋 Service MRs:</strong></p><div style="margin-left: 20px;">${regularMrLines}</div>`;
     }
 
     if (configMrLines) {
-      message += `\n\n⚙️ Config MRs:\n${configMrLines}`;
+      message += `<p><strong>⚙️ Config MRs:</strong></p><div style="margin-left: 20px;">${configMrLines}</div>`;
     }
+
+    message += '</div>';
 
     if (!regularMrLines && !configMrLines) {
       this.snackBar.open('No MR links available to copy.', 'Close', { duration: 3000 });
       return;
     }
 
-    navigator.clipboard.writeText(message).then(() => {
+    this.copyHtmlToClipboard(message);
+  }
+
+  private getMrIid(url: string): string {
+    // Extract MR IID from URL (e.g., /merge_requests/123)
+    const match = url.match(/\/merge_requests\/(\d+)/);
+    return match ? match[1] : 'N/A';
+  }
+
+  private copyHtmlToClipboard(html: string): void {
+    const blob = new Blob([html], { type: 'text/html' });
+    const data = [new ClipboardItem({ 'text/html': blob, 'text/plain': new Blob([this.extractPlainText(html)], { type: 'text/plain' }) })];
+
+    navigator.clipboard.write(data).then(() => {
+      this.snackBar.open('MR message copied to clipboard. Visited links will appear in a different color.', 'Close', { duration: 4000 });
+    }).catch(() => {
+      // Fallback to plain text if HTML copy fails
       this.snackBar.open('MR message copied to clipboard.', 'Close', { duration: 3000 });
     });
+  }
+
+  private extractPlainText(html: string): string {
+    // Extract plain text version for fallback
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    return div.textContent || div.innerText || '';
   }
 
   get mrLinkCount(): number {
