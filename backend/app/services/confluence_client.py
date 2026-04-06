@@ -10,6 +10,7 @@ from html.parser import HTMLParser
 from typing import Dict, Optional
 
 import httpx
+from bs4 import BeautifulSoup
 
 from app.config import settings
 from app.services import token_service

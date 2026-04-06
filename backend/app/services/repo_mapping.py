@@ -5,11 +5,12 @@ Used for updating Confluence release plan pages with MR links.
 """
 
 import json
-from pathlib import Path
 from typing import Dict, Optional
 
-# Store mappings in data directory
-MAPPINGS_FILE = Path(__file__).parent.parent / "data" / "repo_component_mapping.json"
+from app.config import settings
+
+# Store mappings in data directory (shared with other application data)
+MAPPINGS_FILE = settings.data_dir / "repo_component_mapping.json"
 
 
 def _ensure_file_exists() -> None:
