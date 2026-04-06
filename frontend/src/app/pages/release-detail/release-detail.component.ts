@@ -105,6 +105,9 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
   deploymentLogs = new Map<string, any>();
   loadingDeploymentLogs = new Map<string, boolean>();
 
+  // Config MRs
+  configMrs: any = null;
+
   // Documentation tab
   editingDocs = false;
   savingDocs = false;
@@ -165,10 +168,24 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
         this.loading = false;
         // Immediately fetch live pipeline statuses from GitLab
         this.refreshPipelinesQuiet();
+        // Load config MRs for copy functionality
+        this.loadConfigMrs();
       },
       error: () => {
         this.loading = false;
         this.snackBar.open('Failed to load release.', 'Close', { duration: 4000 });
+      },
+    });
+  }
+
+  private loadConfigMrs(): void {
+    this.releaseService.getConfigMrs(this.version).subscribe({
+      next: (data) => {
+        this.configMrs = data;
+      },
+      error: () => {
+        // Silent error - config MRs are optional
+        this.configMrs = { tracked: [], open_mrs: [] };
       },
     });
   }
@@ -788,22 +805,16 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
   copyMRLinks(): void {
     if (!this.release) return;
 
-    // Collect regular repo MRs
+    // Collect regular repo MRs (from stage3)
     const regularMrLines = this.release.stage3
-      .filter(r => r.mr_url && !this.isConfigRepo(r))
+      .filter(r => r.mr_url)
       .map(r => `🔗 ${r.name}: ${r.mr_url!}`)
       .join('\n');
 
-    // Collect config repo MRs (repos that are referenced as config_repo by other repos)
-    const configRepoSet = new Set(
-      this.release.stage3
-        .filter(r => r.config_repo && r.config_repo_in_release)
-        .map(r => r.config_repo)
-    );
-
-    const configMrLines = this.release.stage3
-      .filter(r => r.mr_url && configRepoSet.has(r.name))
-      .map(r => `🔗 ${r.name}: ${r.mr_url!}`)
+    // Collect tracked config repo MRs
+    const trackedConfigMrs = this.configMrs?.tracked ?? [];
+    const configMrLines = trackedConfigMrs
+      .map((mr: any) => `🔗 ${mr.config_repo}: ${mr.mr_url}`)
       .join('\n');
 
     // Build message with separate sections
@@ -827,20 +838,11 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
     });
   }
 
-  private isConfigRepo(repo: Stage3Repo): boolean {
-    // Check if this repo is used as a config repo by any other repo
-    return this.release?.stage3.some(r => r.config_repo === repo.name) ?? false;
-  }
-
   get mrLinkCount(): number {
     if (!this.release) return 0;
-    const regularCount = this.release.stage3.filter(r => r.mr_url && !this.isConfigRepo(r)).length;
-    const configRepoSet = new Set(
-      this.release.stage3
-        .filter(r => r.config_repo && r.config_repo_in_release)
-        .map(r => r.config_repo)
-    );
-    const configCount = this.release.stage3.filter(r => r.mr_url && configRepoSet.has(r.name)).length;
+    const regularCount = this.release.stage3.filter(r => r.mr_url).length;
+    const trackedConfigMrs = this.configMrs?.tracked ?? [];
+    const configCount = trackedConfigMrs.length;
     return regularCount + configCount;
   }
 
