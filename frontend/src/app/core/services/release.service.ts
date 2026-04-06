@@ -265,4 +265,10 @@ export class ReleaseService {
     }
     return this.http.get<any>(`${this.base}/releases/confluence/test-connection`, { params });
   }
+
+  extractConfluenceComponents(pageUrl: string): Observable<any> {
+    return this.http.get<any>(`${this.base}/releases/confluence/extract-components`, {
+      params: { page_url: pageUrl }
+    });
+  }
 }

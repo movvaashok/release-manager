@@ -927,10 +927,14 @@ ALTERNATIVE (if you prefer not to disable pop-up blocker):
   }
 
   openRepoMappingDialog(): void {
-    this.dialog.open(RepoMappingDialogComponent, {
+    const dialogRef = this.dialog.open(RepoMappingDialogComponent, {
       width: '600px',
       disableClose: false,
     });
+    // Pass confluence URL to dialog component
+    if (this.release?.confluence_url) {
+      dialogRef.componentInstance.confluenceUrl = this.release.confluence_url;
+    }
   }
 
   updateConfluencePage(): void {

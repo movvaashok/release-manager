@@ -812,6 +812,188 @@ async def test_confluence_connection(page_url: str = Query(None)):
     return diagnostics
 
 
+@router.get("/confluence/extract-components")
+async def extract_components_from_confluence(page_url: str = Query(...)):
+    """
+    Extract the list of component names from a Confluence page table.
+
+    This helps users see what components actually exist in their Confluence
+    table so they can configure mappings correctly.
+
+    Args:
+        page_url: Confluence page URL
+
+    Returns:
+        {
+            "success": bool,
+            "components": [list of component names found in the table],
+            "message": str,
+            "error": str (if failed)
+        }
+    """
+    from app.services import token_service
+    from app.config import settings
+    import httpx
+    import base64
+    from bs4 import BeautifulSoup
+
+    components = []
+    error_msg = None
+
+    # Check credentials
+    jira_email, jira_api_token = token_service.get_jira_credentials()
+    if not (jira_email and jira_api_token and settings.jira_url):
+        return {
+            "success": False,
+            "components": [],
+            "message": "Credentials not configured",
+            "error": "Jira/Confluence credentials not configured in tokens.json",
+        }
+
+    # Extract page ID
+    page_id_match = re.search(r'/pages/(\d+)', page_url)
+    if not page_id_match:
+        return {
+            "success": False,
+            "components": [],
+            "message": "Invalid page URL",
+            "error": "Could not extract page ID from URL. Expected format: .../pages/12345...",
+        }
+
+    page_id = page_id_match.group(1)
+    auth_header = "Basic " + base64.b64encode(f"{jira_email}:{jira_api_token}".encode()).decode()
+    wiki_base = settings.jira_url.rstrip("/") + "/wiki"
+
+    # Fetch page content
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.get(
+                f"{wiki_base}/rest/api/content/{page_id}",
+                headers={"Authorization": auth_header, "Accept": "application/json"},
+                params={"expand": "body.storage,version"},
+                timeout=10.0,
+            )
+
+            if resp.status_code == 401:
+                return {
+                    "success": False,
+                    "components": [],
+                    "message": "Authentication failed",
+                    "error": "Invalid Jira credentials or expired API token",
+                }
+            elif resp.status_code == 403:
+                return {
+                    "success": False,
+                    "components": [],
+                    "message": "Permission denied",
+                    "error": "Account does not have permission to read this page",
+                }
+            elif resp.status_code == 404:
+                return {
+                    "success": False,
+                    "components": [],
+                    "message": "Page not found",
+                    "error": f"No page found at {page_url}",
+                }
+            elif resp.status_code != 200:
+                return {
+                    "success": False,
+                    "components": [],
+                    "message": f"HTTP {resp.status_code}",
+                    "error": f"Unexpected response from Confluence API",
+                }
+
+            page_data = resp.json()
+            html_content = page_data.get("body", {}).get("storage", {}).get("value", "")
+
+            if not html_content:
+                return {
+                    "success": False,
+                    "components": [],
+                    "message": "No content found",
+                    "error": "Page has no HTML content",
+                }
+
+            # Parse HTML and find component names
+            soup = BeautifulSoup(html_content, "html.parser")
+            tables = soup.find_all("table")
+
+            if not tables:
+                return {
+                    "success": False,
+                    "components": [],
+                    "message": "No tables found",
+                    "error": "Page does not contain any tables",
+                }
+
+            # Search for table with Component column
+            for table in tables:
+                rows = table.find_all("tr")
+                if not rows:
+                    continue
+
+                # Parse header row
+                header_cells = rows[0].find_all(["th", "td"])
+                headers = [re.sub(r'\s+', ' ', cell.get_text(strip=True)).lower() for cell in header_cells]
+
+                # Find component column index
+                comp_idx = next(
+                    (i for i, h in enumerate(headers) if "component" in h),
+                    None,
+                )
+
+                if comp_idx is None:
+                    continue  # Not the right table
+
+                # Extract component names from data rows
+                for row in rows[1:]:  # Skip header
+                    cells = row.find_all(["td"])
+                    if len(cells) > comp_idx:
+                        component_name = cells[comp_idx].get_text(strip=True)
+                        # Normalize whitespace
+                        component_name = re.sub(r'\s+', ' ', component_name).strip()
+                        if component_name and component_name not in components:
+                            components.append(component_name)
+
+                # Found the right table, return components
+                if components:
+                    return {
+                        "success": True,
+                        "components": sorted(components),
+                        "message": f"Found {len(components)} components in Confluence table",
+                        "error": None,
+                    }
+
+            return {
+                "success": False,
+                "components": [],
+                "message": "No 'Component' column found",
+                "error": "Could not find a table with a 'Component' column in the page",
+            }
+
+        except httpx.ConnectError:
+            return {
+                "success": False,
+                "components": [],
+                "message": "Connection failed",
+                "error": f"Cannot connect to {wiki_base}",
+            }
+        except httpx.TimeoutException:
+            return {
+                "success": False,
+                "components": [],
+                "message": "Connection timeout",
+                "error": f"Confluence connection timeout",
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "components": [],
+                "message": "Error",
+                "error": str(e),
+            }
+
+
 @router.post("/{version}/update-confluence-mrs")
 async def update_confluence_mrs(version: str, project: str = Query("pioneer")):
     """

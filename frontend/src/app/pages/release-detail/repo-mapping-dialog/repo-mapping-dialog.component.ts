@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatDialogRef, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -88,6 +88,30 @@ import { ReleaseService } from '../../../core/services/release.service';
         These mappings are used to update the Confluence release page with MR links.
       </p>
 
+      <div *ngIf="confluenceUrl" style="margin-bottom:16px;">
+        <button mat-stroked-button
+          (click)="fetchConfluenceComponents()"
+          [disabled]="loadingComponents"
+          style="width:100%;">
+          <mat-spinner *ngIf="loadingComponents" diameter="18" style="display:inline-block;margin-right:6px;"></mat-spinner>
+          Fetch Components from Confluence
+        </button>
+      </div>
+
+      <div *ngIf="showComponentList && availableComponents.length > 0" style="margin-bottom:16px;background:#f9f9f9;padding:12px;border-radius:4px;">
+        <div style="font-size:12px;font-weight:500;margin-bottom:8px;color:rgba(0,0,0,0.7);">
+          📋 Available Components in Confluence:
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+          <button *ngFor="let component of availableComponents"
+            mat-stroked-button
+            (click)="selectComponentName(component)"
+            style="font-size:12px;padding:6px 12px;">
+            {{ component }}
+          </button>
+        </div>
+      </div>
+
       <div class="add-mapping">
         <mat-form-field appearance="outline">
           <mat-label>Repo Name</mat-label>
@@ -131,10 +155,16 @@ import { ReleaseService } from '../../../core/services/release.service';
   `
 })
 export class RepoMappingDialogComponent implements OnInit {
+  @Input() confluenceUrl: string | null = null;
+
   mappings: Array<{ repo: string; component: string }> = [];
   loadingMappings = false;
   savingMapping = false;
   deletingRepo: string | null = null;
+  loadingComponents = false;
+
+  availableComponents: string[] = [];
+  showComponentList = false;
 
   newRepoName = '';
   newComponentName = '';
@@ -215,6 +245,54 @@ export class RepoMappingDialogComponent implements OnInit {
         this.snackBar.open('Failed to delete mapping.', 'Close', { duration: 3000 });
       },
     });
+  }
+
+  fetchConfluenceComponents(): void {
+    if (!this.confluenceUrl) {
+      this.snackBar.open('No Confluence URL available', 'Close', { duration: 3000 });
+      return;
+    }
+
+    this.loadingComponents = true;
+    this.showComponentList = false;
+    this.availableComponents = [];
+
+    this.releaseService.extractConfluenceComponents(this.confluenceUrl).subscribe({
+      next: (result) => {
+        this.loadingComponents = false;
+
+        if (result.success) {
+          this.availableComponents = result.components || [];
+          this.showComponentList = true;
+
+          if (this.availableComponents.length === 0) {
+            this.snackBar.open('No components found in Confluence table', 'Close', { duration: 3000 });
+          } else {
+            this.snackBar.open(
+              `✅ Found ${this.availableComponents.length} components in Confluence`,
+              'Close',
+              { duration: 3000 }
+            );
+          }
+        } else {
+          this.snackBar.open(
+            `❌ ${result.error || result.message}`,
+            'Close',
+            { duration: 4000 }
+          );
+          console.error('Failed to extract components:', result);
+        }
+      },
+      error: (error) => {
+        this.loadingComponents = false;
+        console.error('Failed to extract components:', error);
+        this.snackBar.open('Failed to extract components. Check console.', 'Close', { duration: 4000 });
+      },
+    });
+  }
+
+  selectComponentName(component: string): void {
+    this.newComponentName = component;
   }
 
   onClose(): void {
