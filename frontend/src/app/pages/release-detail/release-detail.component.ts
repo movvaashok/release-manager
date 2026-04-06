@@ -27,6 +27,7 @@ import { StatusChipComponent } from '../../shared/components/status-chip/status-
 import { AddReposDialogComponent } from './add-repos-dialog/add-repos-dialog.component';
 import { AddViaJiraDialogComponent } from './add-via-jira-dialog/add-via-jira-dialog.component';
 import { RaAbandonConfirmDialogComponent } from './ra-abandon-confirm-dialog/ra-abandon-confirm-dialog.component';
+import { RepoMappingDialogComponent } from './repo-mapping-dialog/repo-mapping-dialog.component';
 import { AuthService } from '../../core/services/auth.service';
 import { ProjectService } from '../../core/services/project.service';
 
@@ -63,6 +64,7 @@ const POLL_INTERVAL_MS = 30_000;
     AddReposDialogComponent,
     AddViaJiraDialogComponent,
     RaAbandonConfirmDialogComponent,
+    RepoMappingDialogComponent,
   ],
   templateUrl: './release-detail.component.html',
   styleUrls: ['./release-detail.component.scss'],
@@ -922,6 +924,13 @@ ALTERNATIVE (if you prefer not to disable pop-up blocker):
 ⚠️ Note: Safari only allows 1 pop-up per user click for security.
     `;
     alert(instructions);
+  }
+
+  openRepoMappingDialog(): void {
+    this.dialog.open(RepoMappingDialogComponent, {
+      width: '600px',
+      disableClose: false,
+    });
   }
 
   updateConfluencePage(): void {

@@ -601,6 +601,12 @@
               Copy MR Links ({{ mrLinkCount }})
             </button>
             <button mat-stroked-button
+              (click)="openRepoMappingDialog()"
+              matTooltip="Configure repo to Confluence component name mappings">
+              <mat-icon>settings</mat-icon>
+              Configure Mappings
+            </button>
+            <button mat-stroked-button
               *ngIf="release?.confluence_url"
               (click)="updateConfluencePage()"
               matTooltip="Update Confluence release page with MR links">
