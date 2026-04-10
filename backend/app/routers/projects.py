@@ -23,7 +23,7 @@ def get_project(project_id: str):
 
 @router.put("/{project_id}/configuration", response_model=ProjectConfig)
 def update_project_configuration(project_id: str, request: UpdateProjectConfigRequest):
-    """Update project-specific configuration (Jira, Confluence URLs, and release branch settings)."""
+    """Update project-specific configuration (Jira, Confluence URLs, release branch settings, and MR options)."""
     # Verify project exists
     project = project_service.get_project(project_id)
     if not project:
@@ -35,6 +35,7 @@ def update_project_configuration(project_id: str, request: UpdateProjectConfigRe
         confluence_base_url=request.confluence_base_url,
         release_branch_source=request.release_branch_source,
         release_branch_pattern=request.release_branch_pattern,
+        mr_include_jira_ticket=request.mr_include_jira_ticket,
     )
 
     if not updated_project:

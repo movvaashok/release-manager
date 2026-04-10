@@ -7,7 +7,8 @@
     "jira_base_url": "https://jira.example.com",
     "confluence_base_url": "https://confluence.example.com",
     "release_branch_source": "develop",
-    "release_branch_pattern": "release/{version}"
+    "release_branch_pattern": "release/{version}",
+    "mr_include_jira_ticket": true
   },
   {
     "id": "calibrate",
@@ -17,6 +18,7 @@
     "jira_base_url": "https://jira.example.com",
     "confluence_base_url": "https://confluence.example.com",
     "release_branch_source": "master",
-    "release_branch_pattern": "Release/{version}"
+    "release_branch_pattern": "Release/{version}",
+    "mr_include_jira_ticket": false
   }
 ]

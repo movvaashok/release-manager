@@ -748,17 +748,18 @@ async def _run_stage3_repo(
             repo.mr_iid = mr["iid"]
             repo.status = RepoStage3Status.ALREADY_EXISTS
         else:
-            # Extract Jira ticket from latest commit on release branch
+            # Extract Jira ticket from latest commit on release branch (if configured for this project)
             jira_ticket = None
-            try:
-                commit = await gitlab.get_latest_commit(repo.project_id, release_branch)
-                if commit:
-                    commit_message = commit.get("message", "")
-                    jira_ticket = _extract_jira_ticket_from_message(commit_message)
-            except Exception:
-                pass  # Continue without ticket if fetch fails
+            if proj and proj.mr_include_jira_ticket:
+                try:
+                    commit = await gitlab.get_latest_commit(repo.project_id, release_branch)
+                    if commit:
+                        commit_message = commit.get("message", "")
+                        jira_ticket = _extract_jira_ticket_from_message(commit_message)
+                except Exception:
+                    pass  # Continue without ticket if fetch fails
 
-            # Build MR title with Jira ticket if available
+            # Build MR title with Jira ticket if available, otherwise use project name
             if jira_ticket:
                 mr_title = f"{jira_ticket} - {project_display_name} v{version}"
             else:

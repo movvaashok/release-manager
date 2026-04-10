@@ -26,8 +26,9 @@ def update_project_config(
     confluence_base_url: Optional[str] = None,
     release_branch_source: Optional[str] = None,
     release_branch_pattern: Optional[str] = None,
+    mr_include_jira_ticket: Optional[bool] = None,
 ) -> Optional[ProjectConfig]:
-    """Update project configuration (URLs and release branch settings)."""
+    """Update project configuration (URLs, release branch settings, and MR options)."""
     path = _projects_path()
     if not path.exists():
         return None
@@ -45,6 +46,8 @@ def update_project_config(
                 project["release_branch_source"] = release_branch_source
             if release_branch_pattern is not None:
                 project["release_branch_pattern"] = release_branch_pattern
+            if mr_include_jira_ticket is not None:
+                project["mr_include_jira_ticket"] = mr_include_jira_ticket
             updated = True
             break
 

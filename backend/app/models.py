@@ -21,6 +21,7 @@ class ProjectConfig(BaseModel):
     confluence_base_url: Optional[str] = None
     release_branch_source: Optional[str] = None  # e.g. "develop", "master"
     release_branch_pattern: Optional[str] = None  # e.g. "release/{version}", "Release/{version}"
+    mr_include_jira_ticket: bool = False  # Include TSSA ticket in MR title (Pioneer only)
 
 
 # ---------------------------------------------------------------------------
@@ -302,3 +303,4 @@ class UpdateProjectConfigRequest(BaseModel):
     confluence_base_url: Optional[str] = None
     release_branch_source: Optional[str] = None
     release_branch_pattern: Optional[str] = None
+    mr_include_jira_ticket: Optional[bool] = None
