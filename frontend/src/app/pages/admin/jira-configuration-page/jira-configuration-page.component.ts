@@ -42,7 +42,7 @@ import { Project } from '../../../core/models/release.model';
         <mat-icon>arrow_back</mat-icon>
       </button>
       <span class="toolbar-spacer"></span>
-      <h1>Jira & Confluence Configuration</h1>
+      <h1>Jira &amp; Confluence Configuration</h1>
       <span class="toolbar-spacer"></span>
     </mat-toolbar>
 
@@ -147,8 +147,8 @@ import { Project } from '../../../core/models/release.model';
 
                 <mat-form-field appearance="outline" class="full-width">
                   <mat-label>Branch Pattern</mat-label>
-                  <input matInput formControlName="release_branch_pattern" placeholder="release/{version}" />
-                  <mat-hint>Branch naming pattern. Use {version} placeholder for version number (e.g., release/{version}, Release/{version})</mat-hint>
+                  <input matInput formControlName="release_branch_pattern" placeholder="release/VERSION" />
+                  <mat-hint>Branch naming pattern. Use VERSION placeholder (e.g., release/VERSION, Release/VERSION)</mat-hint>
                 </mat-form-field>
               </form>
             </mat-card-content>
@@ -307,7 +307,6 @@ export class JiraConfigurationPageComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // Check if user is admin
     if (!this.auth.isAdmin()) {
       this.router.navigate(['/releases']);
       return;
@@ -350,7 +349,6 @@ export class JiraConfigurationPageComponent implements OnInit {
       error: (err: any) => {
         this.loading = false;
         console.error('Failed to load project config:', err);
-        // Set default values on error
         this.jiraForm.patchValue({
           jira_base_url: 'https://jira.example.com',
         });
@@ -376,12 +374,12 @@ export class JiraConfigurationPageComponent implements OnInit {
     this.releaseService.updateProjectConfiguration(this.selectedProjectId, payload).subscribe({
       next: () => {
         this.savingJira = false;
-        this.snackBar.open('✅ Jira configuration saved', 'Close', { duration: 3000 });
+        this.snackBar.open('Jira configuration saved', 'Close', { duration: 3000 });
       },
       error: (err: any) => {
         this.savingJira = false;
         this.errorMessage = err?.error?.detail || 'Failed to save Jira configuration';
-        this.snackBar.open('❌ Failed to save configuration', 'Close', { duration: 4000 });
+        this.snackBar.open('Failed to save configuration', 'Close', { duration: 4000 });
       }
     });
   }
@@ -397,12 +395,12 @@ export class JiraConfigurationPageComponent implements OnInit {
     this.releaseService.updateProjectConfiguration(this.selectedProjectId, payload).subscribe({
       next: () => {
         this.savingConfluence = false;
-        this.snackBar.open('✅ Confluence configuration saved', 'Close', { duration: 3000 });
+        this.snackBar.open('Confluence configuration saved', 'Close', { duration: 3000 });
       },
       error: (err: any) => {
         this.savingConfluence = false;
         this.errorMessage = err?.error?.detail || 'Failed to save Confluence configuration';
-        this.snackBar.open('❌ Failed to save configuration', 'Close', { duration: 4000 });
+        this.snackBar.open('Failed to save configuration', 'Close', { duration: 4000 });
       }
     });
   }
@@ -419,12 +417,12 @@ export class JiraConfigurationPageComponent implements OnInit {
     this.releaseService.updateProjectConfiguration(this.selectedProjectId, payload).subscribe({
       next: () => {
         this.savingReleaseBranch = false;
-        this.snackBar.open('✅ Release branch configuration saved', 'Close', { duration: 3000 });
+        this.snackBar.open('Release branch configuration saved', 'Close', { duration: 3000 });
       },
       error: (err: any) => {
         this.savingReleaseBranch = false;
         this.errorMessage = err?.error?.detail || 'Failed to save release branch configuration';
-        this.snackBar.open('❌ Failed to save configuration', 'Close', { duration: 4000 });
+        this.snackBar.open('Failed to save configuration', 'Close', { duration: 4000 });
       }
     });
   }
