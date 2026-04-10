@@ -5,7 +5,9 @@
     "jira_project_key": "TSSA",
     "gitlab_group_path": "truata/products/pioneer",
     "jira_base_url": "https://jira.example.com",
-    "confluence_base_url": "https://confluence.example.com"
+    "confluence_base_url": "https://confluence.example.com",
+    "release_branch_source": "develop",
+    "release_branch_pattern": "release/{version}"
   },
   {
     "id": "calibrate",
@@ -13,6 +15,8 @@
     "jira_project_key": "TRAN",
     "gitlab_group_path": "truata/products/calibrate",
     "jira_base_url": "https://jira.example.com",
-    "confluence_base_url": "https://confluence.example.com"
+    "confluence_base_url": "https://confluence.example.com",
+    "release_branch_source": "master",
+    "release_branch_pattern": "Release/{version}"
   }
 ]

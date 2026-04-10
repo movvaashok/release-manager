@@ -19,6 +19,8 @@ class ProjectConfig(BaseModel):
     gitlab_group_path: Optional[str] = None  # e.g. "truata/products/pioneer"
     jira_base_url: Optional[str] = None
     confluence_base_url: Optional[str] = None
+    release_branch_source: Optional[str] = None  # e.g. "develop", "master"
+    release_branch_pattern: Optional[str] = None  # e.g. "release/{version}", "Release/{version}"
 
 
 # ---------------------------------------------------------------------------
@@ -298,3 +300,5 @@ class ReleaseSummary(BaseModel):
 class UpdateProjectConfigRequest(BaseModel):
     jira_base_url: Optional[str] = None
     confluence_base_url: Optional[str] = None
+    release_branch_source: Optional[str] = None
+    release_branch_pattern: Optional[str] = None

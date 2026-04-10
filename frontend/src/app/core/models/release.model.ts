@@ -109,6 +109,8 @@ export interface Project {
   gitlab_group_path?: string;
   jira_base_url?: string;
   confluence_base_url?: string;
+  release_branch_source?: string;        // e.g., 'develop', 'master'
+  release_branch_pattern?: string;       // e.g., 'release/{version}', 'Release/{version}'
 }
 
 export interface AuditLog {

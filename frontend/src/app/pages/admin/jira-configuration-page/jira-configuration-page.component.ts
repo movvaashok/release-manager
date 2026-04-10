@@ -124,6 +124,42 @@ import { Project } from '../../../core/models/release.model';
             </mat-card-actions>
           </mat-card>
 
+          <!-- Release Branch Configuration -->
+          <mat-card class="config-card">
+            <mat-card-header>
+              <div mat-card-avatar class="card-icon">
+                <mat-icon>source_control_commit</mat-icon>
+              </div>
+              <mat-card-title>Release Branch Configuration</mat-card-title>
+              <mat-card-subtitle>Configure release branch strategy for {{ currentProject?.display_name }}</mat-card-subtitle>
+            </mat-card-header>
+            <mat-card-content>
+              <form [formGroup]="releaseBranchForm">
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Source Branch</mat-label>
+                  <mat-select formControlName="release_branch_source">
+                    <mat-option value="develop">develop</mat-option>
+                    <mat-option value="master">master</mat-option>
+                    <mat-option value="main">main</mat-option>
+                  </mat-select>
+                  <mat-hint>Branch to create release branch from (e.g., develop, master, main)</mat-hint>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Branch Pattern</mat-label>
+                  <input matInput formControlName="release_branch_pattern" placeholder="release/{version}" />
+                  <mat-hint>Branch naming pattern. Use {version} placeholder for version number (e.g., release/{version}, Release/{version})</mat-hint>
+                </mat-form-field>
+              </form>
+            </mat-card-content>
+            <mat-card-actions>
+              <button mat-raised-button color="primary" [disabled]="releaseBranchForm.invalid || savingReleaseBranch" (click)="saveReleaseBranchConfig()">
+                <mat-spinner *ngIf="savingReleaseBranch" diameter="16" style="display:inline-block;margin-right:6px;"></mat-spinner>
+                Save Release Branch Config
+              </button>
+            </mat-card-actions>
+          </mat-card>
+
           <div *ngIf="errorMessage" class="error-msg">{{ errorMessage }}</div>
         </ng-container>
       </div>
@@ -238,6 +274,7 @@ import { Project } from '../../../core/models/release.model';
 export class JiraConfigurationPageComponent implements OnInit {
   jiraForm: FormGroup;
   confluenceForm: FormGroup;
+  releaseBranchForm: FormGroup;
 
   selectedProjectId: string = '';
   availableProjects: Project[] = [];
@@ -246,6 +283,7 @@ export class JiraConfigurationPageComponent implements OnInit {
   loading = true;
   savingJira = false;
   savingConfluence = false;
+  savingReleaseBranch = false;
   errorMessage = '';
 
   constructor(
@@ -261,6 +299,10 @@ export class JiraConfigurationPageComponent implements OnInit {
     });
     this.confluenceForm = this.fb.group({
       confluence_base_url: ['', [Validators.required, Validators.pattern(/^https?:\/\/.+/)]],
+    });
+    this.releaseBranchForm = this.fb.group({
+      release_branch_source: ['develop', Validators.required],
+      release_branch_pattern: ['release/{version}', [Validators.required, Validators.minLength(5)]],
     });
   }
 
@@ -299,6 +341,10 @@ export class JiraConfigurationPageComponent implements OnInit {
         this.confluenceForm.patchValue({
           confluence_base_url: project.confluence_base_url || 'https://confluence.example.com',
         });
+        this.releaseBranchForm.patchValue({
+          release_branch_source: project.release_branch_source || 'develop',
+          release_branch_pattern: project.release_branch_pattern || 'release/{version}',
+        });
         this.loading = false;
       },
       error: (err: any) => {
@@ -310,6 +356,10 @@ export class JiraConfigurationPageComponent implements OnInit {
         });
         this.confluenceForm.patchValue({
           confluence_base_url: 'https://confluence.example.com',
+        });
+        this.releaseBranchForm.patchValue({
+          release_branch_source: 'develop',
+          release_branch_pattern: 'release/{version}',
         });
       }
     });
@@ -352,6 +402,28 @@ export class JiraConfigurationPageComponent implements OnInit {
       error: (err: any) => {
         this.savingConfluence = false;
         this.errorMessage = err?.error?.detail || 'Failed to save Confluence configuration';
+        this.snackBar.open('❌ Failed to save configuration', 'Close', { duration: 4000 });
+      }
+    });
+  }
+
+  saveReleaseBranchConfig(): void {
+    if (this.releaseBranchForm.invalid) return;
+
+    this.savingReleaseBranch = true;
+    const payload = {
+      release_branch_source: this.releaseBranchForm.get('release_branch_source')?.value,
+      release_branch_pattern: this.releaseBranchForm.get('release_branch_pattern')?.value,
+    };
+
+    this.releaseService.updateProjectConfiguration(this.selectedProjectId, payload).subscribe({
+      next: () => {
+        this.savingReleaseBranch = false;
+        this.snackBar.open('✅ Release branch configuration saved', 'Close', { duration: 3000 });
+      },
+      error: (err: any) => {
+        this.savingReleaseBranch = false;
+        this.errorMessage = err?.error?.detail || 'Failed to save release branch configuration';
         this.snackBar.open('❌ Failed to save configuration', 'Close', { duration: 4000 });
       }
     });

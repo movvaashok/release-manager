@@ -20,8 +20,14 @@ def get_project(project_id: str) -> Optional[ProjectConfig]:
     return next((p for p in get_all() if p.id == project_id), None)
 
 
-def update_project_config(project_id: str, jira_base_url: Optional[str] = None, confluence_base_url: Optional[str] = None) -> Optional[ProjectConfig]:
-    """Update project configuration (Jira and Confluence base URLs)."""
+def update_project_config(
+    project_id: str,
+    jira_base_url: Optional[str] = None,
+    confluence_base_url: Optional[str] = None,
+    release_branch_source: Optional[str] = None,
+    release_branch_pattern: Optional[str] = None,
+) -> Optional[ProjectConfig]:
+    """Update project configuration (URLs and release branch settings)."""
     path = _projects_path()
     if not path.exists():
         return None
@@ -35,6 +41,10 @@ def update_project_config(project_id: str, jira_base_url: Optional[str] = None, 
                 project["jira_base_url"] = jira_base_url
             if confluence_base_url is not None:
                 project["confluence_base_url"] = confluence_base_url
+            if release_branch_source is not None:
+                project["release_branch_source"] = release_branch_source
+            if release_branch_pattern is not None:
+                project["release_branch_pattern"] = release_branch_pattern
             updated = True
             break
 
