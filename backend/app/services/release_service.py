@@ -52,6 +52,32 @@ _DATA_DIR: Path = (
 
 
 # ---------------------------------------------------------------------------
+# Helper functions for project-specific configuration
+# ---------------------------------------------------------------------------
+
+def _get_release_branch_config(project_id: str) -> tuple[str, str]:
+    """
+    Get the release branch source and pattern for a project.
+    Returns: (source_branch, branch_pattern)
+    Example: ("develop", "release/{version}") or ("master", "Release/{version}")
+    """
+    proj = project_service.get_project(project_id)
+    if proj:
+        source = proj.release_branch_source or "develop"
+        pattern = proj.release_branch_pattern or "release/{version}"
+    else:
+        # Fallback defaults
+        source = "develop"
+        pattern = "release/{version}"
+    return source, pattern
+
+
+def _build_release_branch_name(pattern: str, version: str) -> str:
+    """Build the release branch name using the configured pattern."""
+    return pattern.replace("{version}", version)
+
+
+# ---------------------------------------------------------------------------
 # Migrations
 # ---------------------------------------------------------------------------
 
@@ -292,7 +318,8 @@ async def remove_repo_from_release(project_id: str, version: str, repo_name: str
                 )
 
     gitlab = get_gitlab_client(gitlab_token)
-    release_branch = f"release/{version}"
+    _, branch_pattern = _get_release_branch_config(project_id)
+    release_branch = _build_release_branch_name(branch_pattern, version)
     branch = await gitlab.get_branch(repo.project_id, release_branch)
     if branch is not None:
         await gitlab.delete_branch(repo.project_id, release_branch)
@@ -354,10 +381,11 @@ def _git_sync_develop_to_release(
     web_url: str,
     gitlab_token: str,
     release_branch: str,
+    source_branch: str,
     commit_message: str,
 ) -> dict:
     """
-    Clone the repo locally, ensure *release_branch* exists, merge develop into
+    Clone the repo locally, ensure *release_branch* exists, merge source_branch into
     it, then push.  All network I/O is done via authenticated HTTPS so no SSH
     keys are required.
 
@@ -405,12 +433,12 @@ def _git_sync_develop_to_release(
         )
         release_exists = bool(ls.stdout.strip())
 
-        # Fetch develop
-        git("fetch", "-q", "origin", "develop:refs/remotes/origin/develop")
+        # Fetch source branch
+        git("fetch", "-q", "origin", f"{source_branch}:refs/remotes/origin/{source_branch}")
 
         if not release_exists:
-            # Create release branch from develop tip and push
-            git("checkout", "-q", "-b", release_branch, "refs/remotes/origin/develop")
+            # Create release branch from source branch tip and push
+            git("checkout", "-q", "-b", release_branch, f"refs/remotes/origin/{source_branch}")
             git("push", "-q", "origin", f"HEAD:{release_branch}")
             return {
                 "branch_created": True, "branch_existed": False,
@@ -421,25 +449,25 @@ def _git_sync_develop_to_release(
         git("fetch", "-q", "origin", f"{release_branch}:refs/remotes/origin/{release_branch}")
         git("checkout", "-q", "-b", release_branch, f"refs/remotes/origin/{release_branch}")
 
-        # Check if develop has any commits not already in release branch
+        # Check if source branch has any commits not already in release branch
         merge_base = git(
             "merge-base",
             f"refs/remotes/origin/{release_branch}",
-            "refs/remotes/origin/develop",
+            f"refs/remotes/origin/{source_branch}",
         ).stdout.strip()
-        develop_sha = git("rev-parse", "refs/remotes/origin/develop").stdout.strip()
+        source_sha = git("rev-parse", f"refs/remotes/origin/{source_branch}").stdout.strip()
 
-        if merge_base == develop_sha:
-            # develop is already fully contained in release branch
+        if merge_base == source_sha:
+            # source branch is already fully contained in release branch
             return {
                 "branch_created": False, "branch_existed": True,
                 "merged": False, "no_updates": True, "conflict": False,
             }
 
-        # Merge develop into release branch
+        # Merge source branch into release branch
         try:
             git(
-                "merge", "refs/remotes/origin/develop",
+                "merge", f"refs/remotes/origin/{source_branch}",
                 "--no-ff", "-m", commit_message,
             )
         except subprocess.CalledProcessError as exc:
@@ -465,13 +493,15 @@ def _git_sync_develop_to_release(
 # ---------------------------------------------------------------------------
 
 async def _run_stage2_repo(
+    project_id: str,
     version: str,
     repo: Stage2Repo,
     gitlab_token: str,
 ) -> Stage2Repo:
     """Execute stage-2 logic for a single repository and return updated model."""
     gitlab = get_gitlab_client(gitlab_token)
-    release_branch = f"release/{version}"
+    source_branch, branch_pattern = _get_release_branch_config(project_id)
+    release_branch = _build_release_branch_name(branch_pattern, version)
 
     try:
         if not repo.web_url:
@@ -480,7 +510,7 @@ async def _run_stage2_repo(
                 "Re-add the repository to populate the URL."
             )
 
-        # Clone locally, merge develop → release branch, push
+        # Clone locally, merge source_branch → release branch, push
         loop = asyncio.get_event_loop()
         result = await loop.run_in_executor(
             None,
@@ -488,7 +518,8 @@ async def _run_stage2_repo(
             repo.web_url,
             gitlab_token,
             release_branch,
-            f"Merge develop into release/{version}",
+            source_branch,
+            f"Merge {source_branch} into {release_branch}",
         )
 
         repo.branch_created = result["branch_created"]
@@ -525,7 +556,7 @@ async def run_stage2(project_id: str, version: str, gitlab_token: str) -> Releas
     for i, repo in enumerate(state.stage2):
         if repo.status == RepoStage2Status.SUCCESS:
             continue
-        state.stage2[i] = await _run_stage2_repo(version, repo, gitlab_token)
+        state.stage2[i] = await _run_stage2_repo(project_id, version, repo, gitlab_token)
 
     _save_release(project_id, state)
     return state
@@ -553,7 +584,7 @@ async def run_stage2_repo(project_id: str, version: str, repo_name: str, gitlab_
     repo.commits_ahead = None
     repo.compare_url = None
 
-    state.stage2[idx] = await _run_stage2_repo(version, repo, gitlab_token)
+    state.stage2[idx] = await _run_stage2_repo(project_id, version, repo, gitlab_token)
     _save_release(project_id, state)
     return state
 
@@ -563,14 +594,15 @@ async def run_stage2_repo(project_id: str, version: str, repo_name: str, gitlab_
 # ---------------------------------------------------------------------------
 
 async def run_diff_check(project_id: str, version: str, gitlab_token: str) -> ReleaseState:
-    """For every stage-2 repo that has a release branch, compare develop against
-    it and record whether develop is ahead (has new commits)."""
+    """For every stage-2 repo that has a release branch, compare source branch against
+    it and record whether source branch is ahead (has new commits)."""
     state = _load_release(project_id, version)
     if state is None:
         raise ValueError(f"Release {version} not found")
 
     gitlab = get_gitlab_client(gitlab_token)
-    release_branch = f"release/{version}"
+    source_branch, branch_pattern = _get_release_branch_config(project_id)
+    release_branch = _build_release_branch_name(branch_pattern, version)
 
     # Build a lookup of web_url from stage1 so we can construct compare links
     web_urls = {r.name: r.web_url for r in state.stage1 if r.web_url}
@@ -580,17 +612,17 @@ async def run_diff_check(project_id: str, version: str, gitlab_token: str) -> Re
         if not (repo.branch_created or repo.branch_existed or repo.status == RepoStage2Status.SUCCESS):
             continue
         try:
-            comparison = await gitlab.compare_branches(repo.project_id, release_branch, "develop")
+            comparison = await gitlab.compare_branches(repo.project_id, release_branch, source_branch)
             commits = comparison.get("commits", [])
             repo.commits_ahead = len(commits)
             repo.has_new_commits = len(commits) > 0
 
-            # Build GitLab web compare URL: shows what develop has that release doesn't
+            # Build GitLab web compare URL: shows what source branch has that release doesn't
             web_url = web_urls.get(repo.name, "")
             if web_url:
                 from urllib.parse import quote
                 encoded_release = quote(release_branch, safe="")
-                repo.compare_url = f"{web_url}/-/compare/{encoded_release}...develop"
+                repo.compare_url = f"{web_url}/-/compare/{encoded_release}...{source_branch}"
             else:
                 repo.compare_url = None
         except Exception as exc:
@@ -620,7 +652,8 @@ async def refresh_pipeline_statuses(project_id: str, version: str, gitlab_token:
         raise ValueError(f"Release {version} not found")
 
     gitlab = get_gitlab_client(gitlab_token)
-    release_branch = f"release/{version}"
+    _, branch_pattern = _get_release_branch_config(project_id)
+    release_branch = _build_release_branch_name(branch_pattern, version)
     changed = False
 
     # Stage 2 – fetch pipeline for the release branch on each repo that has one
@@ -674,13 +707,15 @@ def _jira_key_from_url(url: Optional[str]) -> Optional[str]:
 
 
 async def _run_stage3_repo(
+    project_id: str,
     version: str,
     repo: Stage3Repo,
     gitlab_token: str,
 ) -> Stage3Repo:
     """Execute stage-3 logic for a single repository and return updated model."""
     gitlab = get_gitlab_client(gitlab_token)
-    release_branch = f"release/{version}"
+    _, branch_pattern = _get_release_branch_config(project_id)
+    release_branch = _build_release_branch_name(branch_pattern, version)
 
     try:
         existing_mrs = await gitlab.list_merge_requests(
@@ -764,7 +799,7 @@ async def run_stage3(project_id: str, version: str, gitlab_token: str) -> Releas
     for i, repo in enumerate(state.stage3):
         if repo.status in (RepoStage3Status.SUCCESS, RepoStage3Status.ALREADY_EXISTS):
             continue
-        state.stage3[i] = await _run_stage3_repo(version, repo, gitlab_token)
+        state.stage3[i] = await _run_stage3_repo(project_id, version, repo, gitlab_token)
 
     _save_release(project_id, state)
     return state
@@ -787,7 +822,7 @@ async def run_stage3_repo(project_id: str, version: str, repo_name: str, gitlab_
     repo.error = None
     repo.pipeline_status = None
     repo.pipeline_url = None
-    state.stage3[idx] = await _run_stage3_repo(version, repo, gitlab_token)
+    state.stage3[idx] = await _run_stage3_repo(project_id, version, repo, gitlab_token)
     _save_release(project_id, state)
     return state
 
