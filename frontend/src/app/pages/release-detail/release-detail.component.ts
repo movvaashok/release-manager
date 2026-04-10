@@ -152,6 +152,8 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
     this.username = this.auth.getUsername() ?? '';
     this.isAdmin = this.auth.isAdmin();
     this.loadRelease();
+    // Load Jira status on initial page load so it's ready when user clicks the tab
+    this.loadJiraStatus();
   }
 
   logout(): void {
