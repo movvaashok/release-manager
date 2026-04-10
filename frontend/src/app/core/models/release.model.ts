@@ -104,6 +104,9 @@ export interface Project {
   id: string;
   display_name: string;
   jira_project_key: string;
+  gitlab_group_path?: string;
+  jira_base_url?: string;
+  confluence_base_url?: string;
 }
 
 export interface AuditLog {

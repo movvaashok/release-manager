@@ -275,4 +275,13 @@ export class ReleaseService {
   extractComponentsFromTemplatePageUrl(): Observable<any> {
     return this.http.get<any>(`${this.base}/releases/confluence/extract-components-from-template`);
   }
+
+  // Project configuration methods
+  getProjectConfiguration(projectId: string): Observable<any> {
+    return this.http.get<any>(`${this.base}/projects/${projectId}`);
+  }
+
+  updateProjectConfiguration(projectId: string, config: any): Observable<any> {
+    return this.http.put<any>(`${this.base}/projects/${projectId}/configuration`, config);
+  }
 }

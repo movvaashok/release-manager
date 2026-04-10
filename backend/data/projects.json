@@ -3,12 +3,16 @@
     "id": "pioneer",
     "display_name": "Pioneer",
     "jira_project_key": "TSSA",
-    "gitlab_group_path": "truata/products/pioneer"
+    "gitlab_group_path": "truata/products/pioneer",
+    "jira_base_url": "https://jira.example.com",
+    "confluence_base_url": "https://confluence.example.com"
   },
   {
     "id": "calibrate",
     "display_name": "Calibrate",
     "jira_project_key": "TRAN",
-    "gitlab_group_path": "truata/products/calibrate"
+    "gitlab_group_path": "truata/products/calibrate",
+    "jira_base_url": "https://jira.example.com",
+    "confluence_base_url": "https://confluence.example.com"
   }
 ]

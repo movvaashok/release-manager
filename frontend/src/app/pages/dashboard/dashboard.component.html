@@ -39,11 +39,16 @@
       <mat-icon>article</mat-icon> Manage Documentation
     </button>
     <ng-container *ngIf="isAdmin">
+      <mat-divider></mat-divider>
+      <div style="padding:8px 16px; font-size:12px; color:rgba(0,0,0,0.5); font-weight:500;">ADMIN</div>
       <button mat-menu-item (click)="openManageRepos()">
         <mat-icon>folder</mat-icon> Manage Repositories
       </button>
       <button mat-menu-item (click)="openManageUsers()">
         <mat-icon>people</mat-icon> Manage Users
+      </button>
+      <button mat-menu-item (click)="openJiraConfiguration()">
+        <mat-icon>settings</mat-icon> Jira & Confluence
       </button>
       <mat-divider></mat-divider>
     </ng-container>

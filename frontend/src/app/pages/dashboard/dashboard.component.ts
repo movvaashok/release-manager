@@ -5,7 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatDialogModule } from '@angular/material/dialog';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
@@ -16,9 +16,6 @@ import { ReleaseService } from '../../core/services/release.service';
 import { ReleaseSummary, Project } from '../../core/models/release.model';
 import { AuthService } from '../../core/services/auth.service';
 import { ProjectService } from '../../core/services/project.service';
-import { ManageReposDialogComponent } from './manage-repos-dialog/manage-repos-dialog.component';
-import { ManageUsersDialogComponent } from './manage-users-dialog/manage-users-dialog.component';
-import { ManageDocumentationDialogComponent } from './manage-documentation-dialog/manage-documentation-dialog.component';
 
 @Component({
   selector: 'app-dashboard',
@@ -41,7 +38,6 @@ export class DashboardComponent implements OnInit {
 
   constructor(
     private releaseService: ReleaseService,
-    private dialog: MatDialog,
     private router: Router,
     private auth: AuthService,
     public projectService: ProjectService,
@@ -84,15 +80,19 @@ export class DashboardComponent implements OnInit {
   }
 
   openManageRepos(): void {
-    this.dialog.open(ManageReposDialogComponent, { width: '1000px', disableClose: false });
+    this.router.navigate(['/admin/manage-repositories']);
   }
 
   openManageUsers(): void {
-    this.dialog.open(ManageUsersDialogComponent, { width: '860px', disableClose: false });
+    this.router.navigate(['/admin/manage-users']);
   }
 
   openManageDocumentation(): void {
-    this.dialog.open(ManageDocumentationDialogComponent, { width: '600px', disableClose: false });
+    this.router.navigate(['/admin/manage-documentation']);
+  }
+
+  openJiraConfiguration(): void {
+    this.router.navigate(['/admin/jira-configuration']);
   }
 
   viewRelease(version: string): void {

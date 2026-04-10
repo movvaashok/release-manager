@@ -17,6 +17,8 @@ class ProjectConfig(BaseModel):
     display_name: str
     jira_project_key: str
     gitlab_group_path: Optional[str] = None  # e.g. "truata/products/pioneer"
+    jira_base_url: Optional[str] = None
+    confluence_base_url: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
@@ -289,3 +291,8 @@ class ReleaseSummary(BaseModel):
     cab_ticket_url: Optional[str] = None
     confluence_url: Optional[str] = None
     risk_assessment_url: Optional[str] = None
+
+
+class UpdateProjectConfigRequest(BaseModel):
+    jira_base_url: Optional[str] = None
+    confluence_base_url: Optional[str] = None

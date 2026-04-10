@@ -18,3 +18,28 @@ def get_all() -> List[ProjectConfig]:
 
 def get_project(project_id: str) -> Optional[ProjectConfig]:
     return next((p for p in get_all() if p.id == project_id), None)
+
+
+def update_project_config(project_id: str, jira_base_url: Optional[str] = None, confluence_base_url: Optional[str] = None) -> Optional[ProjectConfig]:
+    """Update project configuration (Jira and Confluence base URLs)."""
+    path = _projects_path()
+    if not path.exists():
+        return None
+
+    projects = json.loads(path.read_text())
+    updated = False
+
+    for project in projects:
+        if project.get("id") == project_id:
+            if jira_base_url is not None:
+                project["jira_base_url"] = jira_base_url
+            if confluence_base_url is not None:
+                project["confluence_base_url"] = confluence_base_url
+            updated = True
+            break
+
+    if updated:
+        path.write_text(json.dumps(projects, indent=2))
+        return get_project(project_id)
+
+    return None
