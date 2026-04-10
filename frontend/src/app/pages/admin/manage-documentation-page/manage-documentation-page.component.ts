@@ -254,6 +254,11 @@ export class ManageDocumentationPageComponent implements OnInit {
 
   onProjectChange(): void {
     this.projectService.setProject(this.projectService.projects.find(p => p.id === this.selectedProjectId)!);
+    // Reset UI state when switching projects
+    this.availableComponents = [];
+    this.showComponentList = false;
+    this.newRepoName = '';
+    this.newComponentName = '';
     this.loadMappings();
   }
 

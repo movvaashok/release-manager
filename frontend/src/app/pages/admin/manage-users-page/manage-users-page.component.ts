@@ -179,6 +179,7 @@ export class ManageUsersPageComponent implements OnInit {
 
   ngOnInit(): void {
     this.allProjects = this.projectService.projects;
+    // Note: Users are global, not project-specific, but we still load them here
     this.loadUsers();
   }
 

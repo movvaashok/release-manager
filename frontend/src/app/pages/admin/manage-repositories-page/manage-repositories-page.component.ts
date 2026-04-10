@@ -435,6 +435,11 @@ export class ManageRepositoriesPageComponent implements OnInit {
 
   onProjectChange(): void {
     this.projectService.setProject(this.projectService.projects.find(p => p.id === this.selectedProjectId)!);
+    // Reset UI state when switching projects
+    this.editingName = null;
+    this.showAddForm = false;
+    this.errorMessage = '';
+    this.showGitlabBrowser = false;
     this.loadRepos();
   }
 
