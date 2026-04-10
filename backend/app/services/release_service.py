@@ -707,17 +707,18 @@ def _jira_key_from_url(url: Optional[str]) -> Optional[str]:
 
 
 def _extract_jira_ticket_from_message(message: Optional[str]) -> Optional[str]:
-    """Extract Jira ticket number (e.g. 'TSSA-6436') from a commit message.
+    """Extract TSSA Jira ticket number (e.g. 'TSSA-6436') from a commit message.
 
-    Looks for patterns like TSSA-1234, RA-42, etc. at the beginning or anywhere
-    in the message. Returns the first match found.
+    Looks for TSSA ticket patterns only (e.g., TSSA-6436).
+    Ignores other ticket types like RA, TSD, etc.
+    Returns the first TSSA match found.
     """
     if not message:
         return None
     import re
-    # Match Jira ticket pattern: uppercase letters followed by hyphen and digits
-    # e.g., TSSA-6436, RA-42, etc.
-    m = re.search(r"\b([A-Z]+\-\d+)\b", message)
+    # Match only TSSA ticket pattern: TSSA followed by hyphen and digits
+    # e.g., TSSA-6436
+    m = re.search(r"\b(TSSA\-\d+)\b", message)
     return m.group(1) if m else None
 
 
