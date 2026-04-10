@@ -62,6 +62,26 @@ class GitLabClient:
             resp.raise_for_status()
 
     # ------------------------------------------------------------------
+    # Commits
+    # ------------------------------------------------------------------
+
+    async def get_latest_commit(self, project_id: int, branch: str) -> Optional[Dict[str, Any]]:
+        """Get the latest commit on a branch. Returns commit info dict or None."""
+        url = f"{self._base}/projects/{project_id}/repository/commits"
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                url,
+                headers=self._headers,
+                params={"ref": branch, "per_page": 1},
+                timeout=30,
+            )
+            if resp.status_code == 404:
+                return None
+            resp.raise_for_status()
+            commits = resp.json()
+            return commits[0] if commits else None
+
+    # ------------------------------------------------------------------
     # Compare / merge
     # ------------------------------------------------------------------
 

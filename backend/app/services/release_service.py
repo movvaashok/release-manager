@@ -706,6 +706,21 @@ def _jira_key_from_url(url: Optional[str]) -> Optional[str]:
     return m.group(1) if m else None
 
 
+def _extract_jira_ticket_from_message(message: Optional[str]) -> Optional[str]:
+    """Extract Jira ticket number (e.g. 'TSSA-6436') from a commit message.
+
+    Looks for patterns like TSSA-1234, RA-42, etc. at the beginning or anywhere
+    in the message. Returns the first match found.
+    """
+    if not message:
+        return None
+    import re
+    # Match Jira ticket pattern: uppercase letters followed by hyphen and digits
+    # e.g., TSSA-6436, RA-42, etc.
+    m = re.search(r"\b([A-Z]+\-\d+)\b", message)
+    return m.group(1) if m else None
+
+
 async def _run_stage3_repo(
     project_id: str,
     version: str,
@@ -716,6 +731,10 @@ async def _run_stage3_repo(
     gitlab = get_gitlab_client(gitlab_token)
     _, branch_pattern = _get_release_branch_config(project_id)
     release_branch = _build_release_branch_name(branch_pattern, version)
+
+    # Get project info to determine display name
+    proj = project_service.get_project(project_id)
+    project_display_name = proj.display_name if proj else project_id
 
     try:
         existing_mrs = await gitlab.list_merge_requests(
@@ -728,11 +747,27 @@ async def _run_stage3_repo(
             repo.mr_iid = mr["iid"]
             repo.status = RepoStage3Status.ALREADY_EXISTS
         else:
+            # Extract Jira ticket from latest commit on release branch
+            jira_ticket = None
+            try:
+                commit = await gitlab.get_latest_commit(repo.project_id, release_branch)
+                if commit:
+                    commit_message = commit.get("message", "")
+                    jira_ticket = _extract_jira_ticket_from_message(commit_message)
+            except Exception:
+                pass  # Continue without ticket if fetch fails
+
+            # Build MR title with Jira ticket if available
+            if jira_ticket:
+                mr_title = f"{jira_ticket} - {project_display_name} v{version}"
+            else:
+                mr_title = f"{project_display_name} v{version}"
+
             mr = await gitlab.create_merge_request(
                 project_id=repo.project_id,
                 source_branch=release_branch,
                 target_branch="master",
-                title=f"Release {version} - {repo.name}",
+                title=mr_title,
                 description=f"Automated release MR for version {version}.",
             )
             repo.mr_url = mr["web_url"]
