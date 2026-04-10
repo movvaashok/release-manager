@@ -271,4 +271,8 @@ export class ReleaseService {
       params: { page_url: pageUrl }
     });
   }
+
+  extractComponentsFromTemplatePageUrl(): Observable<any> {
+    return this.http.get<any>(`${this.base}/releases/confluence/extract-components-from-template`);
+  }
 }

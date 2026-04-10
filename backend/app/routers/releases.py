@@ -1016,6 +1016,229 @@ async def extract_components_from_confluence(page_url: str = Query(...)):
             }
 
 
+@router.get("/confluence/extract-components-from-template")
+async def extract_components_from_template():
+    """
+    Extract component names from the Pioneer release plan template page.
+
+    Searches for a Confluence page with title matching "Pioneer v.X.X.X release plan template"
+    and extracts the component names from the table.
+
+    Returns:
+        {
+            "success": bool,
+            "components": [list of component names],
+            "template_url": str (URL of the template page found),
+            "message": str,
+            "error": str (if failed)
+        }
+    """
+    from app.services import token_service
+    from app.config import settings
+    import httpx
+    import base64
+    from bs4 import BeautifulSoup
+
+    components = []
+
+    # Check credentials
+    jira_email, jira_api_token = token_service.get_jira_credentials()
+    if not (jira_email and jira_api_token and settings.jira_url):
+        return {
+            "success": False,
+            "components": [],
+            "template_url": "",
+            "message": "Credentials not configured",
+            "error": "Jira/Confluence credentials not configured in tokens.json",
+        }
+
+    auth_header = "Basic " + base64.b64encode(f"{jira_email}:{jira_api_token}".encode()).decode()
+    wiki_base = settings.jira_url.rstrip("/") + "/wiki"
+
+    # Search for template page with "Pioneer" and "release plan template" in title
+    async with httpx.AsyncClient() as client:
+        try:
+            logger.info("Searching for Pioneer release plan template page...")
+
+            # Search for pages matching the template pattern
+            search_resp = await client.get(
+                f"{wiki_base}/rest/api/content/search",
+                headers={"Authorization": auth_header, "Accept": "application/json"},
+                params={
+                    "cql": 'title ~ "Pioneer" AND title ~ "release plan template"',
+                    "expand": "space,body.storage,version",
+                    "limit": 1
+                },
+                timeout=10.0,
+            )
+
+            if search_resp.status_code != 200:
+                logger.error(f"Failed to search for template page: {search_resp.status_code}")
+                return {
+                    "success": False,
+                    "components": [],
+                    "template_url": "",
+                    "message": "Search failed",
+                    "error": f"Confluence search failed with status {search_resp.status_code}",
+                }
+
+            search_data = search_resp.json()
+            results = search_data.get("results", [])
+
+            if not results:
+                return {
+                    "success": False,
+                    "components": [],
+                    "template_url": "",
+                    "message": "Template not found",
+                    "error": 'No Confluence page found matching "Pioneer ... release plan template"',
+                }
+
+            # Get the first (and should be only) result
+            template_page = results[0]
+            page_id = template_page.get("id")
+            page_title = template_page.get("title", "")
+            page_url = template_page.get("_links", {}).get("webui", "")
+
+            logger.info(f"Found template page: {page_title}")
+
+            # Fetch full page content with body
+            content_resp = await client.get(
+                f"{wiki_base}/rest/api/content/{page_id}",
+                headers={"Authorization": auth_header, "Accept": "application/json"},
+                params={"expand": "body.storage,version"},
+                timeout=10.0,
+            )
+
+            if content_resp.status_code != 200:
+                return {
+                    "success": False,
+                    "components": [],
+                    "template_url": page_url,
+                    "message": "Failed to fetch page content",
+                    "error": f"Failed to fetch page content: {content_resp.status_code}",
+                }
+
+            page_data = content_resp.json()
+            html_content = page_data.get("body", {}).get("storage", {}).get("value", "")
+
+            if not html_content:
+                return {
+                    "success": False,
+                    "components": [],
+                    "template_url": page_url,
+                    "message": "No content found",
+                    "error": "Template page has no HTML content",
+                }
+
+            # Parse HTML and find component names
+            soup = BeautifulSoup(html_content, "html.parser")
+            tables = soup.find_all("table")
+
+            if not tables:
+                return {
+                    "success": False,
+                    "components": [],
+                    "template_url": page_url,
+                    "message": "No tables found",
+                    "error": "Template page does not contain any tables",
+                }
+
+            # Find the Release Packages section and extract components
+            release_packages_heading = None
+            for heading in soup.find_all(["h1", "h2", "h3", "h4", "h5", "h6"]):
+                if "release package" in heading.get_text(strip=True).lower():
+                    release_packages_heading = heading
+                    break
+
+            tables_to_search = []
+            if release_packages_heading:
+                # Find all tables after the Release Packages heading
+                current = release_packages_heading.find_next()
+                while current:
+                    if current.name == "table":
+                        tables_to_search.append(current)
+                    # Stop if we hit another heading
+                    if current.name in ["h1", "h2", "h3", "h4", "h5", "h6"]:
+                        break
+                    current = current.find_next()
+            else:
+                tables_to_search = tables
+
+            # Extract component names from the table
+            for table in tables_to_search:
+                rows = table.find_all("tr")
+                if not rows:
+                    continue
+
+                header_cells = rows[0].find_all(["th", "td"])
+                headers = [re.sub(r'\s+', ' ', cell.get_text(strip=True)).lower() for cell in header_cells]
+
+                # Find component column index
+                comp_idx = next(
+                    (i for i, h in enumerate(headers) if "component" in h),
+                    None,
+                )
+
+                if comp_idx is None:
+                    continue
+
+                # Extract component names
+                for row in rows[1:]:
+                    cells = row.find_all(["td"])
+                    if len(cells) > comp_idx:
+                        component_name = cells[comp_idx].get_text(strip=True)
+                        component_name = re.sub(r'\s+', ' ', component_name).strip()
+                        if component_name and component_name not in components:
+                            components.append(component_name)
+
+                if components:
+                    break
+
+            if components:
+                return {
+                    "success": True,
+                    "components": sorted(components),
+                    "template_url": page_url,
+                    "message": f"Found {len(components)} components in template",
+                    "error": None,
+                }
+            else:
+                return {
+                    "success": False,
+                    "components": [],
+                    "template_url": page_url,
+                    "message": "No components found",
+                    "error": "No Component column found in template table",
+                }
+
+        except httpx.ConnectError:
+            return {
+                "success": False,
+                "components": [],
+                "template_url": "",
+                "message": "Connection failed",
+                "error": f"Cannot connect to {wiki_base}",
+            }
+        except httpx.TimeoutException:
+            return {
+                "success": False,
+                "components": [],
+                "template_url": "",
+                "message": "Connection timeout",
+                "error": "Confluence connection timeout",
+            }
+        except Exception as e:
+            logger.error(f"Error extracting template components: {str(e)}")
+            return {
+                "success": False,
+                "components": [],
+                "template_url": "",
+                "message": "Error",
+                "error": str(e),
+            }
+
+
 @router.post("/{version}/update-confluence-mrs")
 async def update_confluence_mrs(version: str, project: str = Query("pioneer")):
     """

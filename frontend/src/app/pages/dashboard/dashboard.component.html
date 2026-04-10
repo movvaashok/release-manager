@@ -35,6 +35,9 @@
         <span [class]="isAdmin ? 'role-admin' : 'role-user'">{{ isAdmin ? 'Admin' : 'User' }}</span>
       </div>
     </div>
+    <button mat-menu-item (click)="openManageDocumentation()">
+      <mat-icon>article</mat-icon> Manage Documentation
+    </button>
     <ng-container *ngIf="isAdmin">
       <button mat-menu-item (click)="openManageRepos()">
         <mat-icon>folder</mat-icon> Manage Repositories

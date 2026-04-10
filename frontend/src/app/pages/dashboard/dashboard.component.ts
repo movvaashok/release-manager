@@ -18,6 +18,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { ProjectService } from '../../core/services/project.service';
 import { ManageReposDialogComponent } from './manage-repos-dialog/manage-repos-dialog.component';
 import { ManageUsersDialogComponent } from './manage-users-dialog/manage-users-dialog.component';
+import { ManageDocumentationDialogComponent } from './manage-documentation-dialog/manage-documentation-dialog.component';
 
 @Component({
   selector: 'app-dashboard',
@@ -88,6 +89,10 @@ export class DashboardComponent implements OnInit {
 
   openManageUsers(): void {
     this.dialog.open(ManageUsersDialogComponent, { width: '860px', disableClose: false });
+  }
+
+  openManageDocumentation(): void {
+    this.dialog.open(ManageDocumentationDialogComponent, { width: '600px', disableClose: false });
   }
 
   viewRelease(version: string): void {
