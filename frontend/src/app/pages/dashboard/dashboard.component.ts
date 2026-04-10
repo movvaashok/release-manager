@@ -35,6 +35,7 @@ export class DashboardComponent implements OnInit {
   username = '';
   isAdmin = false;
   copiedVersion: string | null = null;
+  availableProjectsList: Project[] = [];
 
   constructor(
     private releaseService: ReleaseService,
@@ -47,6 +48,8 @@ export class DashboardComponent implements OnInit {
   ngOnInit(): void {
     this.username = this.auth.getUsername() ?? '';
     this.isAdmin = this.auth.isAdmin();
+    // Ensure available projects are always loaded in this component
+    this.availableProjectsList = this.projectService.projects;
     this.loadReleases();
   }
 
@@ -103,8 +106,9 @@ export class DashboardComponent implements OnInit {
     return this.projectService.current;
   }
 
+  // Kept for compatibility, but use availableProjectsList in template
   get availableProjects(): Project[] {
-    return this.projectService.projects;
+    return this.availableProjectsList;
   }
 
   switchProject(project: Project): void {

@@ -5,7 +5,7 @@
   <span class="spacer"></span>
 
   <!-- Project switcher -->
-  <button *ngIf="availableProjects.length > 1" mat-stroked-button
+  <button *ngIf="availableProjectsList.length > 1" mat-stroked-button
           [matMenuTriggerFor]="projectMenu"
           style="margin-right:12px; color:white; border-color:rgba(255,255,255,0.6);">
     <mat-icon>work_outline</mat-icon>
@@ -13,7 +13,7 @@
     <mat-icon>arrow_drop_down</mat-icon>
   </button>
   <mat-menu #projectMenu="matMenu">
-    <button mat-menu-item *ngFor="let p of availableProjects" (click)="switchProject(p)">
+    <button mat-menu-item *ngFor="let p of availableProjectsList" (click)="switchProject(p)">
       <mat-icon *ngIf="p.id === currentProject?.id" style="color:#1565c0;">check</mat-icon>
       <mat-icon *ngIf="p.id !== currentProject?.id" style="opacity:0;">check</mat-icon>
       {{ p.display_name }}
