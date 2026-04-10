@@ -184,6 +184,7 @@ def _to_summary(state: ReleaseState) -> ReleaseSummary:
     return ReleaseSummary(
         version=state.version,
         created_at=state.created_at,
+        project_id=state.project_id,
         total_repos=len(state.stage1),
         stage2_success=_count(state.stage2, RepoStage2Status.SUCCESS),
         stage2_conflict=_count(state.stage2, RepoStage2Status.CONFLICT),
@@ -256,6 +257,7 @@ def create_release(project_id: str, req: CreateReleaseRequest) -> ReleaseState:
     state = ReleaseState(
         version=req.version,
         created_at=datetime.now(timezone.utc),
+        project_id=project_id,
         stage1=stage1,
         stage2=stage2,
         stage3=stage3,

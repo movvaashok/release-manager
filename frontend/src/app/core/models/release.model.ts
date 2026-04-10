@@ -57,6 +57,7 @@ export interface Stage3Repo {
 export interface ReleaseState {
   version: string;
   created_at: string;
+  project_id?: string;
   stage1: Stage1Repo[];
   stage2: Stage2Repo[];
   stage3: Stage3Repo[];
@@ -70,6 +71,7 @@ export interface ReleaseState {
 export interface ReleaseSummary {
   version: string;
   created_at: string;
+  project_id?: string;
   total_repos: number;
   stage2_success: number;
   stage2_conflict: number;

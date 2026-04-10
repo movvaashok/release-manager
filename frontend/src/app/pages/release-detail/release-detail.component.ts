@@ -169,6 +169,13 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
     this.releaseService.getRelease(this.version).subscribe({
       next: (r) => {
         this.release = r;
+        // Set the project context based on the release's project_id
+        if (r.project_id) {
+          const project = this.projectService.projects.find(p => p.id === r.project_id);
+          if (project) {
+            this.projectService.setProject(project);
+          }
+        }
         this.loading = false;
         // Immediately fetch live pipeline statuses from GitLab
         this.refreshPipelinesQuiet();

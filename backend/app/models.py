@@ -103,6 +103,7 @@ class Stage3Repo(BaseModel):
 class ReleaseState(BaseModel):
     version: str
     created_at: datetime
+    project_id: Optional[str] = None           # Project this release belongs to
     stage1: List[Stage1Repo] = []
     stage2: List[Stage2Repo] = []
     stage3: List[Stage3Repo] = []
@@ -277,6 +278,7 @@ class UpdateReferenceRepoRequest(BaseModel):
 class ReleaseSummary(BaseModel):
     version: str
     created_at: datetime
+    project_id: Optional[str] = None           # Project this release belongs to
     total_repos: int
     stage2_success: int
     stage2_conflict: int
