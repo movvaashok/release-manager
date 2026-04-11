@@ -1454,13 +1454,13 @@ async def validate_container_tags(
         gitlab_tag = None
         gitlab_link = None
         try:
-            logger.info(f"[Validate Tags] Fetching latest rc tag for repo {repo.name} (project_id: {repo.project_id})")
-            gitlab_tag = await gitlab.get_latest_container_tag(repo.project_id, "rc")
+            logger.info(f"[Validate Tags] Fetching latest non-prod rc tag for repo {repo.name} (project_id: {repo.project_id})")
+            gitlab_tag = await gitlab.get_latest_container_tag(repo.project_id, "rc", registry_type="non-prod")
             if gitlab_tag:
                 gitlab_link = f"https://gitlab.com/{repo.project_id}/-/container_registry"
-                logger.info(f"[Validate Tags] Found GitLab tag for {repo.name}: {gitlab_tag}")
+                logger.info(f"[Validate Tags] Found non-prod GitLab tag for {repo.name}: {gitlab_tag}")
             else:
-                logger.warning(f"[Validate Tags] No rc tags found for {repo.name}")
+                logger.warning(f"[Validate Tags] No non-prod rc tags found for {repo.name}")
         except Exception as e:
             logger.error(f"[Validate Tags] Error fetching GitLab tag for {repo.name}: {str(e)}", exc_info=True)
             pass
@@ -1479,7 +1479,7 @@ async def validate_container_tags(
                     break
 
         matches = gitlab_tag and confluence_tag and gitlab_tag == confluence_tag
-        logger.info(f"[Validate Tags] {repo.name} (service: {service_name}) - GitLab: {gitlab_tag}, Confluence: {confluence_tag}, Matches: {matches}")
+        logger.info(f"[Validate Tags] {repo.name} (service: {service_name}) - Non-prod GitLab: {gitlab_tag}, Confluence: {confluence_tag}, Matches: {matches}")
 
         if not matches and (gitlab_tag or confluence_tag):
             all_match = False

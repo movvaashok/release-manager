@@ -68,13 +68,19 @@ class GitLabClient:
     # Container Registry
     # ------------------------------------------------------------------
 
-    async def get_container_registry_tags(self, project_id: int) -> List[Dict[str, Any]]:
-        """Get all container registry tags for a project.
+    async def get_container_registry_tags(self, project_id: int, registry_type: str = "non-prod") -> List[Dict[str, Any]]:
+        """Get container registry tags for a project.
+
+        Args:
+            project_id: GitLab project ID
+            registry_type: Either "non-prod" (default) or "prod"
+                          Non-prod = base registry path (e.g., "tssa_job_mgmt_service")
+                          Prod = registry path with /prod suffix (e.g., "tssa_job_mgmt_service/prod")
 
         Returns a list of tag objects with fields like name, path, etc.
         """
         url = f"{self._base}/projects/{project_id}/registry/repositories"
-        logger.info(f"[Container Registry] Fetching repositories from GitLab: {url}")
+        logger.info(f"[Container Registry] Fetching {registry_type} repositories from GitLab: {url}")
         async with httpx.AsyncClient() as client:
             resp = await client.get(
                 url,
@@ -86,19 +92,31 @@ class GitLabClient:
                 logger.warning(f"[Container Registry] No repositories found (404) for project {project_id}")
                 return []
             resp.raise_for_status()
-            repositories = resp.json()
-            logger.info(f"[Container Registry] Found {len(repositories)} registries: {[r.get('name') for r in repositories]}")
+            all_repositories = resp.json()
+            logger.info(f"[Container Registry] Found {len(all_repositories)} total registries: {[r.get('name') for r in all_repositories]}")
+
+        # Filter repositories based on registry type
+        repositories = []
+        if registry_type == "prod":
+            # Prod registries have '/prod' in the path
+            repositories = [r for r in all_repositories if "/prod" in r.get("path", "")]
+            logger.info(f"[Container Registry] Filtered for PROD registries (with /prod): {[r.get('name') for r in repositories]}")
+        else:  # non-prod
+            # Non-prod registries do NOT have '/prod' in the path
+            repositories = [r for r in all_repositories if "/prod" not in r.get("path", "")]
+            logger.info(f"[Container Registry] Filtered for NON-PROD registries (without /prod): {[r.get('name') for r in repositories]}")
 
         # For each repository, get its tags
         all_tags = []
         for repo in repositories:
             repo_id = repo.get("id")
             repo_name = repo.get("name", "unknown")
+            repo_path = repo.get("path", "unknown")
             if not repo_id:
                 continue
             try:
                 tags_url = f"{self._base}/projects/{project_id}/registry/repositories/{repo_id}/tags"
-                logger.info(f"[Container Registry] Fetching tags for repo '{repo_name}' (ID: {repo_id}): {tags_url}")
+                logger.info(f"[Container Registry] Fetching {registry_type} tags for repo '{repo_name}' (path: {repo_path}, ID: {repo_id})")
                 async with httpx.AsyncClient() as client:
                     tags_resp = await client.get(
                         tags_url,
@@ -109,7 +127,7 @@ class GitLabClient:
                     tags_resp.raise_for_status()
                     tags = tags_resp.json()
                     tag_names = [t.get("name") for t in tags]
-                    logger.info(f"[Container Registry] Found {len(tags)} tags for '{repo_name}': {tag_names[:10]}")
+                    logger.info(f"[Container Registry] Found {len(tags)} tags for {registry_type} registry '{repo_name}': {tag_names[:10]}")
                     all_tags.extend(tags)
             except Exception as e:
                 logger.error(f"[Container Registry] Error fetching tags for repo '{repo_name}': {str(e)}")
@@ -117,26 +135,31 @@ class GitLabClient:
 
         return all_tags
 
-    async def get_latest_container_tag(self, project_id: int, tag_pattern: str = "rc") -> Optional[str]:
+    async def get_latest_container_tag(self, project_id: int, tag_pattern: str = "rc", registry_type: str = "non-prod") -> Optional[str]:
         """Get the latest container registry tag matching a pattern (e.g., '2.17.0-rc-*').
+
+        Args:
+            project_id: GitLab project ID
+            tag_pattern: Pattern to match in tag name (default: "rc")
+            registry_type: "non-prod" (default) or "prod"
 
         Returns the tag name if found, None otherwise.
         """
         try:
-            all_tags = await self.get_container_registry_tags(project_id)
-            logger.debug(f"[Container Registry] All tags fetched: {[t.get('name') for t in all_tags]}")
+            all_tags = await self.get_container_registry_tags(project_id, registry_type=registry_type)
+            logger.debug(f"[Container Registry] All {registry_type} tags fetched: {[t.get('name') for t in all_tags]}")
 
             # Filter tags that contain the pattern (e.g., "rc")
             matching_tags = [t.get("name") for t in all_tags if tag_pattern in t.get("name", "")]
-            logger.info(f"[Container Registry] Filtering tags with pattern '{tag_pattern}': {matching_tags}")
+            logger.info(f"[Container Registry] Filtering {registry_type} tags with pattern '{tag_pattern}': {matching_tags}")
 
             # Sort to find latest (tags should be in format like "2.17.0-rc-1")
             if matching_tags:
                 latest = sorted(matching_tags, reverse=True)[0]
-                logger.info(f"[Container Registry] Latest matching tag for pattern '{tag_pattern}': {latest}")
+                logger.info(f"[Container Registry] Latest matching {registry_type} tag for pattern '{tag_pattern}': {latest}")
                 return latest
 
-            logger.warning(f"[Container Registry] No tags found matching pattern '{tag_pattern}' in {[t.get('name') for t in all_tags]}")
+            logger.warning(f"[Container Registry] No {registry_type} tags found matching pattern '{tag_pattern}' in {[t.get('name') for t in all_tags]}")
             return None
         except Exception as e:
             logger.error(f"[Container Registry] Exception in get_latest_container_tag: {str(e)}", exc_info=True)
