@@ -98,24 +98,28 @@ class GitLabClient:
         # Filter repositories based on registry type
         repositories = []
 
-        # Log all repositories with their paths for debugging
+        # Log all repositories with their details for debugging
         logger.info(f"[Container Registry] All repository details:")
         for repo in all_repositories:
-            logger.info(f"  - Name: {repo.get('name')}, Path: {repo.get('path')}, ID: {repo.get('id')}")
+            repo_name = repo.get('name', '')
+            repo_path = repo.get('path', '')
+            repo_id = repo.get('id')
+            logger.info(f"  - Name: '{repo_name}', Path: '{repo_path}', ID: {repo_id}")
 
         if registry_type == "prod":
-            # Prod registries have '/prod' in the path
-            repositories = [r for r in all_repositories if "/prod" in r.get("path", "")]
-            logger.info(f"[Container Registry] Filtered for PROD registries (with /prod): {[r.get('name') for r in repositories]}")
+            # Prod registries have 'prod' or similar in the name
+            repositories = [r for r in all_repositories if r.get("name") == "prod"]
+            logger.info(f"[Container Registry] Filtered for PROD registries (name='prod'): {[r.get('name') for r in repositories]}")
             if not repositories:
-                logger.warning(f"[Container Registry] No PROD registries found (looking for '/prod' in path)")
+                logger.warning(f"[Container Registry] No PROD registries found (looking for name='prod')")
+                logger.info(f"[Container Registry] Available registry names: {[r.get('name') for r in all_repositories]}")
         else:  # non-prod
-            # Non-prod registries do NOT have '/prod' in the path
-            repositories = [r for r in all_repositories if "/prod" not in r.get("path", "")]
-            logger.info(f"[Container Registry] Filtered for NON-PROD registries (without /prod): {[r.get('name') for r in repositories]}")
+            # Non-prod registries have empty name or don't contain 'prod'
+            repositories = [r for r in all_repositories if r.get("name", "") == ""]
+            logger.info(f"[Container Registry] Filtered for NON-PROD registries (name=''): {[r.get('path') for r in repositories]}")
             if not repositories:
-                logger.warning(f"[Container Registry] No NON-PROD registries found (excluding paths with '/prod')")
-                logger.info(f"[Container Registry] Available paths: {[r.get('path') for r in all_repositories]}")
+                logger.warning(f"[Container Registry] No NON-PROD registries found (looking for name='')")
+                logger.info(f"[Container Registry] Available registry names: {[r.get('name') for r in all_repositories]}")
 
         # For each repository, get its tags
         all_tags = []

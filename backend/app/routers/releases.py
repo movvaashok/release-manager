@@ -1420,13 +1420,17 @@ async def validate_container_tags(
                     continue
 
                 # Extract component name and tag value (handle multi-line content)
-                component_name = cells[comp_idx].get_text(strip=True)
+                # Preserve structure while collapsing excessive whitespace
+                component_cell = cells[comp_idx]
+                # Get all text including newlines, then normalize
+                component_name = component_cell.get_text(separator=' ', strip=True)
                 component_name = regex_module.sub(r'\s+', ' ', component_name).strip()
 
-                tag_text = cells[tag_idx].get_text(strip=True)
+                tag_cell = cells[tag_idx]
+                tag_text = tag_cell.get_text(separator=' ', strip=True)
                 tag_text = regex_module.sub(r'\s+', ' ', tag_text).strip()
 
-                logger.debug(f"[Validate Tags] Row {row_idx}: component={component_name}, tag_raw={tag_text}")
+                logger.debug(f"[Validate Tags] Row {row_idx}: component='{component_name}', tag_raw='{tag_text}'")
 
                 # Try to extract version number (e.g., "2.17.0-rc-1" from various formats)
                 # Match patterns like: 2.17.0-rc-1 or service-name:2.17.0-rc-1
@@ -1473,32 +1477,38 @@ async def validate_container_tags(
         confluence_tag = None
         service_name = repo.name.replace("_", "-").lower()
 
-        # First try to match against Confluence component names
+        logger.debug(f"[Validate Tags] Looking for component matching repo '{repo.name}' (normalized: '{service_name}')")
+        logger.debug(f"[Validate Tags] Available Confluence components: {list(confluence_tags.keys())}")
+
+        # First try to match against Confluence component names - exact match
         for conf_comp, conf_tag in confluence_tags.items():
             conf_comp_normalized = conf_comp.replace("_", "-").lower()
+            logger.debug(f"[Validate Tags]   Comparing: '{service_name}' vs '{conf_comp_normalized}' (original: '{conf_comp}')")
             if conf_comp_normalized == service_name:
                 component_name = conf_comp
                 confluence_tag = conf_tag
-                logger.info(f"[Validate Tags] Found exact component match: {repo.name} -> {component_name}")
+                logger.info(f"[Validate Tags] Found exact component match: repo '{repo.name}' -> component '{component_name}'")
                 break
 
         # If not found by exact match, try partial matching
         if not component_name:
+            logger.debug(f"[Validate Tags] Exact match not found, trying partial matching...")
             for conf_comp, conf_tag in confluence_tags.items():
                 conf_comp_normalized = conf_comp.replace("_", "-").lower()
                 # Try various matching strategies
                 if (service_name in conf_comp_normalized or
                     conf_comp_normalized in service_name or
-                    conf_comp_normalized == repo.name.lower()):
+                    conf_comp_normalized == repo.name.lower() or
+                    repo.name.lower() in conf_comp_normalized):
                     component_name = conf_comp
                     confluence_tag = conf_tag
-                    logger.info(f"[Validate Tags] Found partial component match: {repo.name} -> {component_name}")
+                    logger.info(f"[Validate Tags] Found partial component match: repo '{repo.name}' -> component '{component_name}'")
                     break
 
         # If still not found, use repo name as component name
         if not component_name:
             component_name = repo.name
-            logger.warning(f"[Validate Tags] No Confluence component found for {repo.name}, using repo name as component")
+            logger.warning(f"[Validate Tags] No Confluence component found for repo '{repo.name}', using repo name as fallback component")
 
         matches = gitlab_tag and confluence_tag and gitlab_tag == confluence_tag
         logger.info(f"[Validate Tags] Component: {component_name} (repo: {repo.name}) - Non-prod GitLab: {gitlab_tag}, Confluence: {confluence_tag}, Matches: {matches}")
