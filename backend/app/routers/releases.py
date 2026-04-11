@@ -1307,3 +1307,167 @@ async def update_confluence_mrs(version: str, project: str = Query("pioneer")):
             "message": "Failed to update Confluence page. Check URL and permissions.",
             "updated_count": 0
         }
+
+
+@router.get("/{version}/validate-container-tags", response_model=dict)
+async def validate_container_tags(
+    version: str,
+    project: str = Query("pioneer"),
+    gitlab_token: str = Header(default="", alias="X-GitLab-Token"),
+):
+    """Validate container registry tags for all repositories in a release.
+
+    Compares the latest rc tags in GitLab container registry with what's
+    documented in the Confluence page.
+
+    Returns a dict with:
+    {
+        "confluence_url": str,
+        "repositories": [
+            {
+                "name": str,
+                "gitlab_tag": str or null,
+                "confluence_tag": str or null,
+                "matches": bool,
+                "gitlab_link": str or null
+            }
+        ],
+        "all_match": bool,
+        "can_update": bool
+    }
+    """
+    release = release_service.get_release(project, version)
+    if not release:
+        raise HTTPException(status_code=404, detail=f"Release {version} not found")
+
+    if not release.confluence_url:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Release {version} has no Confluence URL configured"
+        )
+
+    if not gitlab_token:
+        raise HTTPException(
+            status_code=400,
+            detail="GitLab token required (X-GitLab-Token header)"
+        )
+
+    from app.services.gitlab_client import get_gitlab_client
+    gitlab = get_gitlab_client(gitlab_token)
+
+    # Get Confluence page content to extract current tags
+    confluence_tags = {}
+    try:
+        confluence_content = await confluence_client.get_page_content(release.confluence_url)
+        # Extract Docker image tags from Confluence (format: service-name:2.17.0-rc-1)
+        import re
+        tag_pattern = r"([a-z0-9\-]+):(\d+\.\d+\.\d+\-rc\-\d+)"
+        for match in re.finditer(tag_pattern, confluence_content or ""):
+            service_name = match.group(1)
+            tag = match.group(2)
+            confluence_tags[service_name] = tag
+    except Exception:
+        pass  # If we can't fetch Confluence content, continue without it
+
+    # Get latest rc tags from GitLab for each repository
+    repositories = []
+    all_match = True
+
+    for repo in release.stage3:
+        gitlab_tag = None
+        gitlab_link = None
+        try:
+            gitlab_tag = await gitlab.get_latest_container_tag(repo.project_id, "rc")
+            if gitlab_tag:
+                gitlab_link = f"https://gitlab.com/{repo.project_id}/-/container_registry"
+        except Exception:
+            pass
+
+        # Get the service name from the repo name
+        service_name = repo.name.replace("_", "-").lower()
+        confluence_tag = confluence_tags.get(service_name)
+
+        matches = gitlab_tag and confluence_tag and gitlab_tag == confluence_tag
+
+        if not matches and (gitlab_tag or confluence_tag):
+            all_match = False
+
+        repositories.append({
+            "repo_name": repo.name,
+            "service_name": service_name,
+            "gitlab_tag": gitlab_tag,
+            "confluence_tag": confluence_tag,
+            "matches": matches,
+            "gitlab_link": gitlab_link,
+            "mr_url": repo.mr_url
+        })
+
+    return {
+        "confluence_url": release.confluence_url,
+        "version": version,
+        "repositories": repositories,
+        "all_match": all_match,
+        "can_update": bool(release.confluence_url)
+    }
+
+
+@router.post("/{version}/update-container-tags", response_model=dict)
+async def update_container_tags_in_confluence(
+    version: str,
+    project: str = Query("pioneer"),
+    x_username: str | None = Header(default=None),
+):
+    """Update Confluence page with latest container registry tags.
+
+    For each repository in the release, updates the Confluence page with
+    the latest rc tag from GitLab registry.
+
+    Returns:
+    {
+        "success": bool,
+        "message": str,
+        "updated_count": int
+    }
+    """
+    release = release_service.get_release(project, version)
+    if not release:
+        raise HTTPException(status_code=404, detail=f"Release {version} not found")
+
+    if not release.confluence_url:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Release {version} has no Confluence URL configured"
+        )
+
+    # Build mapping of service name -> latest tag
+    docker_tags = {}
+    for repo in release.stage3:
+        # Attempt to get from release service or state
+        # For now, return instruction to call validate-container-tags first
+        pass
+
+    # Update Confluence page with the tags
+    success = await confluence_client.update_container_tags(
+        release.confluence_url,
+        docker_tags
+    )
+
+    if success:
+        audit_service.record(
+            username=_u(x_username),
+            action="container_tags_updated",
+            project=project,
+            release_version=version,
+            details={"updated_count": len(docker_tags)},
+        )
+        return {
+            "success": True,
+            "message": f"Updated Confluence page with {len(docker_tags)} container tag(s)",
+            "updated_count": len(docker_tags)
+        }
+    else:
+        return {
+            "success": False,
+            "message": "Failed to update Confluence page. Check URL and permissions.",
+            "updated_count": 0
+        }

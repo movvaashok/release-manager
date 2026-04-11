@@ -464,3 +464,248 @@ async def update_mr_links(
 
     logger.warning(f"No matching table found with 'Component name' and 'Gitlab Merge Request (MR) Link' columns")
     return False
+
+
+async def update_container_tags(
+    page_url: str,
+    container_tags: Dict[str, str],  # service_name -> docker_tag mapping
+) -> bool:
+    """
+    Update the 'Docker Image Tag' or 'Container Image' column in a Confluence page table.
+
+    Finds the table with 'Component name' and 'Docker Image Tag' columns,
+    then updates the tag cells for matching components.
+
+    Args:
+        page_url: URL to the Confluence page
+        container_tags: Dict mapping service/component name → docker image tag
+                       Example: {"Service A": "2.17.0-rc-1"}
+
+    Returns:
+        True if successfully updated, False otherwise
+    """
+    logger.info(f"Starting Confluence container tags update for page: {page_url}")
+    logger.info(f"Container tags to update: {container_tags}")
+
+    jira_email, jira_api_token = token_service.get_jira_credentials()
+    if not (settings.jira_url and jira_email and jira_api_token):
+        logger.error("Missing Jira/Confluence credentials")
+        return False
+
+    page_id = _extract_page_id(page_url)
+    if not page_id:
+        logger.error(f"Failed to extract page ID from URL: {page_url}")
+        return False
+
+    logger.info(f"Extracted page ID: {page_id}")
+
+    auth_headers = {
+        "Authorization": _auth_header(),
+        "Accept": "application/json",
+    }
+
+    # Step 1: Get current page content and version
+    async with httpx.AsyncClient() as client:
+        try:
+            logger.info(f"Fetching page content from Confluence...")
+            resp = await client.get(
+                f"{_wiki_base()}/rest/api/content/{page_id}",
+                headers=auth_headers,
+                params={"expand": "body.storage,version"},
+                timeout=20.0,
+            )
+            resp.raise_for_status()
+        except httpx.HTTPError as e:
+            logger.error(f"Failed to fetch page: {e}")
+            return False
+
+    page_data = resp.json()
+    current_version = page_data.get("version", {}).get("number", 0)
+    page_title = page_data.get("title", "")
+    html_content = page_data.get("body", {}).get("storage", {}).get("value", "")
+
+    logger.info(f"Page title: {page_title}, version: {current_version}, HTML content length: {len(html_content)}")
+
+    if not html_content:
+        logger.error("No HTML content found in page")
+        return False
+
+    if not page_title:
+        logger.error("No page title found in page data")
+        return False
+
+    # Step 2: Parse HTML and find the right table
+    soup = BeautifulSoup(html_content, "html.parser")
+    tables = soup.find_all("table")
+    logger.info(f"Found {len(tables)} table(s) in page")
+
+    # Try to find the table under "Release Packages" section first
+    release_packages_heading = None
+    for heading in soup.find_all(["h1", "h2", "h3", "h4", "h5", "h6"]):
+        if "release package" in heading.get_text(strip=True).lower():
+            release_packages_heading = heading
+            logger.info(f"Found 'Release Packages' section heading")
+            break
+
+    # Start table search from Release Packages section if found, otherwise search all tables
+    tables_to_search = []
+    if release_packages_heading:
+        current = release_packages_heading.find_next()
+        while current:
+            if current.name == "table":
+                tables_to_search.append(current)
+            if current.name in ["h1", "h2", "h3", "h4", "h5", "h6"]:
+                break
+            current = current.find_next()
+        logger.info(f"Found {len(tables_to_search)} table(s) under Release Packages section")
+    else:
+        logger.warning("'Release Packages' section not found, searching all tables")
+        tables_to_search = tables
+
+    for table_idx, table in enumerate(tables_to_search):
+        rows = table.find_all("tr")
+        if not rows:
+            continue
+
+        logger.debug(f"Table {table_idx}: {len(rows)} rows")
+
+        # Parse header row
+        header_cells = rows[0].find_all(["th", "td"])
+        headers = [cell.get_text(strip=True) for cell in header_cells]
+        headers_lower = [_normalise(h) for h in headers]
+
+        logger.debug(f"Table {table_idx} headers: {headers}")
+
+        # Find column indices
+        comp_idx = next(
+            (i for i, h in enumerate(headers_lower) if "component" in h),
+            None,
+        )
+        # Look for "Docker Image Tag" or "Container Image" column
+        tag_idx = next(
+            (i for i, h in enumerate(headers_lower) if ("docker" in h or "container" in h) and "tag" in h),
+            None,
+        )
+
+        logger.debug(f"Table {table_idx}: component_idx={comp_idx}, tag_idx={tag_idx}")
+
+        if comp_idx is None or tag_idx is None:
+            continue  # Not the right table
+
+        # Step 3: Update container tags in data rows
+        updated = False
+        logger.info(f"Checking {len(rows) - 1} data rows in table {table_idx}")
+
+        for row_idx, row in enumerate(rows[1:], 1):  # Skip header row
+            cells = row.find_all(["td"])
+            if len(cells) <= max(comp_idx, tag_idx):
+                continue
+
+            # Extract and normalize component name
+            component_name = cells[comp_idx].get_text(strip=True)
+            component_name = re.sub(r'\s+', ' ', component_name).strip()
+            logger.debug(f"Row {row_idx}: component={component_name}")
+
+            if component_name in container_tags:
+                tag = container_tags[component_name]
+                tag_cell = cells[tag_idx]
+
+                logger.info(f"Updating row {row_idx}: {component_name} -> {tag}")
+
+                # Clear the cell and add the tag
+                tag_cell.clear()
+                tag_cell.string = tag
+
+                updated = True
+
+        if not updated:
+            logger.debug(f"Table {table_idx}: No rows updated, skipping")
+            continue
+
+        # Step 4: Update the page in Confluence
+        new_html = str(soup)
+
+        if not new_html or len(new_html) < 100:
+            logger.error(f"Generated HTML is too short or empty: {len(new_html)} chars")
+            return False
+
+        if "<table" not in new_html:
+            logger.error("Generated HTML does not contain a table")
+            return False
+
+        logger.info(f"Generated HTML length: {len(new_html)} chars")
+
+        update_body = {
+            "title": page_title,
+            "type": "page",
+            "version": {"number": current_version + 1},
+            "body": {"storage": {"value": new_html, "representation": "storage"}},
+        }
+
+        logger.info(f"Sending update to Confluence with new version: {current_version + 1}")
+
+        try:
+            async with httpx.AsyncClient() as update_client:
+                update_resp = await update_client.put(
+                    f"{_wiki_base()}/rest/api/content/{page_id}",
+                    headers=auth_headers,
+                    json=update_body,
+                    timeout=20.0,
+                )
+
+                if update_resp.status_code >= 400:
+                    try:
+                        error_detail = update_resp.json()
+                        logger.error(f"Confluence API error {update_resp.status_code}: {error_detail}")
+                    except:
+                        logger.error(f"Confluence API error {update_resp.status_code}: {update_resp.text}")
+
+                update_resp.raise_for_status()
+                logger.info(f"Successfully updated Confluence page")
+                return True
+        except httpx.HTTPError as e:
+            logger.error(f"Failed to update Confluence page: {e}")
+            return False
+
+    logger.warning(f"No matching table found with 'Component name' and 'Docker Image Tag' columns")
+    return False
+
+
+async def get_page_content(page_url: str) -> Optional[str]:
+    """Get the raw HTML content of a Confluence page.
+
+    Args:
+        page_url: URL to the Confluence page
+
+    Returns:
+        HTML content as string, or None if not found
+    """
+    jira_email, jira_api_token = token_service.get_jira_credentials()
+    if not (settings.jira_url and jira_email and jira_api_token):
+        logger.error("Missing Jira/Confluence credentials")
+        return None
+
+    page_id = _extract_page_id(page_url)
+    if not page_id:
+        logger.error(f"Failed to extract page ID from URL: {page_url}")
+        return None
+
+    auth_headers = {
+        "Authorization": _auth_header(),
+        "Accept": "application/json",
+    }
+
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                f"{_wiki_base()}/rest/api/content/{page_id}",
+                headers=auth_headers,
+                params={"expand": "body.storage"},
+                timeout=20.0,
+            )
+            resp.raise_for_status()
+            page_data = resp.json()
+            return page_data.get("body", {}).get("storage", {}).get("value")
+    except httpx.HTTPError as e:
+        logger.error(f"Failed to fetch page content: {e}")
+        return None

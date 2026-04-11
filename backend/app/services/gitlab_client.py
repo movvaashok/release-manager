@@ -62,6 +62,67 @@ class GitLabClient:
             resp.raise_for_status()
 
     # ------------------------------------------------------------------
+    # Container Registry
+    # ------------------------------------------------------------------
+
+    async def get_container_registry_tags(self, project_id: int) -> List[Dict[str, Any]]:
+        """Get all container registry tags for a project.
+
+        Returns a list of tag objects with fields like name, path, etc.
+        """
+        url = f"{self._base}/projects/{project_id}/registry/repositories"
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                url,
+                headers=self._headers,
+                params={"per_page": 100},
+                timeout=30,
+            )
+            if resp.status_code == 404:
+                return []
+            resp.raise_for_status()
+            repositories = resp.json()
+
+        # For each repository, get its tags
+        all_tags = []
+        for repo in repositories:
+            repo_id = repo.get("id")
+            if not repo_id:
+                continue
+            try:
+                tags_url = f"{self._base}/projects/{project_id}/registry/repositories/{repo_id}/tags"
+                async with httpx.AsyncClient() as client:
+                    tags_resp = await client.get(
+                        tags_url,
+                        headers=self._headers,
+                        params={"per_page": 100, "order_by": "name", "sort": "desc"},
+                        timeout=30,
+                    )
+                    tags_resp.raise_for_status()
+                    tags = tags_resp.json()
+                    all_tags.extend(tags)
+            except Exception:
+                pass  # Skip repos with errors
+
+        return all_tags
+
+    async def get_latest_container_tag(self, project_id: int, tag_pattern: str = "rc") -> Optional[str]:
+        """Get the latest container registry tag matching a pattern (e.g., '2.17.0-rc-*').
+
+        Returns the tag name if found, None otherwise.
+        """
+        try:
+            all_tags = await self.get_container_registry_tags(project_id)
+            # Filter tags that contain the pattern (e.g., "rc")
+            matching_tags = [t.get("name") for t in all_tags if tag_pattern in t.get("name", "")]
+            # Sort to find latest (tags should be in format like "2.17.0-rc-1")
+            if matching_tags:
+                return sorted(matching_tags, reverse=True)[0]
+            return None
+        except Exception:
+            return None
+
+    # ------------------------------------------------------------------
     # Commits
     # ------------------------------------------------------------------
 
