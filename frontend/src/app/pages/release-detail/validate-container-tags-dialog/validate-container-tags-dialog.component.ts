@@ -1,13 +1,10 @@
 import { Component, Inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatCardModule } from '@angular/material/card';
 import { ReleaseService } from '../../../core/services/release.service';
@@ -17,14 +14,11 @@ import { ReleaseService } from '../../../core/services/release.service';
   standalone: true,
   imports: [
     CommonModule,
-    FormsModule,
     MatDialogModule,
     MatButtonModule,
     MatIconModule,
     MatTableModule,
     MatProgressSpinnerModule,
-    MatFormFieldModule,
-    MatInputModule,
     MatSnackBarModule,
     MatCardModule,
   ],
@@ -38,19 +32,7 @@ import { ReleaseService } from '../../../core/services/release.service';
           <p style="margin-top: 16px;">Fetching container registry tags...</p>
         </div>
 
-        <div *ngIf="!loading && !errorMessage">
-          <div class="gitlab-token-input" *ngIf="!gitlabTokenProvided">
-            <mat-form-field appearance="outline" class="full-width">
-              <mat-label>GitLab Token (optional)</mat-label>
-              <input matInput type="password" [(ngModel)]="gitlabToken" placeholder="Leave empty for public registries" />
-              <mat-hint>Provide a token to access private container registries</mat-hint>
-            </mat-form-field>
-            <button mat-raised-button color="primary" (click)="loadValidationData()">
-              <mat-icon>refresh</mat-icon> Validate Tags
-            </button>
-          </div>
-
-          <div *ngIf="validationData" class="validation-content">
+        <div *ngIf="!loading && !errorMessage && validationData" class="validation-content">
             <mat-card class="info-card">
               <mat-card-content>
                 <p><strong>Release Version:</strong> {{ validationData.version }}</p>
@@ -126,7 +108,6 @@ import { ReleaseService } from '../../../core/services/release.service';
                 Update Confluence
               </button>
             </div>
-          </div>
         </div>
 
         <div *ngIf="errorMessage" class="error-message">
@@ -159,21 +140,6 @@ import { ReleaseService } from '../../../core/services/release.service';
 
     .full-width {
       width: 100%;
-    }
-
-    .gitlab-token-input {
-      display: flex;
-      gap: 16px;
-      align-items: flex-end;
-      margin-bottom: 24px;
-    }
-
-    .gitlab-token-input mat-form-field {
-      flex: 1;
-    }
-
-    .gitlab-token-input button {
-      height: 56px;
     }
 
     .info-card {
@@ -270,8 +236,6 @@ export class ValidateContainerTagsDialogComponent implements OnInit {
   loading = true;
   updating = false;
   errorMessage = '';
-  gitlabToken = '';
-  gitlabTokenProvided = false;
   validationData: any = null;
   displayedColumns = ['service', 'gitlab', 'confluence', 'status', 'link'];
 
@@ -283,35 +247,22 @@ export class ValidateContainerTagsDialogComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    // If GitLab token is available in the browser, use it
-    const storedToken = localStorage.getItem('gitlab_token');
-    if (storedToken) {
-      this.gitlabToken = storedToken;
-      this.gitlabTokenProvided = true;
-      this.loadValidationData();
-    } else {
-      this.loading = false;
-    }
+    // Automatically load validation data using existing GitLab token
+    this.loadValidationData();
   }
 
   loadValidationData(): void {
-    if (!this.gitlabToken) {
-      this.errorMessage = 'GitLab token is required to fetch container registry tags.';
-      return;
-    }
-
     this.loading = true;
     this.errorMessage = '';
-    this.gitlabTokenProvided = true;
 
-    this.releaseService.validateContainerTags(this.data.version, this.gitlabToken).subscribe({
+    this.releaseService.validateContainerTags(this.data.version).subscribe({
       next: (data) => {
         this.validationData = data;
         this.loading = false;
       },
       error: (err: any) => {
         this.loading = false;
-        this.errorMessage = err?.error?.detail || 'Failed to validate container tags. Check your GitLab token.';
+        this.errorMessage = err?.error?.detail || 'Failed to validate container tags. Ensure you have a valid GitLab token configured.';
       }
     });
   }

@@ -286,8 +286,9 @@ export class ReleaseService {
   }
 
   // Container registry tag validation
-  validateContainerTags(version: string, gitlabToken: string): Observable<any> {
+  validateContainerTags(version: string): Observable<any> {
     const params: any = { ...this.p };
+    const gitlabToken = localStorage.getItem('gitlab_token') || '';
     return this.http.get<any>(`${this.base}/releases/${version}/validate-container-tags`, {
       params,
       headers: { 'X-GitLab-Token': gitlabToken }
