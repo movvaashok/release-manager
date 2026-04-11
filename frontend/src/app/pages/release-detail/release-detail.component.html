@@ -836,6 +836,13 @@
                 <mat-icon>link</mat-icon>
                 Update MR links
               </button>
+              <button mat-stroked-button
+                *ngIf="release?.confluence_url"
+                (click)="validateContainerTags()"
+                matTooltip="Validate container registry tags against Confluence">
+                <mat-icon>verified</mat-icon>
+                Validate Release Tags
+              </button>
               <button *ngIf="isAdmin" mat-stroked-button (click)="startEditDocs()">
                 <mat-icon>edit</mat-icon> Edit Documentation Links
               </button>

@@ -28,6 +28,7 @@ import { AddReposDialogComponent } from './add-repos-dialog/add-repos-dialog.com
 import { AddViaJiraDialogComponent } from './add-via-jira-dialog/add-via-jira-dialog.component';
 import { RaAbandonConfirmDialogComponent } from './ra-abandon-confirm-dialog/ra-abandon-confirm-dialog.component';
 import { RepoMappingDialogComponent } from './repo-mapping-dialog/repo-mapping-dialog.component';
+import { ValidateContainerTagsDialogComponent } from './validate-container-tags-dialog/validate-container-tags-dialog.component';
 import { AuthService } from '../../core/services/auth.service';
 import { ProjectService } from '../../core/services/project.service';
 
@@ -65,6 +66,7 @@ const POLL_INTERVAL_MS = 30_000;
     AddViaJiraDialogComponent,
     RaAbandonConfirmDialogComponent,
     RepoMappingDialogComponent,
+    ValidateContainerTagsDialogComponent,
   ],
   templateUrl: './release-detail.component.html',
   styleUrls: ['./release-detail.component.scss'],
@@ -972,6 +974,22 @@ ALTERNATIVE (if you prefer not to disable pop-up blocker):
         const errorMsg = error?.error?.detail || 'Failed to update Confluence page';
         this.snackBar.open(errorMsg, 'Close', { duration: 4000 });
       },
+    });
+  }
+
+  validateContainerTags(): void {
+    if (!this.release?.confluence_url) {
+      this.snackBar.open('No Confluence URL configured for this release.', 'Close', { duration: 3000 });
+      return;
+    }
+
+    const dialogRef = this.dialog.open(ValidateContainerTagsDialogComponent, {
+      maxWidth: '900px',
+      width: '90vw',
+      disableClose: false,
+      data: {
+        version: this.version,
+      }
     });
   }
 

@@ -284,4 +284,17 @@ export class ReleaseService {
   updateProjectConfiguration(projectId: string, config: any): Observable<any> {
     return this.http.put<any>(`${this.base}/projects/${projectId}/configuration`, config);
   }
+
+  // Container registry tag validation
+  validateContainerTags(version: string, gitlabToken: string): Observable<any> {
+    const params: any = { ...this.p };
+    return this.http.get<any>(`${this.base}/releases/${version}/validate-container-tags`, {
+      params,
+      headers: { 'X-GitLab-Token': gitlabToken }
+    });
+  }
+
+  updateContainerTagsInConfluence(version: string): Observable<any> {
+    return this.http.post<any>(`${this.base}/releases/${version}/update-container-tags`, {}, { params: this.p });
+  }
 }
