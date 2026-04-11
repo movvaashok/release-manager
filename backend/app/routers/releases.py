@@ -1336,17 +1336,25 @@ async def validate_container_tags(
         "can_update": bool
     }
     """
+    import logging
+    logger = logging.getLogger(__name__)
+
+    logger.info(f"[Validate Tags] Starting validation for release {version} (project: {project})")
+
     release = release_service.get_release(project, version)
     if not release:
+        logger.error(f"[Validate Tags] Release {version} not found")
         raise HTTPException(status_code=404, detail=f"Release {version} not found")
 
     if not release.confluence_url:
+        logger.error(f"[Validate Tags] Release {version} has no Confluence URL")
         raise HTTPException(
             status_code=400,
             detail=f"Release {version} has no Confluence URL configured"
         )
 
     if not gitlab_token:
+        logger.error(f"[Validate Tags] GitLab token not provided")
         raise HTTPException(
             status_code=400,
             detail="GitLab token required (X-GitLab-Token header)"
@@ -1358,36 +1366,120 @@ async def validate_container_tags(
     # Get Confluence page content to extract current tags
     confluence_tags = {}
     try:
+        logger.info(f"[Validate Tags] Fetching Confluence page: {release.confluence_url}")
         confluence_content = await confluence_client.get_page_content(release.confluence_url)
-        # Extract Docker image tags from Confluence (format: service-name:2.17.0-rc-1)
-        import re
-        tag_pattern = r"([a-z0-9\-]+):(\d+\.\d+\.\d+\-rc\-\d+)"
-        for match in re.finditer(tag_pattern, confluence_content or ""):
-            service_name = match.group(1)
-            tag = match.group(2)
-            confluence_tags[service_name] = tag
-    except Exception:
+        logger.debug(f"[Validate Tags] Confluence page content length: {len(confluence_content or '')}")
+
+        # Extract Docker image tags from Confluence table
+        # Parse HTML table to extract tags from the correct column
+        from bs4 import BeautifulSoup
+        import re as regex_module
+
+        soup = BeautifulSoup(confluence_content or "", "html.parser")
+        tables = soup.find_all("table")
+        logger.info(f"[Validate Tags] Found {len(tables)} table(s) in Confluence page")
+
+        # Search for the table with component and Gitlab Image Tags columns
+        for table_idx, table in enumerate(tables):
+            rows = table.find_all("tr")
+            if not rows:
+                continue
+
+            logger.debug(f"[Validate Tags] Table {table_idx}: {len(rows)} rows")
+
+            # Parse header row
+            header_cells = rows[0].find_all(["th", "td"])
+            headers = [cell.get_text(strip=True) for cell in header_cells]
+            headers_lower = [regex_module.sub(r"[\s_]+", " ", h.strip().lower()) for h in headers]
+
+            logger.info(f"[Validate Tags] Table {table_idx} headers: {headers}")
+
+            # Find column indices for component and Gitlab Image Tags
+            comp_idx = next(
+                (i for i, h in enumerate(headers_lower) if "component" in h),
+                None,
+            )
+            tag_idx = next(
+                (i for i, h in enumerate(headers_lower)
+                 if ("docker" in h or "container" in h or "gitlab" in h) and "tag" in h),
+                None,
+            )
+
+            logger.debug(f"[Validate Tags] Table {table_idx}: component_idx={comp_idx}, tag_idx={tag_idx}")
+
+            if comp_idx is None or tag_idx is None:
+                continue  # Not the right table
+
+            logger.info(f"[Validate Tags] Found matching table at index {table_idx}")
+
+            # Extract tags from data rows
+            for row_idx, row in enumerate(rows[1:], 1):  # Skip header row
+                cells = row.find_all(["td"])
+                if len(cells) <= max(comp_idx, tag_idx):
+                    continue
+
+                # Extract component name and tag value (handle multi-line content)
+                component_name = cells[comp_idx].get_text(strip=True)
+                component_name = regex_module.sub(r'\s+', ' ', component_name).strip()
+
+                tag_text = cells[tag_idx].get_text(strip=True)
+                tag_text = regex_module.sub(r'\s+', ' ', tag_text).strip()
+
+                logger.debug(f"[Validate Tags] Row {row_idx}: component={component_name}, tag_raw={tag_text}")
+
+                # Try to extract version number (e.g., "2.17.0-rc-1" from various formats)
+                # Match patterns like: 2.17.0-rc-1 or service-name:2.17.0-rc-1
+                tag_match = regex_module.search(r"(\d+\.\d+\.\d+\-rc\-\d+)", tag_text)
+                if tag_match:
+                    version_tag = tag_match.group(1)
+                    # Use component name as key
+                    confluence_tags[component_name] = version_tag
+                    logger.info(f"[Validate Tags] Extracted from Confluence: {component_name} = {version_tag}")
+
+            if confluence_tags:
+                break  # Found the right table, stop searching
+
+        logger.info(f"[Validate Tags] Confluence tags extracted: {confluence_tags}")
+    except Exception as e:
+        logger.warning(f"[Validate Tags] Error fetching Confluence content: {str(e)}", exc_info=True)
         pass  # If we can't fetch Confluence content, continue without it
 
     # Get latest rc tags from GitLab for each repository
     repositories = []
     all_match = True
 
+    logger.info(f"[Validate Tags] Processing {len(release.stage3)} repositories")
+
     for repo in release.stage3:
         gitlab_tag = None
         gitlab_link = None
         try:
+            logger.info(f"[Validate Tags] Fetching latest rc tag for repo {repo.name} (project_id: {repo.project_id})")
             gitlab_tag = await gitlab.get_latest_container_tag(repo.project_id, "rc")
             if gitlab_tag:
                 gitlab_link = f"https://gitlab.com/{repo.project_id}/-/container_registry"
-        except Exception:
+                logger.info(f"[Validate Tags] Found GitLab tag for {repo.name}: {gitlab_tag}")
+            else:
+                logger.warning(f"[Validate Tags] No rc tags found for {repo.name}")
+        except Exception as e:
+            logger.error(f"[Validate Tags] Error fetching GitLab tag for {repo.name}: {str(e)}", exc_info=True)
             pass
 
-        # Get the service name from the repo name
+        # Get the service name from the repo name and try to find matching Confluence tag
         service_name = repo.name.replace("_", "-").lower()
         confluence_tag = confluence_tags.get(service_name)
 
+        # If not found by direct name, try partial matching (for flexibility)
+        if not confluence_tag:
+            for conf_comp, conf_tag in confluence_tags.items():
+                conf_comp_normalized = conf_comp.replace("_", "-").lower()
+                if conf_comp_normalized == service_name or service_name in conf_comp_normalized or conf_comp_normalized in service_name:
+                    confluence_tag = conf_tag
+                    logger.info(f"[Validate Tags] Found Confluence tag by partial match: {service_name} -> {conf_comp} = {conf_tag}")
+                    break
+
         matches = gitlab_tag and confluence_tag and gitlab_tag == confluence_tag
+        logger.info(f"[Validate Tags] {repo.name} (service: {service_name}) - GitLab: {gitlab_tag}, Confluence: {confluence_tag}, Matches: {matches}")
 
         if not matches and (gitlab_tag or confluence_tag):
             all_match = False
@@ -1401,6 +1493,8 @@ async def validate_container_tags(
             "gitlab_link": gitlab_link,
             "mr_url": repo.mr_url
         })
+
+    logger.info(f"[Validate Tags] Validation complete - all_match: {all_match}, repositories: {len(repositories)}")
 
     return {
         "confluence_url": release.confluence_url,

@@ -5,12 +5,15 @@ names like "release/2.15.0" are transmitted correctly.
 """
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, List, Optional
 from urllib.parse import quote
 
 import httpx
 
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 def _encode_branch(branch: str) -> str:
@@ -71,6 +74,7 @@ class GitLabClient:
         Returns a list of tag objects with fields like name, path, etc.
         """
         url = f"{self._base}/projects/{project_id}/registry/repositories"
+        logger.info(f"[Container Registry] Fetching repositories from GitLab: {url}")
         async with httpx.AsyncClient() as client:
             resp = await client.get(
                 url,
@@ -79,18 +83,22 @@ class GitLabClient:
                 timeout=30,
             )
             if resp.status_code == 404:
+                logger.warning(f"[Container Registry] No repositories found (404) for project {project_id}")
                 return []
             resp.raise_for_status()
             repositories = resp.json()
+            logger.info(f"[Container Registry] Found {len(repositories)} registries: {[r.get('name') for r in repositories]}")
 
         # For each repository, get its tags
         all_tags = []
         for repo in repositories:
             repo_id = repo.get("id")
+            repo_name = repo.get("name", "unknown")
             if not repo_id:
                 continue
             try:
                 tags_url = f"{self._base}/projects/{project_id}/registry/repositories/{repo_id}/tags"
+                logger.info(f"[Container Registry] Fetching tags for repo '{repo_name}' (ID: {repo_id}): {tags_url}")
                 async with httpx.AsyncClient() as client:
                     tags_resp = await client.get(
                         tags_url,
@@ -100,8 +108,11 @@ class GitLabClient:
                     )
                     tags_resp.raise_for_status()
                     tags = tags_resp.json()
+                    tag_names = [t.get("name") for t in tags]
+                    logger.info(f"[Container Registry] Found {len(tags)} tags for '{repo_name}': {tag_names[:10]}")
                     all_tags.extend(tags)
-            except Exception:
+            except Exception as e:
+                logger.error(f"[Container Registry] Error fetching tags for repo '{repo_name}': {str(e)}")
                 pass  # Skip repos with errors
 
         return all_tags
@@ -113,13 +124,22 @@ class GitLabClient:
         """
         try:
             all_tags = await self.get_container_registry_tags(project_id)
+            logger.debug(f"[Container Registry] All tags fetched: {[t.get('name') for t in all_tags]}")
+
             # Filter tags that contain the pattern (e.g., "rc")
             matching_tags = [t.get("name") for t in all_tags if tag_pattern in t.get("name", "")]
+            logger.info(f"[Container Registry] Filtering tags with pattern '{tag_pattern}': {matching_tags}")
+
             # Sort to find latest (tags should be in format like "2.17.0-rc-1")
             if matching_tags:
-                return sorted(matching_tags, reverse=True)[0]
+                latest = sorted(matching_tags, reverse=True)[0]
+                logger.info(f"[Container Registry] Latest matching tag for pattern '{tag_pattern}': {latest}")
+                return latest
+
+            logger.warning(f"[Container Registry] No tags found matching pattern '{tag_pattern}' in {[t.get('name') for t in all_tags]}")
             return None
-        except Exception:
+        except Exception as e:
+            logger.error(f"[Container Registry] Exception in get_latest_container_tag: {str(e)}", exc_info=True)
             return None
 
     # ------------------------------------------------------------------

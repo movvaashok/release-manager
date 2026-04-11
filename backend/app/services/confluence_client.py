@@ -581,13 +581,15 @@ async def update_container_tags(
             (i for i, h in enumerate(headers_lower) if "component" in h),
             None,
         )
-        # Look for "Docker Image Tag" or "Container Image" column
+        # Look for "Docker Image Tag", "Container Image", or "Gitlab Image Tags" column
         tag_idx = next(
-            (i for i, h in enumerate(headers_lower) if ("docker" in h or "container" in h) and "tag" in h),
+            (i for i, h in enumerate(headers_lower)
+             if ("docker" in h or "container" in h or "gitlab" in h) and "tag" in h),
             None,
         )
 
         logger.debug(f"Table {table_idx}: component_idx={comp_idx}, tag_idx={tag_idx}")
+        logger.debug(f"Table {table_idx} all headers: {headers}")
 
         if comp_idx is None or tag_idx is None:
             continue  # Not the right table
