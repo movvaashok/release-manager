@@ -1363,8 +1363,9 @@ async def validate_container_tags(
     from app.services.gitlab_client import get_gitlab_client
     gitlab = get_gitlab_client(gitlab_token)
 
-    # Get Confluence page content to extract current tags
-    confluence_tags = {}
+    # Get Confluence page content to extract current tags and component names
+    confluence_tags = {}  # component_name -> tag
+    component_to_service = {}  # service_name -> component_name mapping
     try:
         logger.info(f"[Validate Tags] Fetching Confluence page: {release.confluence_url}")
         confluence_content = await confluence_client.get_page_content(release.confluence_url)
@@ -1449,6 +1450,7 @@ async def validate_container_tags(
     all_match = True
 
     logger.info(f"[Validate Tags] Processing {len(release.stage3)} repositories")
+    logger.info(f"[Validate Tags] Confluence components available: {list(confluence_tags.keys())}")
 
     for repo in release.stage3:
         gitlab_tag = None
@@ -1465,27 +1467,48 @@ async def validate_container_tags(
             logger.error(f"[Validate Tags] Error fetching GitLab tag for {repo.name}: {str(e)}", exc_info=True)
             pass
 
-        # Get the service name from the repo name and try to find matching Confluence tag
+        # Find the corresponding component name from Confluence
+        # Try exact match first (case-insensitive)
+        component_name = None
+        confluence_tag = None
         service_name = repo.name.replace("_", "-").lower()
-        confluence_tag = confluence_tags.get(service_name)
 
-        # If not found by direct name, try partial matching (for flexibility)
-        if not confluence_tag:
+        # First try to match against Confluence component names
+        for conf_comp, conf_tag in confluence_tags.items():
+            conf_comp_normalized = conf_comp.replace("_", "-").lower()
+            if conf_comp_normalized == service_name:
+                component_name = conf_comp
+                confluence_tag = conf_tag
+                logger.info(f"[Validate Tags] Found exact component match: {repo.name} -> {component_name}")
+                break
+
+        # If not found by exact match, try partial matching
+        if not component_name:
             for conf_comp, conf_tag in confluence_tags.items():
                 conf_comp_normalized = conf_comp.replace("_", "-").lower()
-                if conf_comp_normalized == service_name or service_name in conf_comp_normalized or conf_comp_normalized in service_name:
+                # Try various matching strategies
+                if (service_name in conf_comp_normalized or
+                    conf_comp_normalized in service_name or
+                    conf_comp_normalized == repo.name.lower()):
+                    component_name = conf_comp
                     confluence_tag = conf_tag
-                    logger.info(f"[Validate Tags] Found Confluence tag by partial match: {service_name} -> {conf_comp} = {conf_tag}")
+                    logger.info(f"[Validate Tags] Found partial component match: {repo.name} -> {component_name}")
                     break
 
+        # If still not found, use repo name as component name
+        if not component_name:
+            component_name = repo.name
+            logger.warning(f"[Validate Tags] No Confluence component found for {repo.name}, using repo name as component")
+
         matches = gitlab_tag and confluence_tag and gitlab_tag == confluence_tag
-        logger.info(f"[Validate Tags] {repo.name} (service: {service_name}) - Non-prod GitLab: {gitlab_tag}, Confluence: {confluence_tag}, Matches: {matches}")
+        logger.info(f"[Validate Tags] Component: {component_name} (repo: {repo.name}) - Non-prod GitLab: {gitlab_tag}, Confluence: {confluence_tag}, Matches: {matches}")
 
         if not matches and (gitlab_tag or confluence_tag):
             all_match = False
 
         repositories.append({
             "repo_name": repo.name,
+            "component_name": component_name,  # Display component name instead of service name
             "service_name": service_name,
             "gitlab_tag": gitlab_tag,
             "confluence_tag": confluence_tag,

@@ -46,10 +46,10 @@ import { ReleaseService } from '../../../core/services/release.service';
             <h3 style="margin-top: 24px;">Repository Tags</h3>
             <div class="table-container">
               <table mat-table [dataSource]="validationData.repositories" class="full-width">
-                <!-- Service Name Column -->
-                <ng-container matColumnDef="service">
-                  <th mat-header-cell *matHeaderCellDef>Service</th>
-                  <td mat-cell *matCellDef="let element">{{ element.service_name }}</td>
+                <!-- Component Name Column -->
+                <ng-container matColumnDef="component">
+                  <th mat-header-cell *matHeaderCellDef>Component</th>
+                  <td mat-cell *matCellDef="let element">{{ element.component_name }}</td>
                 </ng-container>
 
                 <!-- GitLab Tag Column -->
@@ -237,7 +237,7 @@ export class ValidateContainerTagsDialogComponent implements OnInit {
   updating = false;
   errorMessage = '';
   validationData: any = null;
-  displayedColumns = ['service', 'gitlab', 'confluence', 'status', 'link'];
+  displayedColumns = ['component', 'gitlab', 'confluence', 'status', 'link'];
 
   constructor(
     public dialogRef: MatDialogRef<ValidateContainerTagsDialogComponent>,
