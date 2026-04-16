@@ -1294,12 +1294,18 @@ ALTERNATIVE (if you prefer not to disable pop-up blocker):
     this.renovateMRsData = null;
     this.selectedMRs = [];
 
+    console.log('[Renovate MRs] Loading MRs for release:', this.release.version);
+
     this.releaseService.getRenovateMergeRequests(this.release.version).subscribe({
       next: (data) => {
+        console.log('[Renovate MRs] Data received:', data);
+        console.log('[Renovate MRs] Total MRs:', data.total_mrs);
+        console.log('[Renovate MRs] Repositories:', data.repositories);
         this.renovateMRsData = data;
         this.loadingRenovateMRs = false;
       },
       error: (err: any) => {
+        console.error('[Renovate MRs] Error:', err);
         this.loadingRenovateMRs = false;
         this.renovateMRsError = err?.error?.detail || 'Failed to fetch Renovate merge requests.';
       },

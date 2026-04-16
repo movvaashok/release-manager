@@ -1110,6 +1110,13 @@
             </p>
           </div>
 
+          <!-- Debug info -->
+          <div *ngIf="!loadingRenovateMRs && renovateMRsData" style="padding:12px;background:#f0f0f0;border-radius:4px;margin-bottom:16px;font-size:12px;font-family:monospace;">
+            <div>Total MRs: {{ renovateMRsData.total_mrs }}</div>
+            <div>Repositories count: {{ renovateMRsData.repositories?.length || 0 }}</div>
+            <div>Author: {{ renovateMRsData.renovate_author }}</div>
+          </div>
+
           <!-- MRs by repository -->
           <div *ngIf="!loadingRenovateMRs && renovateMRsData && renovateMRsData.total_mrs > 0">
             <div style="margin-bottom:16px;padding:8px 12px;background:#f5f5f5;border-radius:4px;">
@@ -1119,7 +1126,10 @@
               </span>
             </div>
 
-            <ng-container *ngFor="let repo of renovateMRsData.repositories">
+            <ng-container *ngFor="let repo of renovateMRsData.repositories; let i = index">
+              <div style="margin-bottom:12px;padding:12px;background:#e3f2fd;border-radius:4px;font-size:12px;">
+                Repository {{ i }}: {{ repo.repo_name }} - {{ repo.mrs?.length || 0 }} MRs
+              </div>
               <mat-card style="margin-bottom:16px;">
                 <mat-card-header style="padding:12px 16px;border-bottom:1px solid #eee;background:#fafafa;">
                   <strong style="display:block;margin-bottom:4px;">{{ repo.repo_name }}</strong>
