@@ -298,4 +298,12 @@ export class ReleaseService {
   updateContainerTagsInConfluence(version: string): Observable<any> {
     return this.http.post<any>(`${this.base}/releases/${version}/update-container-tags`, {}, { params: this.p });
   }
+
+  getRenovateMergeRequests(version: string): Observable<any> {
+    const gitlabToken = localStorage.getItem('gitlab_token') || '';
+    return this.http.get<any>(`${this.base}/releases/${version}/renovate-mrs`, {
+      params: this.p,
+      headers: { 'X-GitLab-Token': gitlabToken }
+    });
+  }
 }

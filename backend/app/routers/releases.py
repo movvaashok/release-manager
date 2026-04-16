@@ -1598,3 +1598,107 @@ async def update_container_tags_in_confluence(
             "message": "Failed to update Confluence page. Check URL and permissions.",
             "updated_count": 0
         }
+
+
+@router.get("/{version}/renovate-mrs", response_model=dict)
+async def get_renovate_merge_requests(
+    version: str,
+    project: str = Query("pioneer"),
+    gitlab_token: str = Header(default="", alias="X-GitLab-Token"),
+):
+    """Fetch merge requests from all repositories in a release that are created by Renovate bot.
+
+    Filters MRs by the author name configured in the project settings (renovate_bot_author).
+
+    Returns a list of MRs with details for each repository.
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+
+    logger.info(f"[Renovate MRs] Fetching Renovate MRs for release {version} (project: {project})")
+
+    release = release_service.get_release(project, version)
+    if not release:
+        logger.error(f"[Renovate MRs] Release {version} not found")
+        raise HTTPException(status_code=404, detail=f"Release {version} not found")
+
+    if not gitlab_token:
+        logger.error(f"[Renovate MRs] GitLab token not provided")
+        raise HTTPException(
+            status_code=400,
+            detail="GitLab token required (X-GitLab-Token header)"
+        )
+
+    # Get project config to retrieve renovate bot author name
+    from app.services import project_service
+    proj_config = project_service.get_project(project)
+    renovate_author = None
+    if proj_config and proj_config.renovate_bot_author:
+        renovate_author = proj_config.renovate_bot_author
+        logger.info(f"[Renovate MRs] Renovate bot author configured: '{renovate_author}'")
+    else:
+        logger.warning(f"[Renovate MRs] No renovate_bot_author configured for project {project}")
+        return {
+            "version": version,
+            "project": project,
+            "renovate_author": None,
+            "repositories": [],
+            "total_mrs": 0,
+            "message": "Renovate bot author not configured for this project"
+        }
+
+    from app.services.gitlab_client import get_gitlab_client
+    gitlab = get_gitlab_client(gitlab_token)
+
+    # Fetch MRs from all repositories in the release
+    repositories = []
+    total_mrs = 0
+
+    logger.info(f"[Renovate MRs] Processing {len(release.stage3)} repositories")
+
+    for repo in release.stage3:
+        try:
+            logger.info(f"[Renovate MRs] Fetching MRs for repo {repo.name} (project_id: {repo.project_id})")
+            all_mrs = await gitlab.get_open_mrs(repo.project_id)
+            logger.info(f"[Renovate MRs] Found {len(all_mrs)} open MRs for {repo.name}")
+
+            # Filter MRs by author
+            renovate_mrs = [
+                mr for mr in all_mrs
+                if mr.get("author", {}).get("username") == renovate_author
+            ]
+            logger.info(f"[Renovate MRs] Found {len(renovate_mrs)} Renovate MRs for {repo.name}")
+
+            if renovate_mrs:
+                total_mrs += len(renovate_mrs)
+                repositories.append({
+                    "repo_name": repo.name,
+                    "project_id": repo.project_id,
+                    "web_url": repo.web_url,
+                    "mrs": [
+                        {
+                            "iid": mr.get("iid"),
+                            "title": mr.get("title"),
+                            "description": mr.get("description", "")[:200],  # First 200 chars
+                            "web_url": mr.get("web_url"),
+                            "author": mr.get("author", {}).get("username"),
+                            "created_at": mr.get("created_at"),
+                            "updated_at": mr.get("updated_at"),
+                            "state": mr.get("state"),
+                        }
+                        for mr in renovate_mrs
+                    ]
+                })
+        except Exception as e:
+            logger.error(f"[Renovate MRs] Error fetching MRs for {repo.name}: {str(e)}", exc_info=True)
+            pass
+
+    logger.info(f"[Renovate MRs] Total Renovate MRs found: {total_mrs}")
+
+    return {
+        "version": version,
+        "project": project,
+        "renovate_author": renovate_author,
+        "repositories": repositories,
+        "total_mrs": total_mrs
+    }

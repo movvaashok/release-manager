@@ -129,6 +129,12 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
   messageCopied = false;
   refreshingRa = false;
 
+  // Renovate MRs tab
+  renovateMRsData: any = null;
+  loadingRenovateMRs = false;
+  renovateMRsError = '';
+  selectedMRs: string[] = []; // Array of MR URLs
+
   get raRepoCount(): number {
     return this.release?.stage3.filter(r => r.requires_ra).length ?? 0;
   }
@@ -1277,5 +1283,52 @@ ALTERNATIVE (if you prefer not to disable pop-up blocker):
       case 'skipped':   return '#757575';
       default:          return '#9e9e9e';
     }
+  }
+
+  // Renovate MRs methods
+  loadRenovateMRs(): void {
+    if (!this.release) return;
+
+    this.loadingRenovateMRs = true;
+    this.renovateMRsError = '';
+    this.renovateMRsData = null;
+    this.selectedMRs = [];
+
+    this.releaseService.getRenovateMergeRequests(this.release.version).subscribe({
+      next: (data) => {
+        this.renovateMRsData = data;
+        this.loadingRenovateMRs = false;
+      },
+      error: (err: any) => {
+        this.loadingRenovateMRs = false;
+        this.renovateMRsError = err?.error?.detail || 'Failed to fetch Renovate merge requests.';
+      },
+    });
+  }
+
+  isMRSelected(repoName: string, mrIid: number): boolean {
+    return this.selectedMRs.some(url => url.includes(`!${mrIid}`));
+  }
+
+  toggleMRSelection(repoName: string, mrIid: number, mrUrl: string): void {
+    const index = this.selectedMRs.findIndex(url => url.includes(`!${mrIid}`));
+    if (index > -1) {
+      this.selectedMRs.splice(index, 1);
+    } else {
+      this.selectedMRs.push(mrUrl);
+    }
+  }
+
+  copySelectedMRs(): void {
+    if (this.selectedMRs.length === 0) return;
+
+    const text = this.selectedMRs.join('\n');
+    navigator.clipboard.writeText(text).then(() => {
+      this.snackBar.open(`Copied ${this.selectedMRs.length} MR link${this.selectedMRs.length !== 1 ? 's' : ''}`, 'Close', {
+        duration: 3000,
+      });
+    }).catch(() => {
+      this.snackBar.open('Failed to copy to clipboard', 'Close', { duration: 3000 });
+    });
   }
 }

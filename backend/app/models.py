@@ -22,6 +22,7 @@ class ProjectConfig(BaseModel):
     release_branch_source: Optional[str] = None  # e.g. "develop", "master"
     release_branch_pattern: Optional[str] = None  # e.g. "release/{version}", "Release/{version}"
     mr_include_jira_ticket: bool = False  # Include TSSA ticket in MR title (Pioneer only)
+    renovate_bot_author: Optional[str] = None  # Author name to filter Renovate bot MRs (e.g. "renovate[bot]")
 
 
 # ---------------------------------------------------------------------------

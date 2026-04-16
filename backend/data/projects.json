@@ -8,7 +8,8 @@
     "confluence_base_url": "https://confluence.example.com",
     "release_branch_source": "develop",
     "release_branch_pattern": "release/{version}",
-    "mr_include_jira_ticket": true
+    "mr_include_jira_ticket": true,
+    "renovate_bot_author": "renovate[bot]"
   },
   {
     "id": "calibrate",
@@ -19,6 +20,7 @@
     "confluence_base_url": "https://confluence.example.com",
     "release_branch_source": "master",
     "release_branch_pattern": "Release/{version}",
-    "mr_include_jira_ticket": false
+    "mr_include_jira_ticket": false,
+    "renovate_bot_author": "renovate[bot]"
   }
 ]

@@ -1052,6 +1052,119 @@
         </div>
       </mat-tab>
 
+      <!-- ─────────────────────────────────────────────────────────────────
+           Renovate MRs tab
+      ──────────────────────────────────────────────────────────────────── -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-icon">pull_request</mat-icon>
+          Renovate MRs
+        </ng-template>
+
+        <div class="tab-content" style="padding:20px;">
+
+          <!-- Toolbar -->
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:12px;">
+            <span style="font-size:15px;font-weight:600;color:rgba(0,0,0,0.75);">Renovate bot merge requests</span>
+            <button mat-raised-button color="primary"
+                    (click)="loadRenovateMRs()"
+                    [disabled]="loadingRenovateMRs"
+                    style="min-width:auto;">
+              <mat-spinner *ngIf="loadingRenovateMRs" diameter="16" style="display:inline-block;margin-right:6px;"></mat-spinner>
+              <mat-icon *ngIf="!loadingRenovateMRs">refresh</mat-icon>
+              {{ loadingRenovateMRs ? 'Loading…' : 'Load MRs' }}
+            </button>
+            <button mat-raised-button color="accent"
+                    (click)="copySelectedMRs()"
+                    [disabled]="selectedMRs.length === 0"
+                    style="min-width:auto;"
+                    matTooltip="Copy selected MR links to clipboard">
+              <mat-icon>content_copy</mat-icon>
+              Copy ({{ selectedMRs.length }})
+            </button>
+          </div>
+
+          <!-- Error message -->
+          <div *ngIf="renovateMRsError"
+               style="padding:12px;background:#ffebee;border-radius:6px;color:#c62828;font-size:13px;margin-bottom:16px;">
+            {{ renovateMRsError }}
+          </div>
+
+          <!-- Loading state -->
+          <div *ngIf="loadingRenovateMRs && !renovateMRsData" style="text-align:center;padding:48px;">
+            <mat-spinner diameter="40" style="margin:0 auto;"></mat-spinner>
+          </div>
+
+          <!-- Empty state -->
+          <div *ngIf="!loadingRenovateMRs && renovateMRsData && renovateMRsData.total_mrs === 0"
+               style="padding:40px;text-align:center;color:rgba(0,0,0,0.54);">
+            <mat-icon style="font-size:48px;color:rgba(0,0,0,0.26);margin-bottom:12px;">package_2</mat-icon>
+            <p style="font-size:14px;margin:0;">No Renovate merge requests found</p>
+            <p style="font-size:12px;margin:8px 0 0 0;">
+              <span *ngIf="!renovateMRsData.renovate_author">
+                Renovate bot author not configured for this project
+              </span>
+              <span *ngIf="renovateMRsData.renovate_author">
+                Configured author: <strong>{{ renovateMRsData.renovate_author }}</strong>
+              </span>
+            </p>
+          </div>
+
+          <!-- MRs by repository -->
+          <div *ngIf="!loadingRenovateMRs && renovateMRsData && renovateMRsData.total_mrs > 0">
+            <div style="margin-bottom:16px;padding:8px 12px;background:#f5f5f5;border-radius:4px;">
+              <strong style="color:#333;">Total: {{ renovateMRsData.total_mrs }} merge request{{ renovateMRsData.total_mrs !== 1 ? 's' : '' }}</strong>
+              <span style="float:right;font-size:12px;color:rgba(0,0,0,0.54);">
+                Configured author: <strong>{{ renovateMRsData.renovate_author }}</strong>
+              </span>
+            </div>
+
+            <ng-container *ngFor="let repo of renovateMRsData.repositories">
+              <mat-card style="margin-bottom:16px;">
+                <mat-card-header style="padding:12px 16px;border-bottom:1px solid #eee;background:#fafafa;">
+                  <strong style="display:block;margin-bottom:4px;">{{ repo.repo_name }}</strong>
+                  <span style="font-size:12px;color:rgba(0,0,0,0.54);">{{ repo.mrs.length }} MR{{ repo.mrs.length !== 1 ? 's' : '' }}</span>
+                </mat-card-header>
+                <mat-card-content style="padding:12px 16px;">
+                  <div class="mr-list">
+                    <div *ngFor="let mr of repo.mrs" class="mr-item">
+                      <div style="display:flex;align-items:flex-start;gap:12px;padding:8px 0;border-bottom:1px solid #eee;">
+                        <!-- Checkbox -->
+                        <input type="checkbox"
+                               [checked]="isMRSelected(repo.repo_name, mr.iid)"
+                               (change)="toggleMRSelection(repo.repo_name, mr.iid, mr.web_url)"
+                               style="margin-top:4px;cursor:pointer;"/>
+
+                        <!-- MR Details -->
+                        <div style="flex:1;">
+                          <div style="display:flex;align-items:center;gap:8px;">
+                            <a [href]="mr.web_url" target="_blank" style="text-decoration:none;color:#1976d2;font-weight:500;">
+                              !{{ mr.iid }}: {{ mr.title }}
+                            </a>
+                            <span [class]="'status-badge status-' + mr.state"
+                                  style="font-size:11px;padding:2px 8px;border-radius:12px;background:#f0f0f0;color:#666;">
+                              {{ mr.state }}
+                            </span>
+                          </div>
+                          <div style="font-size:12px;color:rgba(0,0,0,0.54);margin-top:4px;">
+                            <span>{{ mr.created_at | date:'short' }}</span>
+                            <span style="margin-left:12px;">Author: <strong>{{ mr.author }}</strong></span>
+                          </div>
+                          <div *ngIf="mr.description" style="font-size:12px;color:rgba(0,0,0,0.54);margin-top:4px;max-width:600px;overflow:hidden;text-overflow:ellipsis;">
+                            {{ mr.description }}...
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </mat-card-content>
+              </mat-card>
+            </ng-container>
+          </div>
+
+        </div>
+      </mat-tab>
+
     </mat-tab-group>
   </ng-container>
 </div>
