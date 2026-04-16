@@ -1157,7 +1157,7 @@
                         <!-- Checkbox -->
                         <input type="checkbox"
                                [checked]="isMRSelected(repo.repo_name, mr.iid)"
-                               (change)="toggleMRSelection(repo.repo_name, mr.iid, mr.web_url)"
+                               (change)="toggleMRSelection(repo.repo_name, mr.iid, mr.web_url, mr.title)"
                                style="margin-top:4px;cursor:pointer;"/>
 
                         <!-- MR Details -->

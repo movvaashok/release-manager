@@ -133,7 +133,7 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
   renovateMRsData: any = null;
   loadingRenovateMRs = false;
   renovateMRsError = '';
-  selectedMRs: string[] = []; // Array of MR URLs
+  selectedMRs: Array<{repo_name: string, iid: number, title: string, url: string}> = []; // Array of MR details
   renovateMRsScope: 'release' | 'project' = 'release'; // Toggle between release and project scope
 
   get raRepoCount(): number {
@@ -1314,24 +1314,56 @@ ALTERNATIVE (if you prefer not to disable pop-up blocker):
   }
 
   isMRSelected(repoName: string, mrIid: number): boolean {
-    return this.selectedMRs.some(url => url.includes(`!${mrIid}`));
+    return this.selectedMRs.some(mr => mr.iid === mrIid && mr.repo_name === repoName);
   }
 
-  toggleMRSelection(repoName: string, mrIid: number, mrUrl: string): void {
-    const index = this.selectedMRs.findIndex(url => url.includes(`!${mrIid}`));
+  toggleMRSelection(repoName: string, mrIid: number, mrUrl: string, mrTitle: string): void {
+    const index = this.selectedMRs.findIndex(mr => mr.iid === mrIid && mr.repo_name === repoName);
     if (index > -1) {
       this.selectedMRs.splice(index, 1);
     } else {
-      this.selectedMRs.push(mrUrl);
+      this.selectedMRs.push({
+        repo_name: repoName,
+        iid: mrIid,
+        title: mrTitle,
+        url: mrUrl
+      });
     }
   }
 
   copySelectedMRs(): void {
     if (this.selectedMRs.length === 0) return;
 
-    const text = this.selectedMRs.join('\n');
-    navigator.clipboard.writeText(text).then(() => {
-      this.snackBar.open(`Copied ${this.selectedMRs.length} MR link${this.selectedMRs.length !== 1 ? 's' : ''}`, 'Close', {
+    // Generate Teams message format
+    let teamsMessage = `🔄 **Renovate Bot MRs for Review**\n\n`;
+    teamsMessage += `Release: ${this.release?.version || 'N/A'}\n`;
+    teamsMessage += `Scope: ${this.renovateMRsScope === 'release' ? 'Current Release' : 'Entire Project'}\n`;
+    teamsMessage += `Count: ${this.selectedMRs.length}\n\n`;
+
+    // Group by repository
+    const byRepo = new Map<string, typeof this.selectedMRs>();
+    this.selectedMRs.forEach(mr => {
+      if (!byRepo.has(mr.repo_name)) {
+        byRepo.set(mr.repo_name, []);
+      }
+      byRepo.get(mr.repo_name)!.push(mr);
+    });
+
+    // Format each repository's MRs
+    byRepo.forEach((mrs, repoName) => {
+      teamsMessage += `**${repoName}**\n`;
+      mrs.forEach(mr => {
+        teamsMessage += `- [!${mr.iid}: ${mr.title}](${mr.url})\n`;
+      });
+      teamsMessage += '\n';
+    });
+
+    teamsMessage += '---\n';
+    teamsMessage += `_Selected by ${this.username} on ${new Date().toLocaleString()}_`;
+
+    // Copy to clipboard
+    navigator.clipboard.writeText(teamsMessage).then(() => {
+      this.snackBar.open(`Copied ${this.selectedMRs.length} MR${this.selectedMRs.length !== 1 ? 's' : ''} (Teams format)`, 'Close', {
         duration: 3000,
       });
     }).catch(() => {
