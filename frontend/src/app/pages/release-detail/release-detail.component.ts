@@ -1335,10 +1335,7 @@ ALTERNATIVE (if you prefer not to disable pop-up blocker):
     if (this.selectedMRs.length === 0) return;
 
     // Generate Teams message format
-    let teamsMessage = `🔄 **Renovate Bot MRs for Review**\n\n`;
-    teamsMessage += `Release: ${this.release?.version || 'N/A'}\n`;
-    teamsMessage += `Scope: ${this.renovateMRsScope === 'release' ? 'Current Release' : 'Entire Project'}\n`;
-    teamsMessage += `Count: ${this.selectedMRs.length}\n\n`;
+    let teamsMessage = `🤖 **Renovate Bot MRs for Review**\n\n`;
 
     // Group by repository
     const byRepo = new Map<string, typeof this.selectedMRs>();
@@ -1357,9 +1354,6 @@ ALTERNATIVE (if you prefer not to disable pop-up blocker):
       });
       teamsMessage += '\n';
     });
-
-    teamsMessage += '---\n';
-    teamsMessage += `_Selected by ${this.username} on ${new Date().toLocaleString()}_`;
 
     // Copy to clipboard
     navigator.clipboard.writeText(teamsMessage).then(() => {
