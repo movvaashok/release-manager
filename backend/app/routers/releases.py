@@ -1660,8 +1660,11 @@ async def get_renovate_merge_requests(
     repos_to_check = []
     if scope == "project":
         # Get all repositories in the project from the reference data
-        from app.services import repo_mapping
-        all_project_repos = repo_mapping.get_repos_for_project(project)
+        from app.services import repo_service
+        all_project_repos = repo_service.get_all(project)
+        logger.info(f"[Renovate MRs] Project scope: found {len(all_project_repos)} project repositories")
+
+        # Convert RepoReference objects to have the same interface as Stage3Repo
         repos_to_check = all_project_repos
         logger.info(f"[Renovate MRs] Project scope: checking {len(repos_to_check)} project repositories")
     else:
