@@ -299,10 +299,10 @@ export class ReleaseService {
     return this.http.post<any>(`${this.base}/releases/${version}/update-container-tags`, {}, { params: this.p });
   }
 
-  getRenovateMergeRequests(version: string): Observable<any> {
+  getRenovateMergeRequests(version: string, scope: 'release' | 'project' = 'release'): Observable<any> {
     const gitlabToken = localStorage.getItem('gitlab_token') || '';
     return this.http.get<any>(`${this.base}/releases/${version}/renovate-mrs`, {
-      params: this.p,
+      params: { ...this.p, scope },
       headers: { 'X-GitLab-Token': gitlabToken }
     });
   }

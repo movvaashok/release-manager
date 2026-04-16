@@ -1604,9 +1604,14 @@ async def update_container_tags_in_confluence(
 async def get_renovate_merge_requests(
     version: str,
     project: str = Query("pioneer"),
+    scope: str = Query("release", description="'release' for current release repos, 'project' for all project repos"),
     gitlab_token: str = Header(default="", alias="X-GitLab-Token"),
 ):
-    """Fetch merge requests from all repositories in a release that are created by Renovate bot.
+    """Fetch merge requests created by Renovate bot.
+
+    Can fetch MRs from either:
+    - 'release' scope: Only repositories in the current release (stage3)
+    - 'project' scope: All repositories in the project
 
     Filters MRs by the author name configured in the project settings (renovate_bot_author).
 
@@ -1615,7 +1620,7 @@ async def get_renovate_merge_requests(
     import logging
     logger = logging.getLogger(__name__)
 
-    logger.info(f"[Renovate MRs] Fetching Renovate MRs for release {version} (project: {project})")
+    logger.info(f"[Renovate MRs] Fetching Renovate MRs for {scope} scope - release {version} (project: {project})")
 
     release = release_service.get_release(project, version)
     if not release:
@@ -1641,6 +1646,7 @@ async def get_renovate_merge_requests(
         return {
             "version": version,
             "project": project,
+            "scope": scope,
             "renovate_author": None,
             "repositories": [],
             "total_mrs": 0,
@@ -1650,13 +1656,24 @@ async def get_renovate_merge_requests(
     from app.services.gitlab_client import get_gitlab_client
     gitlab = get_gitlab_client(gitlab_token)
 
-    # Fetch MRs from all repositories in the release
+    # Determine which repositories to check
+    repos_to_check = []
+    if scope == "project":
+        # Get all repositories in the project from the reference data
+        from app.services import repo_mapping
+        all_project_repos = repo_mapping.get_repos_for_project(project)
+        repos_to_check = all_project_repos
+        logger.info(f"[Renovate MRs] Project scope: checking {len(repos_to_check)} project repositories")
+    else:
+        # scope == "release" - use only release stage3 repos
+        repos_to_check = release.stage3
+        logger.info(f"[Renovate MRs] Release scope: checking {len(repos_to_check)} release repositories")
+
+    # Fetch MRs from repositories
     repositories = []
     total_mrs = 0
 
-    logger.info(f"[Renovate MRs] Processing {len(release.stage3)} repositories")
-
-    for repo in release.stage3:
+    for repo in repos_to_check:
         try:
             logger.info(f"[Renovate MRs] Fetching MRs for repo {repo.name} (project_id: {repo.project_id})")
             all_mrs = await gitlab.get_open_mrs(repo.project_id)
@@ -1674,7 +1691,7 @@ async def get_renovate_merge_requests(
                 repositories.append({
                     "repo_name": repo.name,
                     "project_id": repo.project_id,
-                    "web_url": repo.web_url,
+                    "web_url": getattr(repo, 'web_url', None),
                     "mrs": [
                         {
                             "iid": mr.get("iid"),
@@ -1698,6 +1715,7 @@ async def get_renovate_merge_requests(
     return {
         "version": version,
         "project": project,
+        "scope": scope,
         "renovate_author": renovate_author,
         "repositories": repositories,
         "total_mrs": total_mrs

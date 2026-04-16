@@ -134,6 +134,7 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
   loadingRenovateMRs = false;
   renovateMRsError = '';
   selectedMRs: string[] = []; // Array of MR URLs
+  renovateMRsScope: 'release' | 'project' = 'release'; // Toggle between release and project scope
 
   get raRepoCount(): number {
     return this.release?.stage3.filter(r => r.requires_ra).length ?? 0;
@@ -1294,9 +1295,9 @@ ALTERNATIVE (if you prefer not to disable pop-up blocker):
     this.renovateMRsData = null;
     this.selectedMRs = [];
 
-    console.log('[Renovate MRs] Loading MRs for release:', this.release.version);
+    console.log('[Renovate MRs] Loading MRs for release:', this.release.version, 'scope:', this.renovateMRsScope);
 
-    this.releaseService.getRenovateMergeRequests(this.release.version).subscribe({
+    this.releaseService.getRenovateMergeRequests(this.release.version, this.renovateMRsScope).subscribe({
       next: (data) => {
         console.log('[Renovate MRs] Data received:', data);
         console.log('[Renovate MRs] Total MRs:', data.total_mrs);
