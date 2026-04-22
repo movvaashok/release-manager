@@ -480,7 +480,41 @@ def _git_sync_develop_to_release(
             raise Exception(f"Git merge failed: {exc.stderr or exc.output}")
 
         # Push merged result
-        git("push", "-q", "origin", f"HEAD:{release_branch}")
+        try:
+            git("push", "-q", "origin", f"HEAD:{release_branch}")
+        except subprocess.CalledProcessError as exc:
+            stderr = exc.stderr or exc.output or ""
+            stdout = exc.stdout or ""
+            output = f"{stdout}\n{stderr}"
+
+            # Provide helpful error messages based on common git push failures
+            if "protected branch" in output.lower() or "rejected" in output.lower():
+                raise Exception(
+                    f"Cannot push to {release_branch}: Branch is protected or push was rejected. "
+                    f"Check GitLab branch protection rules, merge approval requirements, or pipeline status. "
+                    f"Details: {stderr}"
+                )
+            elif "permission denied" in output.lower() or "403" in output:
+                raise Exception(
+                    f"Permission denied: GitLab token may not have push access to {release_branch}. "
+                    f"Verify token has 'api' and 'write_repository' scopes. "
+                    f"Details: {stderr}"
+                )
+            elif "authentication failed" in output.lower() or "401" in output:
+                raise Exception(
+                    f"Authentication failed: GitLab token is invalid or expired. "
+                    f"Please re-authenticate and try again. "
+                    f"Details: {stderr}"
+                )
+            elif "non-fast-forward" in output.lower():
+                raise Exception(
+                    f"Push rejected: Non-fast-forward update to {release_branch}. "
+                    f"The branch may have been updated by another process. "
+                    f"Try again after refreshing the branch. "
+                    f"Details: {stderr}"
+                )
+            else:
+                raise Exception(f"Git push failed: {stderr or output}")
 
         return {
             "branch_created": False, "branch_existed": True,
