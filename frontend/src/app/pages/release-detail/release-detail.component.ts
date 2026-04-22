@@ -126,6 +126,8 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
   confluenceFound: boolean | null = null; // null = not yet searched
   cabTicketSearching = false;
   cabTicketFound: boolean | null = null; // null = not yet searched
+  riskAssessmentSearching = false;
+  riskAssessmentFound: boolean | null = null; // null = not yet searched
   messageCopied = false;
   refreshingRa = false;
 
@@ -370,6 +372,26 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
     });
   }
 
+  tryPopulateRiskAssessment(): void {
+    if (!this.release || this.release.risk_assessment_url || this.riskAssessmentSearching) return;
+    this.riskAssessmentSearching = true;
+    this.releaseService.riskAssessmentSearch(this.version).subscribe({
+      next: (r) => {
+        const found = !!r.risk_assessment_url && !this.release?.risk_assessment_url;
+        this.release = r;
+        this.riskAssessmentSearching = false;
+        this.riskAssessmentFound = !!r.risk_assessment_url;
+        if (found) {
+          this.snackBar.open('Risk Assessment ticket found and linked automatically.', 'Close', { duration: 4000 });
+        }
+      },
+      error: () => {
+        this.riskAssessmentSearching = false;
+        this.riskAssessmentFound = false;
+      },
+    });
+  }
+
   onTabChanged(index: number): void {
     // Tab order: 0=Jira Status, 1=Stage1, 2=Stage2, 3=Stage3(admin), 4=Deployment Status, 5=Documentation(admin)
     // (when not admin, Stage3 is hidden so Deployment Status shifts to 3, Documentation to 4)
@@ -388,6 +410,7 @@ export class ReleaseDetailComponent implements OnInit, OnDestroy {
   onDocTabSelected(): void {
     this.tryPopulateConfluence();
     this.tryPopulateCabTicket();
+    this.tryPopulateRiskAssessment();
   }
 
   refreshRaRequirements(): void {

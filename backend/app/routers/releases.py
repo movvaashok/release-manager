@@ -483,6 +483,39 @@ async def cab_ticket_search(
     return state
 
 
+@router.post("/{version}/docs/risk-assessment-search", response_model=ReleaseState)
+async def risk_assessment_search(
+    version: str,
+    project: str = Query("pioneer"),
+    x_role: str | None = Header(default=None),
+    x_username: str | None = Header(default=None),
+):
+    """
+    Search for Risk Assessment ticket linked to the CAB ticket.
+    If CAB ticket is found and has an RA blocker link, saves risk_assessment_url.
+    Always returns the up-to-date ReleaseState.
+    """
+    state = release_service.get_release(project, version)
+    if state is None:
+        raise HTTPException(status_code=404, detail=f"Release {version} not found")
+
+    # Only search if RA URL is not already set
+    if not state.risk_assessment_url:
+        # First, try to find CAB ticket to get RA from its links
+        ticket = await jira_client.find_cab_ticket(project, version)
+        if ticket and ticket.get("ra_url"):
+            state = release_service.update_docs(project, version, UpdateDocsRequest(risk_assessment_url=ticket["ra_url"]))
+            audit_service.record(
+                username=_u(x_username),
+                action="ra_auto_linked",
+                project=project,
+                release_version=version,
+                details={"ra_url": ticket["ra_url"], "cab_ticket_key": ticket["key"]},
+            )
+
+    return state
+
+
 @router.post("/{version}/docs/refresh-ra", response_model=ReleaseState)
 async def refresh_ra_requirements(
     version: str,

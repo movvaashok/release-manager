@@ -803,11 +803,11 @@
               <div class="doc-card">
                 <div class="doc-label">
                   <mat-icon>security</mat-icon> Risk Assessment Ticket
-                  <span *ngIf="cabTicketSearching" class="confluence-searching">
+                  <span *ngIf="riskAssessmentSearching" class="confluence-searching">
                     <mat-spinner diameter="12" style="display:inline-block;margin-left:6px;vertical-align:middle;"></mat-spinner>
                     Searching…
                   </span>
-                  <span *ngIf="!cabTicketSearching && cabTicketFound === true && release.risk_assessment_url" class="auto-found-badge">
+                  <span *ngIf="!riskAssessmentSearching && riskAssessmentFound === true && release.risk_assessment_url" class="auto-found-badge">
                     <mat-icon style="font-size:14px;height:14px;width:14px;vertical-align:middle;">auto_awesome</mat-icon> Auto-linked
                   </span>
                 </div>
@@ -816,37 +816,57 @@
                     <mat-icon class="link-icon">open_in_new</mat-icon>
                     {{ release.risk_assessment_url }}
                   </a>
-                  <span *ngIf="!release.risk_assessment_url && !cabTicketSearching" class="doc-empty">Not set</span>
+                  <span *ngIf="!release.risk_assessment_url && !riskAssessmentSearching" class="doc-empty">Not set</span>
                 </div>
               </div>
 
             </div>
 
-            <div class="doc-actions">
-              <button mat-raised-button (click)="copyDocMessage()"
-                      [color]="messageCopied ? 'accent' : 'primary'"
-                      matTooltip="Copy a Teams/Slack message with all documentation links">
-                <mat-icon>{{ messageCopied ? 'check' : 'content_copy' }}</mat-icon>
-                {{ messageCopied ? 'Copied!' : 'Copy Message' }}
-              </button>
-              <button mat-stroked-button
-                *ngIf="release?.confluence_url"
-                (click)="updateConfluencePage()"
-                matTooltip="Update Confluence release page with MR links">
-                <mat-icon>link</mat-icon>
-                Update MR links
-              </button>
-              <button mat-stroked-button
-                *ngIf="release?.confluence_url"
-                (click)="validateContainerTags()"
-                matTooltip="Validate container registry tags against Confluence">
-                <mat-icon>verified</mat-icon>
-                Validate Release Tags
-              </button>
-              <button *ngIf="isAdmin" mat-stroked-button (click)="startEditDocs()">
-                <mat-icon>edit</mat-icon> Edit Documentation Links
-              </button>
-            </div>
+            <!-- Action buttons vertical tab group -->
+            <mat-tab-group animationDuration="150ms" mat-stretch-tabs="false"
+                           style="margin-top:24px;border:1px solid #e0e0e0;border-radius:4px;">
+
+              <mat-tab>
+                <ng-template mat-tab-label>
+                  <mat-icon style="margin-right:8px;font-size:18px;width:18px;height:18px;">build</mat-icon>
+                  Documentation Actions
+                </ng-template>
+
+                <div style="padding:20px;">
+                  <div style="display:flex;flex-direction:column;gap:12px;">
+
+                    <button mat-raised-button color="primary" (click)="copyDocMessage()"
+                            [style.background]="messageCopied ? 'accent' : 'primary'"
+                            matTooltip="Copy a Teams/Slack message with all documentation links">
+                      <mat-icon>{{ messageCopied ? 'check' : 'content_copy' }}</mat-icon>
+                      {{ messageCopied ? 'Copied!' : 'Copy Message' }}
+                    </button>
+
+                    <button mat-stroked-button
+                      *ngIf="release?.confluence_url"
+                      (click)="updateConfluencePage()"
+                      matTooltip="Update Confluence release page with MR links">
+                      <mat-icon>link</mat-icon>
+                      Update MR Links
+                    </button>
+
+                    <button mat-stroked-button
+                      *ngIf="release?.confluence_url"
+                      (click)="validateContainerTags()"
+                      matTooltip="Validate container registry tags against Confluence">
+                      <mat-icon>verified</mat-icon>
+                      Validate Release Tags
+                    </button>
+
+                    <button *ngIf="isAdmin" mat-stroked-button (click)="startEditDocs()">
+                      <mat-icon>edit</mat-icon> Edit Documentation Links
+                    </button>
+
+                  </div>
+                </div>
+              </mat-tab>
+
+            </mat-tab-group>
           </ng-container>
 
           <!-- Edit mode (admin only) -->
