@@ -1756,3 +1756,76 @@ async def get_renovate_merge_requests(
         "repositories": repositories,
         "total_mrs": total_mrs
     }
+
+
+# ── Add MR Links ─────────────────────────────────────────────────────────
+@router.post("/{version}/add-mr-links", response_model=ReleaseState)
+async def add_mr_links(
+    version: str,
+    req: dict,
+    project: str = Query("pioneer"),
+    x_role: str | None = Header(default=None),
+    x_username: str | None = Header(default=None),
+):
+    """
+    Manually add MR links to Stage 3 repositories.
+
+    Request body:
+    {
+        "mr_links": [
+            {
+                "repo_name": "repo-name",
+                "mr_url": "https://gitlab.com/project/repo/-/merge_requests/123"
+            }
+        ]
+    }
+    """
+    state = release_service.get_release(project, version)
+    if state is None:
+        raise HTTPException(status_code=404, detail=f"Release {version} not found")
+
+    mr_links = req.get("mr_links", [])
+    if not mr_links:
+        raise HTTPException(status_code=400, detail="No MR links provided")
+
+    # Update stage3 repos with the provided MR links
+    updated_repos = []
+    for mr_link in mr_links:
+        repo_name = mr_link.get("repo_name")
+        mr_url = mr_link.get("mr_url")
+
+        if not repo_name or not mr_url:
+            raise HTTPException(status_code=400, detail="Each MR link must have repo_name and mr_url")
+
+        # Find and update the repo
+        found = False
+        for repo in state.stage3:
+            if repo.name == repo_name:
+                # Extract MR IID from URL (e.g., from /merge_requests/123)
+                import re
+                match = re.search(r'/merge_requests/(\d+)', mr_url)
+                if match:
+                    repo.mr_iid = int(match.group(1))
+                    repo.mr_url = mr_url
+                    repo.mr_state = "opened"  # Set initial state (will be refreshed)
+                    repo.mr_merge_status = "unchecked"  # Will be checked when refreshed
+                    found = True
+                    updated_repos.append(repo_name)
+                    break
+
+        if not found:
+            raise HTTPException(status_code=404, detail=f"Repository '{repo_name}' not found in release stage3")
+
+    # Save the updated release state
+    release_service._save_release(project, state)
+
+    # Record audit
+    audit_service.record(
+        username=_u(x_username),
+        action="mr_links_added",
+        project=project,
+        release_version=version,
+        details={"repos": updated_repos, "count": len(updated_repos)},
+    )
+
+    return state

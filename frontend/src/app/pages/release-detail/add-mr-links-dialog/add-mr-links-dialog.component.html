@@ -1,0 +1,104 @@
+<h2 mat-dialog-title>Add Merge Request Links</h2>
+
+<mat-dialog-content>
+  <mat-tab-group animationDuration="150ms">
+    <!-- Bulk Add Tab -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon style="margin-right:8px;">add_circle</mat-icon>
+        Bulk Add
+      </ng-template>
+
+      <div style="padding:20px;">
+        <p style="font-size:13px;color:rgba(0,0,0,0.65);margin-bottom:16px;">
+          Paste multiple MR links (one per line). You can optionally prefix each with the repository name.
+        </p>
+
+        <mat-form-field appearance="outline" class="full-width" style="margin-bottom:16px;">
+          <mat-label>MR Links (paste here)</mat-label>
+          <textarea
+            matInput
+            [(ngModel)]="bulkText"
+            placeholder="https://gitlab.com/project/repo/-/merge_requests/123&#10;https://gitlab.com/project/repo2/-/merge_requests/456&#10;or&#10;repo-name: https://gitlab.com/..."
+            rows="8"
+            style="font-family:monospace;font-size:12px;">
+          </textarea>
+        </mat-form-field>
+
+        <div *ngIf="bulkError" style="padding:12px;background:#ffebee;border-radius:6px;color:#c62828;font-size:13px;margin-bottom:16px;">
+          <mat-icon style="font-size:16px;width:16px;height:16px;vertical-align:middle;margin-right:4px;">error</mat-icon>
+          {{ bulkError }}
+        </div>
+
+        <div *ngIf="bulkMRs.length > 0" style="padding:12px;background:#e8f5e9;border-radius:6px;margin-bottom:16px;">
+          <div style="font-weight:500;color:#2e7d32;margin-bottom:8px;">
+            Ready to add {{ bulkMRs.length }} MR{{ bulkMRs.length !== 1 ? 's' : '' }}:
+          </div>
+          <div style="font-size:12px;color:rgba(0,0,0,0.65);">
+            <div *ngFor="let mr of bulkMRs" style="margin:4px 0;">
+              <strong>{{ mr.repo_name }}</strong> — {{ mr.mr_url.substring(mr.mr_url.lastIndexOf('/') + 1) }}
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:12px;justify-content:flex-end;">
+          <button mat-button (click)="cancel()" [disabled]="saving">Cancel</button>
+          <button mat-raised-button color="primary"
+                  (click)="addBulkMRs()"
+                  [disabled]="!bulkText.trim() || saving">
+            <mat-spinner *ngIf="saving" diameter="16" style="display:inline-block;margin-right:6px;"></mat-spinner>
+            <mat-icon *ngIf="!saving">add</mat-icon>
+            {{ saving ? 'Adding…' : 'Add MRs' }}
+          </button>
+        </div>
+      </div>
+    </mat-tab>
+
+    <!-- Single Add Tab -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon style="margin-right:8px;">edit</mat-icon>
+        Single Add
+      </ng-template>
+
+      <div style="padding:20px;">
+        <p style="font-size:13px;color:rgba(0,0,0,0.65);margin-bottom:16px;">
+          Add an MR link to a specific repository.
+        </p>
+
+        <mat-form-field appearance="outline" class="full-width" style="margin-bottom:16px;">
+          <mat-label>Repository</mat-label>
+          <mat-select [(ngModel)]="selectedRepo">
+            <mat-option *ngFor="let repo of data.stage3Repos" [value]="repo.name">
+              {{ repo.name }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width" style="margin-bottom:16px;">
+          <mat-label>MR URL</mat-label>
+          <input matInput
+                 [(ngModel)]="singleMrUrl"
+                 placeholder="https://gitlab.com/project/repo/-/merge_requests/123"
+                 type="url" />
+        </mat-form-field>
+
+        <div *ngIf="singleError" style="padding:12px;background:#ffebee;border-radius:6px;color:#c62828;font-size:13px;margin-bottom:16px;">
+          <mat-icon style="font-size:16px;width:16px;height:16px;vertical-align:middle;margin-right:4px;">error</mat-icon>
+          {{ singleError }}
+        </div>
+
+        <div style="display:flex;gap:12px;justify-content:flex-end;">
+          <button mat-button (click)="cancel()" [disabled]="saving">Cancel</button>
+          <button mat-raised-button color="primary"
+                  (click)="addSingleMR()"
+                  [disabled]="!selectedRepo || !singleMrUrl || saving">
+            <mat-spinner *ngIf="saving" diameter="16" style="display:inline-block;margin-right:6px;"></mat-spinner>
+            <mat-icon *ngIf="!saving">add</mat-icon>
+            {{ saving ? 'Adding…' : 'Add MR' }}
+          </button>
+        </div>
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+</mat-dialog-content>

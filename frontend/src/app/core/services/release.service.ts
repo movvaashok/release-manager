@@ -314,4 +314,12 @@ export class ReleaseService {
       headers: { 'X-GitLab-Token': gitlabToken }
     });
   }
+
+  addMrLinks(version: string, mrLinks: Array<{repo_name: string, mr_url: string}>): Observable<ReleaseState> {
+    return this.http.post<ReleaseState>(
+      `${this.base}/releases/${version}/add-mr-links`,
+      { mr_links: mrLinks },
+      { params: this.p }
+    );
+  }
 }

@@ -29,6 +29,7 @@ import { AddViaJiraDialogComponent } from './add-via-jira-dialog/add-via-jira-di
 import { RaAbandonConfirmDialogComponent } from './ra-abandon-confirm-dialog/ra-abandon-confirm-dialog.component';
 import { RepoMappingDialogComponent } from './repo-mapping-dialog/repo-mapping-dialog.component';
 import { ValidateContainerTagsDialogComponent } from './validate-container-tags-dialog/validate-container-tags-dialog.component';
+import { AddMrLinksDialogComponent } from './add-mr-links-dialog/add-mr-links-dialog.component';
 import { AuthService } from '../../core/services/auth.service';
 import { ProjectService } from '../../core/services/project.service';
 
@@ -67,6 +68,7 @@ const POLL_INTERVAL_MS = 30_000;
     RaAbandonConfirmDialogComponent,
     RepoMappingDialogComponent,
     ValidateContainerTagsDialogComponent,
+    AddMrLinksDialogComponent,
   ],
   templateUrl: './release-detail.component.html',
   styleUrls: ['./release-detail.component.scss'],
@@ -1385,6 +1387,52 @@ ALTERNATIVE (if you prefer not to disable pop-up blocker):
       });
     }).catch(() => {
       this.snackBar.open('Failed to copy to clipboard', 'Close', { duration: 3000 });
+    });
+  }
+
+  // -----------------------------------------------------------------------
+  // Add MR Links dialog
+  // -----------------------------------------------------------------------
+
+  openAddMrLinksDialog(): void {
+    const ref = this.dialog.open(AddMrLinksDialogComponent, {
+      width: '800px',
+      maxWidth: '95vw',
+      disableClose: false,
+      data: {
+        version: this.version,
+        stage3Repos: this.release?.stage3 ?? [],
+        releaseService: this.releaseService,
+      },
+    });
+
+    ref.afterClosed().subscribe((result) => {
+      if (result) {
+        // Refresh the release to get updated MR links
+        this.loadRelease();
+        this.snackBar.open('MR links added successfully.', 'Close', { duration: 3000 });
+      }
+    });
+  }
+
+  openAddMrLinkForRepo(repo: Stage3Repo): void {
+    const ref = this.dialog.open(AddMrLinksDialogComponent, {
+      width: '600px',
+      maxWidth: '95vw',
+      disableClose: false,
+      data: {
+        version: this.version,
+        stage3Repos: [repo],
+        releaseService: this.releaseService,
+      },
+    });
+
+    ref.afterClosed().subscribe((result) => {
+      if (result) {
+        // Refresh the release to get updated MR links
+        this.loadRelease();
+        this.snackBar.open('MR link added successfully.', 'Close', { duration: 3000 });
+      }
     });
   }
 }
